@@ -1,5 +1,195 @@
-import { registerTab } from "../admin.js";
-registerTab("today", async () => {
-  const root = document.getElementById("today-list");
-  if (root) root.innerHTML = "<p class='muted'>Tab implementation coming next.</p>";
-});
+import { registerTab, must, api, toast, openModal, closeModal, escapeHtml, fmtDateTime, todayKey, plusDays, getServices } from "../admin.js";
+
+const fromInput = document.getElementById("today-from");
+const toInput = document.getElementById("today-to");
+const refreshBtn = document.getElementById("today-refresh");
+const addBtn = document.getElementById("today-add");
+const list = document.getElementById("today-list");
+
+fromInput.value = todayKey();
+toInput.value = plusDays(todayKey(), 14);
+
+refreshBtn.addEventListener("click", () => renderList());
+addBtn.addEventListener("click", () => openManualBookingModal());
+
+async function renderList() {
+  list.innerHTML = `<p class="muted">Učitavanje...</p>`;
+  try {
+    const { appointments, rawEvents } = await must(
+      `/api/admin/appointments?from=${fromInput.value}&to=${toInput.value}`
+    );
+    const all = [
+      ...appointments.map((a) => ({ kind: "booking", ...a })),
+      ...rawEvents.map((r) => ({ kind: "raw", ...r })),
+    ].sort((a, b) => (a.startISO || "").localeCompare(b.startISO || ""));
+    if (!all.length) {
+      list.innerHTML = `<p class="muted">Nema termina u izabranom periodu.</p>`;
+      return;
+    }
+    list.innerHTML = all.map(renderCard).join("");
+    list.querySelectorAll("[data-action]").forEach((el) => el.addEventListener("click", onAction));
+  } catch (e) {
+    list.innerHTML = `<p class="muted">${escapeHtml(e.message)}</p>`;
+  }
+}
+
+function renderCard(a) {
+  if (a.kind === "raw") {
+    return `
+      <article class="stack-card" data-event-id="${escapeHtml(a.id)}">
+        <div class="stack-card__head">
+          <div>
+            <div class="stack-card__title">🔒 ${escapeHtml(a.summary)}</div>
+            <div class="stack-card__meta">${fmtDateTime(a.startISO)} — ${fmtDateTime(a.endISO)}</div>
+          </div>
+        </div>
+        <div class="stack-card__details muted">Ručno dodan event u kalendaru (npr. "Privatno").</div>
+      </article>
+    `;
+  }
+  const phone = escapeHtml(a.phoneE164 || "");
+  const emailLine = a.email ? `<div>📧 ${escapeHtml(a.email)}</div>` : "";
+  const noteLine = a.note ? `<div>📝 ${escapeHtml(a.note)}</div>` : "";
+  return `
+    <article class="stack-card" data-event-id="${escapeHtml(a.calendarEventId)}" data-name="${escapeHtml(a.name)}" data-phone="${phone}" data-service="${escapeHtml(a.serviceName)}" data-start="${escapeHtml(a.startISO)}">
+      <div class="stack-card__head">
+        <div>
+          <div class="stack-card__title">${escapeHtml(a.serviceName)} — ${escapeHtml(a.name)}</div>
+          <div class="stack-card__meta">${fmtDateTime(a.startISO)}</div>
+        </div>
+      </div>
+      <div class="stack-card__details">
+        <div>📞 ${phone}</div>
+        ${emailLine}
+        ${noteLine}
+      </div>
+      <div class="stack-card__actions">
+        <a class="btn btn-ghost" href="tel:${phone}">📞 Pozovi</a>
+        <a class="btn btn-ghost" data-action="wa">📱 WhatsApp</a>
+        <button class="btn btn-ghost" type="button" data-action="reschedule">✏️ Pomjeri</button>
+        <button class="btn btn-danger" type="button" data-action="cancel">✕ Otkaži</button>
+      </div>
+    </article>
+  `;
+}
+
+async function onAction(e) {
+  const action = e.currentTarget.dataset.action;
+  const card = e.currentTarget.closest(".stack-card");
+  const eventId = card.dataset.eventId;
+  const name = card.dataset.name;
+  const phone = card.dataset.phone;
+  const service = card.dataset.service;
+  const start = card.dataset.start;
+
+  if (action === "wa") {
+    const when = fmtDateTime(start);
+    const msg = `Zdravo ${name}, vezano za vaš termin (${service}, ${when}) — L'Essenza.`;
+    const digits = phone.replace(/\D+/g, "");
+    window.open(`https://wa.me/${digits}?text=${encodeURIComponent(msg)}`, "_blank");
+    e.preventDefault();
+    return;
+  }
+
+  if (action === "cancel") {
+    openModal("Otkaži termin", `
+      <p><strong>${escapeHtml(service)}</strong> — ${escapeHtml(name)}<br><span class="muted">${fmtDateTime(start)}</span></p>
+      <div class="field">
+        <label for="cancel-reason">Razlog (opciono, šalje se klijentu)</label>
+        <input id="cancel-reason" type="text" maxlength="200" placeholder="npr. bolest">
+      </div>
+      <div class="stack-card__actions">
+        <button class="btn btn-ghost" type="button" data-close="1">Nazad</button>
+        <button class="btn btn-danger" type="button" id="confirm-cancel">Otkaži termin</button>
+      </div>
+    `);
+    document.getElementById("confirm-cancel").addEventListener("click", async () => {
+      const reason = document.getElementById("cancel-reason").value.trim();
+      try {
+        const r = await must("/api/admin/cancel-booking", { method: "POST", body: { eventId, reason } });
+        closeModal();
+        toast("Termin otkazan.", "success");
+        if (r.whatsappLink && !r.emailSent) {
+          window.open(r.whatsappLink, "_blank");
+        }
+        await renderList();
+      } catch (err) {
+        toast(err.message, "error");
+      }
+    });
+    return;
+  }
+
+  if (action === "reschedule") {
+    const curLocal = new Date(start).toISOString().slice(0, 16);
+    openModal("Pomjeri termin", `
+      <p><strong>${escapeHtml(service)}</strong> — ${escapeHtml(name)}<br><span class="muted">Trenutno: ${fmtDateTime(start)}</span></p>
+      <div class="field">
+        <label for="new-start">Novo vrijeme</label>
+        <input id="new-start" type="datetime-local" value="${curLocal}" required>
+      </div>
+      <div class="stack-card__actions">
+        <button class="btn btn-ghost" type="button" data-close="1">Nazad</button>
+        <button class="btn btn-primary" type="button" id="confirm-reschedule">Pomjeri</button>
+      </div>
+    `);
+    document.getElementById("confirm-reschedule").addEventListener("click", async () => {
+      const local = document.getElementById("new-start").value;
+      if (!local) return;
+      const iso = new Date(local).toISOString();
+      try {
+        const r = await must("/api/admin/reschedule-booking", { method: "POST", body: { eventId, newStartISO: iso } });
+        closeModal();
+        toast("Termin pomjeren.", "success");
+        if (r.whatsappLink && !r.emailSent) window.open(r.whatsappLink, "_blank");
+        await renderList();
+      } catch (err) {
+        toast(err.message, "error");
+      }
+    });
+    return;
+  }
+}
+
+async function openManualBookingModal() {
+  const services = (await getServices()).filter((s) => s.active);
+  const opts = services.map((s) => `<option value="${s.id}">${escapeHtml(s.name)} (${s.durationMinutes} min)</option>`).join("");
+  openModal("Dodaj termin ručno", `
+    <div class="field"><label for="mb-service">Usluga</label><select id="mb-service">${opts}</select></div>
+    <div class="field"><label for="mb-start">Početak</label><input id="mb-start" type="datetime-local" required></div>
+    <div class="field"><label for="mb-name">Ime</label><input id="mb-name" type="text" required maxlength="120"></div>
+    <div class="field"><label for="mb-phone">Telefon</label><input id="mb-phone" type="tel" required placeholder="+38269123456 ili 069123456"></div>
+    <div class="field"><label for="mb-email">Email (opciono)</label><input id="mb-email" type="email"></div>
+    <div class="field"><label for="mb-note">Napomena (opciono)</label><input id="mb-note" type="text" maxlength="500"></div>
+    <div class="stack-card__actions">
+      <button class="btn btn-ghost" type="button" data-close="1">Nazad</button>
+      <button class="btn btn-primary" type="button" id="mb-save">Dodaj</button>
+    </div>
+  `);
+  document.getElementById("mb-save").addEventListener("click", async () => {
+    const serviceId = document.getElementById("mb-service").value;
+    const local = document.getElementById("mb-start").value;
+    const name = document.getElementById("mb-name").value.trim();
+    const phone = document.getElementById("mb-phone").value.trim();
+    const email = document.getElementById("mb-email").value.trim();
+    const note = document.getElementById("mb-note").value.trim();
+    if (!serviceId || !local || !name || !phone) {
+      toast("Popuni sva obavezna polja.", "error");
+      return;
+    }
+    const startISO = new Date(local).toISOString();
+    try {
+      await must("/api/admin/manual-booking", {
+        method: "POST",
+        body: { serviceId, startISO, name, phone, email: email || undefined, note: note || undefined },
+      });
+      closeModal();
+      toast("Termin dodan.", "success");
+      await renderList();
+    } catch (e) {
+      toast(e.message, "error");
+    }
+  });
+}
+
+registerTab("today", renderList);
