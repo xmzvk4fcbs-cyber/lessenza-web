@@ -320,4 +320,23 @@ ui.inquiryOpen.addEventListener("click", (e) => {
 });
 
 // Init
-loadServices().catch((e) => showError(e.message));
+(async () => {
+  try {
+    const s = await apiGet("/api/public-settings");
+    state.bookingWindowDays = s.bookingWindowDays;
+    const dial = document.getElementById("f-dial");
+    const idial = document.getElementById("i-dial");
+    [dial, idial].forEach((sel) => {
+      if (!sel) return;
+      const opt = Array.from(sel.options).find((o) => o.value === s.defaultCountryCode);
+      if (opt) opt.selected = true;
+    });
+  } catch {
+    // use defaults
+  }
+  try {
+    await loadServices();
+  } catch (e) {
+    showError(e.message);
+  }
+})();
