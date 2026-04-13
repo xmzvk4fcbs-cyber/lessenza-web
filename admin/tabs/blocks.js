@@ -1,2 +1,71 @@
-import { registerTab } from "../admin.js";
-registerTab("blocks", async () => {});
+import { registerTab, must, toast, escapeHtml, fmtDateTime } from "../admin.js";
+
+const form = document.getElementById("blocks-form");
+const list = document.getElementById("blocks-list");
+
+form.addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const start = document.getElementById("block-start").value;
+  const end = document.getElementById("block-end").value;
+  const reason = document.getElementById("block-reason").value.trim();
+  if (!start || !end) { toast("Unesi početak i kraj.", "error"); return; }
+  try {
+    await must("/api/admin/blocks", {
+      method: "POST",
+      body: {
+        startISO: new Date(start).toISOString(),
+        endISO: new Date(end).toISOString(),
+        reason: reason || undefined,
+      },
+    });
+    form.reset();
+    toast("Blok dodan.", "success");
+    await render();
+  } catch (e2) {
+    toast(e2.message, "error");
+  }
+});
+
+async function render() {
+  list.innerHTML = `<p class="muted">Učitavanje...</p>`;
+  try {
+    const { blocks } = await must("/api/admin/blocks");
+    if (!blocks.length) {
+      list.innerHTML = `<p class="muted">Nema aktivnih blokova.</p>`;
+      return;
+    }
+    list.innerHTML = blocks
+      .slice()
+      .sort((a, b) => a.startISO.localeCompare(b.startISO))
+      .map(
+        (b) => `
+        <article class="stack-card" data-id="${escapeHtml(b.id)}">
+          <div class="stack-card__head">
+            <div>
+              <div class="stack-card__title">${escapeHtml(b.reason || "(bez razloga)")}</div>
+              <div class="stack-card__meta">${fmtDateTime(b.startISO)} — ${fmtDateTime(b.endISO)}</div>
+            </div>
+            <button class="btn btn-danger" type="button" data-del="${escapeHtml(b.id)}">Obriši</button>
+          </div>
+        </article>
+      `
+      )
+      .join("");
+    list.querySelectorAll("[data-del]").forEach((btn) =>
+      btn.addEventListener("click", async () => {
+        const id = btn.dataset.del;
+        try {
+          await must(`/api/admin/blocks?id=${encodeURIComponent(id)}`, { method: "DELETE" });
+          toast("Blok obrisan.", "success");
+          await render();
+        } catch (e) {
+          toast(e.message, "error");
+        }
+      })
+    );
+  } catch (e) {
+    list.innerHTML = `<p class="muted">${escapeHtml(e.message)}</p>`;
+  }
+}
+
+registerTab("blocks", render);
