@@ -100,3 +100,97 @@ export function inquiryCreatedToOwner(i: InquiryForEmail, ctx: OwnerTemplateCtx)
     text,
   };
 }
+
+export function bookingCancelledToClient(
+  b: Booking,
+  reason: string,
+  ctx: ClientTemplateCtx
+): EmailMessage {
+  if (!b.email) throw new Error("Booking has no client email");
+  const dateLine = formatDateHuman(b.startISO);
+  const phoneLine = ctx.ownerPhone ? `Za novi termin pozovite ${formatPhoneNational(ctx.ownerPhone)}.` : "";
+  const text = [
+    `Zdravo ${b.name},`,
+    ``,
+    `Nažalost moramo otkazati vaš termin:`,
+    ``,
+    `Usluga: ${b.serviceName}`,
+    `Kada: ${dateLine}`,
+    reason ? `Razlog: ${reason}` : "",
+    ``,
+    phoneLine,
+    ``,
+    `— L'Essenza`,
+  ].filter(Boolean).join("\n");
+  return { to: b.email, subject: "L'Essenza — Termin je otkazan", text };
+}
+
+export function bookingRescheduledToClient(
+  original: Booking,
+  updated: Booking,
+  ctx: ClientTemplateCtx
+): EmailMessage {
+  if (!updated.email) throw new Error("Booking has no client email");
+  const oldLine = formatDateHuman(original.startISO);
+  const newLine = formatDateHuman(updated.startISO);
+  const phoneLine = ctx.ownerPhone ? `Za izmjene pozovite ${formatPhoneNational(ctx.ownerPhone)}.` : "";
+  const text = [
+    `Zdravo ${updated.name},`,
+    ``,
+    `Vaš termin u L'Essenza je pomjeren.`,
+    ``,
+    `Usluga: ${updated.serviceName}`,
+    `Stari termin: ${oldLine}`,
+    `Novi termin: ${newLine}`,
+    `Gdje: ${ctx.salonAddress}`,
+    ``,
+    phoneLine,
+    ``,
+    `— L'Essenza`,
+  ].filter(Boolean).join("\n");
+  return { to: updated.email, subject: "L'Essenza — Termin pomjeren", text };
+}
+
+export function inquiryAcceptedToClient(
+  i: InquiryForEmail,
+  startISO: string,
+  ctx: ClientTemplateCtx
+): EmailMessage {
+  if (!i.email) throw new Error("Inquiry has no client email");
+  const dateLine = formatDateHuman(startISO);
+  const phoneLine = ctx.ownerPhone ? `Za izmjene pozovite ${formatPhoneNational(ctx.ownerPhone)}.` : "";
+  const text = [
+    `Zdravo ${i.name},`,
+    ``,
+    `Vaš upit je prihvaćen. Zakazan termin:`,
+    ``,
+    `Usluga: ${i.serviceName}`,
+    `Kada: ${dateLine}`,
+    `Gdje: ${ctx.salonAddress}`,
+    ``,
+    phoneLine,
+    ``,
+    `— L'Essenza`,
+  ].filter(Boolean).join("\n");
+  return { to: i.email, subject: "L'Essenza — Upit prihvaćen", text };
+}
+
+export function inquiryDeclinedToClient(
+  i: InquiryForEmail,
+  reason: string,
+  ctx: ClientTemplateCtx
+): EmailMessage {
+  if (!i.email) throw new Error("Inquiry has no client email");
+  const phoneLine = ctx.ownerPhone ? `Za drugi datum pozovite ${formatPhoneNational(ctx.ownerPhone)}.` : "";
+  const text = [
+    `Zdravo ${i.name},`,
+    ``,
+    `Nažalost za ${i.desiredDateISO} nemamo slobodan termin.`,
+    reason ? `Napomena: ${reason}` : "",
+    ``,
+    phoneLine,
+    ``,
+    `— L'Essenza`,
+  ].filter(Boolean).join("\n");
+  return { to: i.email, subject: "L'Essenza — Upit", text };
+}

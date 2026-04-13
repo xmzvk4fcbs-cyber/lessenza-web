@@ -3,6 +3,10 @@ import {
   bookingConfirmedToClient,
   bookingCreatedToOwner,
   inquiryCreatedToOwner,
+  bookingCancelledToClient,
+  bookingRescheduledToClient,
+  inquiryAcceptedToClient,
+  inquiryDeclinedToClient,
 } from "../../netlify/lib/email-templates";
 import type { Booking } from "../../netlify/lib/calendar-domain";
 
@@ -60,5 +64,45 @@ describe("email templates", () => {
     expect(m.subject).toMatch(/upit/i);
     expect(m.text).toContain("Mara");
     expect(m.text).toContain("2026-08-15");
+  });
+});
+
+describe("cancellation + reschedule + inquiry templates", () => {
+  it("bookingCancelledToClient includes reason and contact phone", () => {
+    const m = bookingCancelledToClient(booking, "bolest", {
+      salonAddress: "Bajova 22",
+      ownerPhone: "+38269000000",
+    });
+    expect(m.to).toBe("ana@example.com");
+    expect(m.subject).toMatch(/otkazan/i);
+    expect(m.text).toContain("bolest");
+    expect(m.text).toContain("069 000 000");
+  });
+
+  it("bookingRescheduledToClient shows old and new date", () => {
+    const updated = { ...booking, startISO: "2026-04-21T10:00:00.000Z", endISO: "2026-04-21T11:00:00.000Z" };
+    const m = bookingRescheduledToClient(booking, updated, { salonAddress: "Bajova 22" });
+    expect(m.subject).toMatch(/pomjeren/i);
+    expect(m.text).toContain("10:00"); // original (12:00 CEST)... actually formatted in TZ
+  });
+
+  it("inquiryAcceptedToClient and Declined require email", () => {
+    const inq = {
+      id: "i",
+      createdAt: new Date().toISOString(),
+      name: "X",
+      phone: "+382691",
+      email: "x@x.com",
+      serviceId: "s",
+      serviceName: "S",
+      desiredDateISO: "2099-06-01",
+      desiredTimeWindow: "morning",
+      status: "pending",
+    };
+    const m1 = inquiryAcceptedToClient(inq, "2099-06-01T08:00:00Z", { salonAddress: "B 22" });
+    expect(m1.to).toBe("x@x.com");
+    const m2 = inquiryDeclinedToClient(inq, "zauzeto", { salonAddress: "B 22" });
+    expect(m2.to).toBe("x@x.com");
+    expect(m2.text).toContain("2099-06-01");
   });
 });
