@@ -65,6 +65,6 @@ describe("/api/admin/reschedule-booking", () => {
     expect(r?.statusCode).toBe(200);
     expect(patched).toHaveLength(1);
     expect(mailer.sent).toHaveLength(1);
-    expect(mailer.sent[0].to).toBe("ana@example.com");
+    expect(mailer.sent[0]?.to).toBe("ana@example.com");
   });
 });

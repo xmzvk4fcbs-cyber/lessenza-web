@@ -1,5 +1,5 @@
-import type { Handler } from "@netlify/functions";
-import { unauthorized } from "./http";
+import type { Handler, HandlerResponse } from "@netlify/functions";
+import { unauthorized, serverError } from "./http";
 import { requireAdmin } from "./auth";
 
 export function adminGuard(inner: Handler): Handler {
@@ -9,6 +9,8 @@ export function adminGuard(inner: Handler): Handler {
     } catch {
       return unauthorized();
     }
-    return inner(event, context);
+    const result = await inner(event, context);
+    if (!result) return serverError("Handler returned no response");
+    return result as HandlerResponse;
   };
 }

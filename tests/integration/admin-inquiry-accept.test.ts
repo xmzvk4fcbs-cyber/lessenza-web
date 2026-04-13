@@ -71,6 +71,6 @@ describe("/api/admin/inquiry-accept", () => {
     expect(inserts).toHaveLength(1);
     expect(mailer.sent).toHaveLength(1);
     const list = await listInquiries();
-    expect(list[0].status).toBe("accepted");
+    expect(list[0]?.status).toBe("accepted");
   });
 });

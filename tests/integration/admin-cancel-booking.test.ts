@@ -69,7 +69,7 @@ describe("/api/admin/cancel-booking", () => {
     expect(r?.statusCode).toBe(200);
     expect(deleted).toEqual(["gcal-1"]);
     expect(mailer.sent).toHaveLength(1);
-    expect(mailer.sent[0].to).toBe("ana@example.com");
+    expect(mailer.sent[0]?.to).toBe("ana@example.com");
   });
 
   it("still deletes event when booking has no email", async () => {

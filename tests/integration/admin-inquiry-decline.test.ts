@@ -49,7 +49,7 @@ describe("/api/admin/inquiry-decline", () => {
     expect(r?.statusCode).toBe(200);
     expect(mailer.sent).toHaveLength(1);
     const all = await listInquiries();
-    expect(all[0].status).toBe("declined");
+    expect(all[0]?.status).toBe("declined");
   });
 
   it("404 unknown inquiry", async () => {
