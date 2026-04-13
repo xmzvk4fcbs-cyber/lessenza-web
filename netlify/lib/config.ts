@@ -6,11 +6,13 @@ import {
   SettingsSchema,
   ParallelPairsSchema,
   BlocksSchema,
+  InquirySchema,
   type Service,
   type WorkingHours,
   type Settings,
   type ParallelPair,
   type Block,
+  type Inquiry,
 } from "./schemas";
 import { DEFAULT_SERVICES, DEFAULT_WORKING_HOURS, DEFAULT_PARALLEL_PAIRS } from "./defaults";
 
@@ -77,4 +79,37 @@ export async function removeBlock(id: string): Promise<void> {
   const current = await getBlocks();
   const next = current.filter((b) => b.id !== id);
   await store().setJSON(KEY_BLOCKS, next);
+}
+
+const INQUIRY_PREFIX = "inquiries/";
+
+export async function addInquiry(i: Inquiry): Promise<void> {
+  InquirySchema.parse(i);
+  await store().setJSON(`${INQUIRY_PREFIX}${i.id}.json`, i);
+}
+
+export async function listInquiries(): Promise<Inquiry[]> {
+  const keys = await store().list(INQUIRY_PREFIX);
+  const out: Inquiry[] = [];
+  for (const k of keys) {
+    const raw = await store().getJSON<unknown>(k);
+    if (!raw) continue;
+    const r = InquirySchema.safeParse(raw);
+    if (r.success) out.push(r.data);
+  }
+  return out.sort((a, b) => a.createdAt.localeCompare(b.createdAt));
+}
+
+export async function getInquiry(id: string): Promise<Inquiry | null> {
+  const raw = await store().getJSON<unknown>(`${INQUIRY_PREFIX}${id}.json`);
+  if (!raw) return null;
+  const r = InquirySchema.safeParse(raw);
+  return r.success ? r.data : null;
+}
+
+export async function updateInquiryStatus(id: string, status: Inquiry["status"]): Promise<void> {
+  const cur = await getInquiry(id);
+  if (!cur) throw new Error("not-found");
+  const next: Inquiry = { ...cur, status };
+  await store().setJSON(`${INQUIRY_PREFIX}${id}.json`, next);
 }
