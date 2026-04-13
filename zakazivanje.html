@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="sr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Zakazi Termin — L'Essenza Beauty Salon</title>
+  <meta name="description" content="Zakazite svoj termin u L'Essenza Beauty Salon — brzo i jednostavno.">
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>✨</text></svg>">
+</head>
+<body>
+
+  <header class="header">
+    <div class="header__inner">
+      <a href="index.html" class="header__logo">
+        <div class="header__logo-icon">L'E</div>
+        <div class="header__logo-text">L'ESENZA <span>beauty salon</span></div>
+      </a>
+      <nav class="nav">
+        <a href="index.html" class="nav__link">Pocetna</a>
+        <a href="usluge.html" class="nav__link">Usluge</a>
+        <a href="o-nama.html" class="nav__link">O Nama</a>
+        <a href="galerija.html" class="nav__link">Galerija</a>
+        <a href="kontakt.html" class="nav__link">Kontakt</a>
+        <a href="zakazivanje.html" class="btn btn-primary nav__cta">Zakazi Termin</a>
+      </nav>
+      <button class="menu-toggle" aria-label="Menu"><span></span><span></span><span></span></button>
+    </div>
+  </header>
+
+  <div class="mobile-nav">
+    <a href="index.html" class="mobile-nav__link">Pocetna</a>
+    <a href="usluge.html" class="mobile-nav__link">Usluge</a>
+    <a href="o-nama.html" class="mobile-nav__link">O Nama</a>
+    <a href="galerija.html" class="mobile-nav__link">Galerija</a>
+    <a href="kontakt.html" class="mobile-nav__link">Kontakt</a>
+    <a href="zakazivanje.html" class="mobile-nav__link">Zakazi Termin</a>
+  </div>
+
+  <section class="page-hero">
+    <div class="page-hero__inner">
+      <span class="section-label">Rezervacija</span>
+      <h1 class="page-hero__title">Zakazi Termin</h1>
+      <p class="page-hero__subtitle">Izaberite uslugu, datum i vrijeme — mi cemo se pobrinuti za sve ostalo.</p>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="section__inner">
+      <div class="booking-form reveal">
+        <form>
+          <div class="form-row">
+            <div class="form-group">
+              <label for="name">Ime i Prezime</label>
+              <input type="text" id="name" name="name" required placeholder="Vase ime">
+            </div>
+            <div class="form-group">
+              <label for="phone">Telefon</label>
+              <input type="tel" id="phone" name="phone" required placeholder="+382 6X XXX XXX">
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label for="service">Usluga</label>
+              <select id="service" name="service" required>
+                <option value="" disabled selected>Izaberite uslugu</option>
+                <option value="Body Sculpt">Body Sculpt</option>
+                <option value="Laserska Epilacija">Laserska Epilacija</option>
+                <option value="Manikir - Klasican">Manikir - Klasican</option>
+                <option value="Manikir - Gel">Manikir - Gel</option>
+                <option value="Manikir - Spa">Manikir - Spa</option>
+                <option value="Pedikir - Klasican">Pedikir - Klasican</option>
+                <option value="Pedikir - Spa">Pedikir - Spa</option>
+                <option value="Depilacija">Depilacija</option>
+                <option value="Konsultacija">Besplatna konsultacija</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="date">Datum</label>
+              <input type="date" id="date" name="date" required>
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label for="time">Zeljeno Vrijeme</label>
+              <select id="time" name="time" required>
+                <option value="" disabled selected>Izaberite vrijeme</option>
+                <option value="09:00">09:00</option>
+                <option value="09:30">09:30</option>
+                <option value="10:00">10:00</option>
+                <option value="10:30">10:30</option>
+                <option value="11:00">11:00</option>
+                <option value="11:30">11:30</option>
+                <option value="12:00">12:00</option>
+                <option value="12:30">12:30</option>
+                <option value="13:00">13:00</option>
+                <option value="13:30">13:30</option>
+                <option value="14:00">14:00</option>
+                <option value="14:30">14:30</option>
+                <option value="15:00">15:00</option>
+                <option value="15:30">15:30</option>
+                <option value="16:00">16:00</option>
+                <option value="16:30">16:30</option>
+                <option value="17:00">17:00</option>
+                <option value="17:30">17:30</option>
+                <option value="18:00">18:00</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="email">Email (opciono)</label>
+              <input type="email" id="email" name="email" placeholder="vas@email.com">
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group form-group--full">
+              <label for="message">Napomena (opciono)</label>
+              <textarea id="message" name="message" placeholder="Dodajte napomenu ili poseban zahtjev..."></textarea>
+            </div>
+          </div>
+
+          <button type="submit" class="btn btn-primary">Posalji Zahtjev</button>
+        </form>
+      </div>
+
+      <div class="booking-info reveal">
+        <p>Nakon slanja zahtjeva, bicete preusmereni na WhatsApp za potvrdu termina. Mozete nas kontaktirati i direktno na <a href="tel:+38269000000" style="color: var(--gold-dark);">+382 69 000 000</a></p>
+      </div>
+    </div>
+  </section>
+
+  <footer class="footer">
+    <div class="footer__inner">
+      <div class="footer__grid">
+        <div>
+          <div class="footer__brand-name">L'Essenza</div>
+          <p class="footer__brand-desc">Beauty salon posvecen vasoj ljepoti i njezi. Jer vi zasluzujete samo najbolje.</p>
+          <div class="footer__social">
+            <a href="https://www.instagram.com/l_essenza_beauty_salon/" target="_blank" rel="noopener" aria-label="Instagram">IG</a>
+          </div>
+        </div>
+        <div>
+          <h4 class="footer__heading">Navigacija</h4>
+          <div class="footer__links">
+            <a href="index.html">Pocetna</a>
+            <a href="usluge.html">Usluge</a>
+            <a href="o-nama.html">O Nama</a>
+            <a href="galerija.html">Galerija</a>
+          </div>
+        </div>
+        <div>
+          <h4 class="footer__heading">Usluge</h4>
+          <div class="footer__links">
+            <a href="usluge.html">Body Sculpt</a>
+            <a href="usluge.html">Laserska Epilacija</a>
+            <a href="usluge.html">Manikir</a>
+            <a href="usluge.html">Pedikir</a>
+            <a href="usluge.html">Depilacija</a>
+          </div>
+        </div>
+        <div>
+          <h4 class="footer__heading">Kontakt</h4>
+          <div class="footer__links">
+            <a href="kontakt.html">Bajova 22</a>
+            <a href="tel:+38269000000">+382 69 000 000</a>
+            <a href="zakazivanje.html">Zakazi termin</a>
+          </div>
+        </div>
+      </div>
+      <div class="footer__bottom">
+        <span>&copy; 2026 L'Essenza Beauty Salon. Sva prava zadrzana.</span>
+        <span>Bajova 22</span>
+      </div>
+    </div>
+  </footer>
+
+  <script src="js/main.js"></script>
+</body>
+</html>

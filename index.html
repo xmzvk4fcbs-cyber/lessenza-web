@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="sr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>L'Essenza Beauty Salon</title>
+  <meta name="description" content="L'Essenza Beauty Salon — Body Sculpt, Laserska Epilacija, Manikir, Pedikir, Depilacija. Zakazi svoj termin.">
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>✨</text></svg>">
+</head>
+<body>
+
+  <!-- Header -->
+  <header class="header header--transparent">
+    <div class="header__inner">
+      <a href="index.html" class="header__logo">
+        <div class="header__logo-icon">L'E</div>
+        <div class="header__logo-text">
+          L'ESENZA
+          <span>beauty salon</span>
+        </div>
+      </a>
+
+      <nav class="nav">
+        <a href="index.html" class="nav__link nav__link--active">Pocetna</a>
+        <a href="usluge.html" class="nav__link">Usluge</a>
+        <a href="o-nama.html" class="nav__link">O Nama</a>
+        <a href="galerija.html" class="nav__link">Galerija</a>
+        <a href="kontakt.html" class="nav__link">Kontakt</a>
+        <a href="zakazivanje.html" class="btn btn-primary nav__cta">Zakazi Termin</a>
+      </nav>
+
+      <button class="menu-toggle" aria-label="Menu">
+        <span></span>
+        <span></span>
+        <span></span>
+      </button>
+    </div>
+  </header>
+
+  <!-- Mobile Nav -->
+  <div class="mobile-nav">
+    <a href="index.html" class="mobile-nav__link">Pocetna</a>
+    <a href="usluge.html" class="mobile-nav__link">Usluge</a>
+    <a href="o-nama.html" class="mobile-nav__link">O Nama</a>
+    <a href="galerija.html" class="mobile-nav__link">Galerija</a>
+    <a href="kontakt.html" class="mobile-nav__link">Kontakt</a>
+    <a href="zakazivanje.html" class="mobile-nav__link">Zakazi Termin</a>
+  </div>
+
+  <!-- Hero -->
+  <section class="hero">
+    <div class="hero__bg"></div>
+    <div class="hero__overlay"></div>
+    <div class="hero__content">
+      <span class="hero__label">Beauty Salon</span>
+      <h1 class="hero__title">Otkrijte svoju<br><em>sustinu</em></h1>
+      <p class="hero__desc">L'Essenza znaci sustina. Prostor gdje se spajaju njega, ljepota i moderna tehnologija za rezultate koje zasluzujete.</p>
+      <div class="hero__actions">
+        <a href="zakazivanje.html" class="btn btn-primary">Zakazi Termin</a>
+        <a href="usluge.html" class="btn btn-outline" style="border-color: rgba(255,255,255,0.3); color: #fff;">Nase Usluge</a>
+      </div>
+    </div>
+    <div class="hero__scroll">
+      <div class="hero__scroll-line"></div>
+    </div>
+  </section>
+
+  <!-- Services Preview -->
+  <section class="section">
+    <div class="section__inner">
+      <div class="reveal">
+        <span class="section-label">Nase Usluge</span>
+        <h2 class="section-title">Tretmani koji transformisu</h2>
+        <p class="section-subtitle">Koristimo najsavremenije aparate i tehnike da vam pruzimo rezultate koji se vide od prvog tretmana.</p>
+      </div>
+
+      <div class="services-preview">
+        <a href="usluge.html" class="service-card reveal">
+          <div class="service-card__img" style="background: linear-gradient(135deg, #3d342a, #2a2520); width:100%; height:100%;"></div>
+          <div class="service-card__overlay">
+            <div class="service-card__arrow">&nearr;</div>
+            <h3 class="service-card__name">Body Sculpt</h3>
+            <p class="service-card__desc">MX Sculpt — zatezanje koze, izgradnja misica, uklanjanje celulita</p>
+          </div>
+        </a>
+
+        <a href="usluge.html" class="service-card reveal">
+          <div class="service-card__img" style="background: linear-gradient(135deg, #4a3f35, #2f2925); width:100%; height:100%;"></div>
+          <div class="service-card__overlay">
+            <div class="service-card__arrow">&nearr;</div>
+            <h3 class="service-card__name">Laserska Epilacija</h3>
+            <p class="service-card__desc">Trajna epilacija najnovijom laserskom tehnologijom</p>
+          </div>
+        </a>
+
+        <a href="usluge.html" class="service-card reveal">
+          <div class="service-card__img" style="background: linear-gradient(135deg, #504538, #3a332c); width:100%; height:100%;"></div>
+          <div class="service-card__overlay">
+            <div class="service-card__arrow">&nearr;</div>
+            <h3 class="service-card__name">Manikir &amp; Pedikir</h3>
+            <p class="service-card__desc">Klasican, gel i spa manikir i pedikir</p>
+          </div>
+        </a>
+      </div>
+    </div>
+  </section>
+
+  <!-- About Preview -->
+  <section class="section section--cream">
+    <div class="section__inner">
+      <div class="about-preview">
+        <div class="about-preview__image reveal">
+          <div style="width:100%; height:100%; background: linear-gradient(135deg, var(--cream-dark), #d4c5b3); display:flex; align-items:center; justify-content:center; font-family: var(--font-display); font-size: 3rem; color: var(--gold-dark); opacity: 0.4;">L'E</div>
+        </div>
+        <div class="about-preview__content reveal">
+          <span class="section-label">O Nama</span>
+          <h2 class="section-title">L'Essenza znaci<br><em>sustina</em></h2>
+          <p class="about-preview__text">Naziv L'Essenza nastao je nakon dugih godina planiranja, mashtanja i stvaranja vizije o salonu koji nece biti samo mjesto za tretmane, vec prostor u kojem se cuva ono najvaznije — sustina.</p>
+          <p class="about-preview__text">Ja sam sustina L'Essenze — moj rad, moja posvecnost, moj stil i moja potreba za savrsenim tretmanom.</p>
+          <a href="o-nama.html" class="btn btn-outline" style="margin-top:16px; align-self:flex-start;">Saznaj Vise</a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Stats -->
+  <section class="section section--dark">
+    <div class="section__inner">
+      <div class="stats reveal">
+        <div class="stat">
+          <div class="stat__number" data-count="900" data-suffix="+">0</div>
+          <div class="stat__label">Zadovoljnih klijenata</div>
+        </div>
+        <div class="stat">
+          <div class="stat__number" data-count="5" data-suffix="">0</div>
+          <div class="stat__label">Vrsta tretmana</div>
+        </div>
+        <div class="stat">
+          <div class="stat__number" data-count="3" data-suffix="">0</div>
+          <div class="stat__label">Godine iskustva</div>
+        </div>
+        <div class="stat">
+          <div class="stat__number" data-count="100" data-suffix="%">0</div>
+          <div class="stat__label">Posvecnost kvalitetu</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- CTA -->
+  <section class="cta-banner section--cream">
+    <div class="reveal">
+      <span class="section-label">Spremni ste?</span>
+      <h2>Zakazite svoj termin<br><em>danas</em></h2>
+      <p>Kontaktirajte nas i saznajte koji tretman je idealan za vas.</p>
+      <a href="zakazivanje.html" class="btn btn-primary">Zakazi Termin</a>
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <footer class="footer">
+    <div class="footer__inner">
+      <div class="footer__grid">
+        <div>
+          <div class="footer__brand-name">L'Essenza</div>
+          <p class="footer__brand-desc">Beauty salon posvecen vasoj ljepoti i njezi. Jer vi zasluzujete samo najbolje.</p>
+          <div class="footer__social">
+            <a href="https://www.instagram.com/l_essenza_beauty_salon/" target="_blank" rel="noopener" aria-label="Instagram">IG</a>
+          </div>
+        </div>
+        <div>
+          <h4 class="footer__heading">Navigacija</h4>
+          <div class="footer__links">
+            <a href="index.html">Pocetna</a>
+            <a href="usluge.html">Usluge</a>
+            <a href="o-nama.html">O Nama</a>
+            <a href="galerija.html">Galerija</a>
+          </div>
+        </div>
+        <div>
+          <h4 class="footer__heading">Usluge</h4>
+          <div class="footer__links">
+            <a href="usluge.html">Body Sculpt</a>
+            <a href="usluge.html">Laserska Epilacija</a>
+            <a href="usluge.html">Manikir</a>
+            <a href="usluge.html">Pedikir</a>
+            <a href="usluge.html">Depilacija</a>
+          </div>
+        </div>
+        <div>
+          <h4 class="footer__heading">Kontakt</h4>
+          <div class="footer__links">
+            <a href="kontakt.html">Bajova 22</a>
+            <a href="tel:+38269000000">+382 69 000 000</a>
+            <a href="zakazivanje.html">Zakazi termin</a>
+          </div>
+        </div>
+      </div>
+      <div class="footer__bottom">
+        <span>&copy; 2026 L'Essenza Beauty Salon. Sva prava zadrzana.</span>
+        <span>Bajova 22</span>
+      </div>
+    </div>
+  </footer>
+
+  <script src="js/main.js"></script>
+</body>
+</html>
