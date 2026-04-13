@@ -1,0 +1,40 @@
+{
+  "name": "lessenza",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "engines": { "node": ">=20" },
+  "scripts": {
+    "dev": "netlify dev",
+    "build": "tsc -p tsconfig.json --noEmit",
+    "lint": "eslint \"netlify/**/*.ts\" \"tests/**/*.ts\"",
+    "format": "prettier -w \"**/*.{ts,js,json,md,html,css}\"",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "dependencies": {
+    "@netlify/blobs": "^8.1.0",
+    "@netlify/functions": "^2.8.0",
+    "bcryptjs": "^2.4.3",
+    "date-fns": "^3.6.0",
+    "date-fns-tz": "^3.1.3",
+    "googleapis": "^144.0.0",
+    "jose": "^5.9.6",
+    "libphonenumber-js": "^1.11.11",
+    "nodemailer": "^6.9.15",
+    "resend": "^4.0.1",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "@types/bcryptjs": "^2.4.6",
+    "@types/node": "^20.14.10",
+    "@types/nodemailer": "^6.4.16",
+    "@typescript-eslint/eslint-plugin": "^8.8.0",
+    "@typescript-eslint/parser": "^8.8.0",
+    "eslint": "^8.57.1",
+    "netlify-cli": "^17.37.2",
+    "prettier": "^3.3.3",
+    "typescript": "^5.6.2",
+    "vitest": "^2.1.1"
+  }
+}
