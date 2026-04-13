@@ -47,86 +47,140 @@
 
   <section class="section">
     <div class="section__inner">
-      <div class="booking-form reveal">
-        <form>
-          <div class="form-row">
-            <div class="form-group">
-              <label for="name">Ime i Prezime</label>
-              <input type="text" id="name" name="name" required placeholder="Vase ime">
-            </div>
-            <div class="form-group">
-              <label for="phone">Telefon</label>
-              <input type="tel" id="phone" name="phone" required placeholder="+382 6X XXX XXX">
-            </div>
-          </div>
+      <link rel="stylesheet" href="css/booking.css">
 
-          <div class="form-row">
-            <div class="form-group">
-              <label for="service">Usluga</label>
-              <select id="service" name="service" required>
-                <option value="" disabled selected>Izaberite uslugu</option>
-                <option value="Body Sculpt">Body Sculpt</option>
-                <option value="Laserska Epilacija">Laserska Epilacija</option>
-                <option value="Manikir - Klasican">Manikir - Klasican</option>
-                <option value="Manikir - Gel">Manikir - Gel</option>
-                <option value="Manikir - Spa">Manikir - Spa</option>
-                <option value="Pedikir - Klasican">Pedikir - Klasican</option>
-                <option value="Pedikir - Spa">Pedikir - Spa</option>
-                <option value="Depilacija">Depilacija</option>
-                <option value="Konsultacija">Besplatna konsultacija</option>
+      <div class="booking-wizard" id="wizard">
+        <ol class="booking-steps" aria-label="Koraci rezervacije">
+          <li class="booking-steps__item is-active" data-step="1">1. Usluga</li>
+          <li class="booking-steps__item" data-step="2">2. Datum</li>
+          <li class="booking-steps__item" data-step="3">3. Vrijeme</li>
+          <li class="booking-steps__item" data-step="4">4. Podaci</li>
+        </ol>
+
+        <div class="booking-error" id="wizard-error" hidden></div>
+
+        <section class="booking-step" id="step-1" aria-labelledby="step-1-title">
+          <h2 id="step-1-title">Izaberi uslugu</h2>
+          <div class="service-grid" id="service-grid" role="list"></div>
+        </section>
+
+        <section class="booking-step" id="step-2" hidden aria-labelledby="step-2-title">
+          <h2 id="step-2-title">Izaberi datum</h2>
+          <div id="date-picker"></div>
+          <a class="inquiry-link" href="#" id="inquiry-open">Trebam kasniji datum → pošalji upit</a>
+        </section>
+
+        <section class="booking-step" id="step-3" hidden aria-labelledby="step-3-title">
+          <h2 id="step-3-title">Izaberi vrijeme</h2>
+          <div class="slot-grid" id="slot-grid"></div>
+          <p class="slot-empty" id="slot-empty" hidden>Nema slobodnih termina za ovaj datum. Probaj drugi.</p>
+        </section>
+
+        <section class="booking-step" id="step-4" hidden aria-labelledby="step-4-title">
+          <h2 id="step-4-title">Tvoji podaci</h2>
+          <form id="details-form" novalidate>
+            <div class="field">
+              <label for="f-name">Ime i prezime</label>
+              <input id="f-name" name="name" type="text" required autocomplete="name" maxlength="120">
+            </div>
+            <div class="field">
+              <label for="f-phone">Telefon</label>
+              <div class="phone-field">
+                <select id="f-dial" aria-label="Pozivni broj">
+                  <option value="+382" selected>+382</option>
+                  <option value="+381">+381</option>
+                  <option value="+385">+385</option>
+                  <option value="+387">+387</option>
+                  <option value="+386">+386</option>
+                  <option value="+389">+389</option>
+                  <option value="+49">+49</option>
+                  <option value="+43">+43</option>
+                  <option value="+39">+39</option>
+                  <option value="+33">+33</option>
+                  <option value="+44">+44</option>
+                  <option value="+1">+1</option>
+                </select>
+                <input id="f-phone" name="phone" type="tel" required autocomplete="tel-national" inputmode="tel" placeholder="69 123 456">
+              </div>
+              <p class="field__hint">Obavezno — za potvrdu ili izmjene termina.</p>
+            </div>
+            <div class="field">
+              <label for="f-email">Email (opciono)</label>
+              <input id="f-email" name="email" type="email" autocomplete="email" placeholder="tvoj@email.com">
+              <p class="field__hint">Ako ostaviš email, poslaćemo ti potvrdu.</p>
+            </div>
+            <div class="field">
+              <label for="f-note">Napomena (opciono)</label>
+              <textarea id="f-note" name="note" maxlength="1000" placeholder="Dodaj napomenu ili poseban zahtjev..."></textarea>
+            </div>
+          </form>
+        </section>
+
+        <section class="booking-step" id="step-success" hidden aria-live="polite">
+          <div class="booking-success">
+            <div class="booking-success__check" aria-hidden="true">✓</div>
+            <h2>Termin zakazan</h2>
+            <p id="success-summary"></p>
+            <p id="success-email-note"></p>
+            <p>Vidimo se u Bajovoj 22.</p>
+          </div>
+        </section>
+
+        <section class="booking-step" id="step-inquiry" hidden aria-labelledby="inquiry-title">
+          <h2 id="inquiry-title">Pošalji upit za kasniji datum</h2>
+          <form id="inquiry-form" novalidate>
+            <div class="field">
+              <label for="i-date">Željeni datum</label>
+              <input id="i-date" name="desiredDateISO" type="date" required>
+            </div>
+            <div class="field">
+              <label for="i-window">Dio dana</label>
+              <select id="i-window" name="desiredTimeWindow" required>
+                <option value="morning">Jutro (do 12h)</option>
+                <option value="afternoon">Poslijepodne (12–18h)</option>
+                <option value="any" selected>Bilo kad</option>
               </select>
             </div>
-            <div class="form-group">
-              <label for="date">Datum</label>
-              <input type="date" id="date" name="date" required>
+            <div class="field">
+              <label for="i-name">Ime i prezime</label>
+              <input id="i-name" name="name" type="text" required maxlength="120">
             </div>
+            <div class="field">
+              <label for="i-phone">Telefon</label>
+              <div class="phone-field">
+                <select id="i-dial" aria-label="Pozivni broj">
+                  <option value="+382" selected>+382</option>
+                  <option value="+381">+381</option>
+                  <option value="+385">+385</option>
+                  <option value="+387">+387</option>
+                  <option value="+386">+386</option>
+                </select>
+                <input id="i-phone" name="phone" type="tel" required inputmode="tel">
+              </div>
+            </div>
+            <div class="field">
+              <label for="i-email">Email (opciono)</label>
+              <input id="i-email" name="email" type="email">
+            </div>
+            <div class="field">
+              <label for="i-note">Napomena</label>
+              <textarea id="i-note" name="note" maxlength="1000"></textarea>
+            </div>
+          </form>
+        </section>
+
+        <section class="booking-step" id="step-inquiry-success" hidden>
+          <div class="booking-success">
+            <div class="booking-success__check" aria-hidden="true">✓</div>
+            <h2>Upit poslat</h2>
+            <p>Javićemo ti se uskoro na telefon ili email.</p>
           </div>
+        </section>
 
-          <div class="form-row">
-            <div class="form-group">
-              <label for="time">Zeljeno Vrijeme</label>
-              <select id="time" name="time" required>
-                <option value="" disabled selected>Izaberite vrijeme</option>
-                <option value="09:00">09:00</option>
-                <option value="09:30">09:30</option>
-                <option value="10:00">10:00</option>
-                <option value="10:30">10:30</option>
-                <option value="11:00">11:00</option>
-                <option value="11:30">11:30</option>
-                <option value="12:00">12:00</option>
-                <option value="12:30">12:30</option>
-                <option value="13:00">13:00</option>
-                <option value="13:30">13:30</option>
-                <option value="14:00">14:00</option>
-                <option value="14:30">14:30</option>
-                <option value="15:00">15:00</option>
-                <option value="15:30">15:30</option>
-                <option value="16:00">16:00</option>
-                <option value="16:30">16:30</option>
-                <option value="17:00">17:00</option>
-                <option value="17:30">17:30</option>
-                <option value="18:00">18:00</option>
-              </select>
-            </div>
-            <div class="form-group">
-              <label for="email">Email (opciono)</label>
-              <input type="email" id="email" name="email" placeholder="vas@email.com">
-            </div>
-          </div>
-
-          <div class="form-row">
-            <div class="form-group form-group--full">
-              <label for="message">Napomena (opciono)</label>
-              <textarea id="message" name="message" placeholder="Dodajte napomenu ili poseban zahtjev..."></textarea>
-            </div>
-          </div>
-
-          <button type="submit" class="btn btn-primary">Posalji Zahtjev</button>
-        </form>
-      </div>
-
-      <div class="booking-info reveal">
-        <p>Nakon slanja zahtjeva, bicete preusmereni na WhatsApp za potvrdu termina. Mozete nas kontaktirati i direktno na <a href="tel:+38269000000" style="color: var(--gold-dark);">+382 69 000 000</a></p>
+        <div class="booking-nav" id="nav">
+          <button type="button" class="btn btn-ghost" id="nav-back" hidden>Nazad</button>
+          <button type="button" class="btn btn-primary" id="nav-next">Dalje</button>
+        </div>
       </div>
     </div>
   </section>
@@ -176,6 +230,7 @@
     </div>
   </footer>
 
+  <script src="js/booking.js" type="module"></script>
   <script src="js/main.js"></script>
 </body>
 </html>
