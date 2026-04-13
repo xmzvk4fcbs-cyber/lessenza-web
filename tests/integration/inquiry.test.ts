@@ -72,8 +72,8 @@ describe("POST /api/inquiry", () => {
     expect(body.inquiryId).toBeTruthy();
     const all = await listInquiries();
     expect(all).toHaveLength(1);
-    expect(all[0].status).toBe("pending");
+    expect(all[0]?.status).toBe("pending");
     expect(mailer.sent).toHaveLength(1);
-    expect(mailer.sent[0].to).toBe("vlasnica@example.com");
+    expect(mailer.sent[0]?.to).toBe("vlasnica@example.com");
   });
 });

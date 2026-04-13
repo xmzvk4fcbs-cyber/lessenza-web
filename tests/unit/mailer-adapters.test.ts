@@ -46,7 +46,7 @@ describe("gmail mailer", () => {
     const id = await m.send({ to: "x@y.com", subject: "hi", text: "body" });
     expect(id).toBe("<gmail-1>");
     expect(sendMail).toHaveBeenCalledOnce();
-    expect(sendMail.mock.calls[0][0]).toMatchObject({
+    expect(sendMail.mock.calls[0]?.[0]).toMatchObject({
       to: "x@y.com",
       from: "owner@gmail.com",
       subject: "hi",
