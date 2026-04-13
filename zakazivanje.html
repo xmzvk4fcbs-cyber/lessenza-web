@@ -79,6 +79,7 @@
         <section class="booking-step" id="step-4" hidden aria-labelledby="step-4-title">
           <h2 id="step-4-title">Tvoji podaci</h2>
           <form id="details-form" novalidate>
+            <input type="text" id="hp-website" name="website" tabindex="-1" autocomplete="off" aria-hidden="true" style="position:absolute;left:-10000px;width:1px;height:1px;opacity:0;">
             <div class="field">
               <label for="f-name">Ime i prezime</label>
               <input id="f-name" name="name" type="text" required autocomplete="name" maxlength="120">
@@ -129,6 +130,7 @@
         <section class="booking-step" id="step-inquiry" hidden aria-labelledby="inquiry-title">
           <h2 id="inquiry-title">Pošalji upit za kasniji datum</h2>
           <form id="inquiry-form" novalidate>
+            <input type="text" id="i-hp-website" name="website" tabindex="-1" autocomplete="off" aria-hidden="true" style="position:absolute;left:-10000px;width:1px;height:1px;opacity:0;">
             <div class="field">
               <label for="i-date">Željeni datum</label>
               <input id="i-date" name="desiredDateISO" type="date" required>

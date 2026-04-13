@@ -6,6 +6,8 @@ import { normalizePhone } from "../lib/phone";
 import { getMailer, type Mailer } from "../lib/mailer";
 import { inquiryCreatedToOwner } from "../lib/email-templates";
 import type { Inquiry } from "../lib/schemas";
+import { isHoneypotTriggered } from "../lib/honeypot";
+import { rateLimitAllow, clientIP } from "../lib/rate-limit";
 
 let mailerFactory: (() => Mailer) | null = null;
 export function __setMailerForTests(f: (() => Mailer) | null): void {
@@ -35,6 +37,19 @@ export const handler: Handler = async (event) => {
     body = parseJson<InquiryRequest>(event.body);
   } catch {
     return badRequest("invalid-json", "Body must be JSON");
+  }
+
+  if (isHoneypotTriggered(body)) {
+    return json({ ok: true }, 200);
+  }
+  const ip = clientIP(event.headers as Record<string, string | undefined>);
+  const rl = await rateLimitAllow(ip, { key: "inquiry", limit: 5, windowSeconds: 3600 });
+  if (!rl.allowed) {
+    return json(
+      { error: "rate-limited", message: "Previše zahtjeva, probajte ponovo kasnije" },
+      429,
+      { "retry-after": String(rl.retryAfterSec) }
+    );
   }
 
   if (!body.serviceId || !body.desiredDateISO || !body.desiredTimeWindow || !body.name || !body.phone) {

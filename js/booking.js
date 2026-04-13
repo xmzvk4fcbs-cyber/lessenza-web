@@ -229,6 +229,7 @@ async function submitBooking() {
   if (!name) throw new Error("Unesi ime i prezime.");
   if (!local) throw new Error("Unesi broj telefona.");
   const phone = `${dial}${local.replace(/\D+/g, "")}`;
+  const hp = document.getElementById("hp-website")?.value || "";
   const payload = {
     serviceId: state.chosenService.id,
     startISO: localToISO(state.chosenDate, state.chosenSlot),
@@ -236,6 +237,7 @@ async function submitBooking() {
     phone,
     email: email || undefined,
     note: note || undefined,
+    website: hp, // honeypot — empty for humans
   };
   const { booking } = await apiPost("/api/book", payload);
   const d = new Date(booking.startISO);
@@ -255,6 +257,7 @@ async function submitInquiry() {
   if (!local) throw new Error("Unesi broj telefona.");
   if (!desiredDateISO) throw new Error("Izaberi datum.");
   const phone = `${dial}${local.replace(/\D+/g, "")}`;
+  const hp2 = document.getElementById("i-hp-website")?.value || "";
   await apiPost("/api/inquiry", {
     serviceId: state.chosenService?.id ?? state.services[0]?.id,
     desiredDateISO,
@@ -263,6 +266,7 @@ async function submitInquiry() {
     phone,
     email: email || undefined,
     note: note || undefined,
+    website: hp2,
   });
   showInquirySuccess();
 }

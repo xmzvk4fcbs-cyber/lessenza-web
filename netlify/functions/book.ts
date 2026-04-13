@@ -9,6 +9,8 @@ import { normalizePhone } from "../lib/phone";
 import { fromTZ, dayKeyInTZ, formatSalon } from "../lib/time";
 import { getMailer, type Mailer } from "../lib/mailer";
 import { bookingConfirmedToClient, bookingCreatedToOwner } from "../lib/email-templates";
+import { isHoneypotTriggered } from "../lib/honeypot";
+import { rateLimitAllow, clientIP } from "../lib/rate-limit";
 
 interface Deps {
   makeCalendar: () => CalendarClient;
@@ -39,6 +41,19 @@ export const handler: Handler = async (event) => {
     body = parseJson<BookRequest>(event.body);
   } catch {
     return badRequest("invalid-json", "Body must be JSON");
+  }
+
+  if (isHoneypotTriggered(body)) {
+    return json({ ok: true }, 200); // silently succeed
+  }
+  const ip = clientIP(event.headers as Record<string, string | undefined>);
+  const rl = await rateLimitAllow(ip, { key: "book", limit: 10, windowSeconds: 3600 });
+  if (!rl.allowed) {
+    return json(
+      { error: "rate-limited", message: "Previše zahtjeva, probajte ponovo kasnije" },
+      429,
+      { "retry-after": String(rl.retryAfterSec) }
+    );
   }
 
   if (!body.serviceId || !body.startISO || !body.name || !body.phone) {
