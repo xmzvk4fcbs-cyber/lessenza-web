@@ -99,3 +99,13 @@ export async function requireAdmin(cookieHeader: string | undefined): Promise<Se
   if (!token) throw new Error("no-token");
   return verifyToken(token);
 }
+
+export async function changePassword(oldPassword: string, newPassword: string): Promise<void> {
+  if (newPassword.length < 8) throw new Error("password-too-short");
+  const ok = await verifyPassword(oldPassword);
+  if (!ok) throw new Error("wrong-password");
+  const auth = await readAuth();
+  if (!auth) throw new Error("not-initialized");
+  const passwordHash = await bcrypt.hash(newPassword, 12);
+  await store().setJSON(KEY_AUTH, { ...auth, passwordHash });
+}
