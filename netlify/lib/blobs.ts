@@ -43,10 +43,10 @@ export function createConfigStore(opts: { testMode?: boolean } = {}): KVStore {
     },
     async list(prefix = ""): Promise<string[]> {
       const out: string[] = [];
-      for await (const entry of store.list({ prefix })) {
-        if (Array.isArray((entry as { blobs?: unknown[] }).blobs)) {
-          for (const b of (entry as { blobs: { key: string }[] }).blobs) out.push(b.key);
-        }
+      const result = await store.list({ prefix });
+      const blobs = (result as { blobs?: { key: string }[] }).blobs;
+      if (Array.isArray(blobs)) {
+        for (const b of blobs) out.push(b.key);
       }
       return out;
     },
