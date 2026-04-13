@@ -24,8 +24,9 @@ async function render() {
       <article class="stack-card" data-day="${key}">
         <div class="stack-card__head">
           <div class="stack-card__title">${label}</div>
-          <label class="stack-card__meta" style="display:flex;align-items:center;gap:0.5rem;">
-            <input type="checkbox" class="open-toggle" ${open}> Radi
+          <label class="check-row">
+            <input type="checkbox" class="open-toggle" ${open}>
+            <span>Radi</span>
           </label>
         </div>
         <div class="stack-card__details" style="display:flex;gap:0.5rem;">

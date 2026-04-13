@@ -85,10 +85,10 @@ function openEditModal(service) {
     <div class="field"><label for="s-notes">Napomene (opciono)</label>
       <input id="s-notes" type="text" value="${escapeHtml(service?.notes || "")}" maxlength="500">
     </div>
-    <div class="field" style="display:flex;align-items:center;gap:0.5rem;">
-      <input id="s-active" type="checkbox" ${service?.active !== false ? "checked" : ""} style="width:auto;min-height:0;">
-      <label for="s-active" style="margin:0;">Aktivna</label>
-    </div>
+    <label class="check-row" for="s-active">
+      <input id="s-active" type="checkbox" ${service?.active !== false ? "checked" : ""}>
+      <span>Aktivna</span>
+    </label>
     <div class="stack-card__actions">
       <button class="btn btn-ghost" type="button" data-close="1">Nazad</button>
       <button class="btn btn-primary" type="button" id="s-save">${editing ? "Sačuvaj" : "Dodaj"}</button>

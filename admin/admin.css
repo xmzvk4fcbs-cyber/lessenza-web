@@ -167,9 +167,32 @@
 .modal__header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem; }
 .modal__header h3 { margin: 0; }
 .modal__close {
-  width: 40px; height: 40px;
+  width: 44px; height: 44px;
   border: 0; border-radius: 10px;
   background: transparent; font-size: 1.2rem; cursor: pointer;
+}
+
+.check-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  min-height: 44px;
+  padding: 0.5rem 0;
+  cursor: pointer;
+}
+.check-row input[type="checkbox"] {
+  width: 22px;
+  height: 22px;
+  min-height: 22px;
+  flex: 0 0 22px;
+  margin: 0;
+  accent-color: var(--gold-dark, #a7854a);
+}
+.check-row label,
+.check-row span {
+  margin: 0;
+  font-size: 1rem;
+  line-height: 1.2;
 }
 
 @media (min-width: 640px) {

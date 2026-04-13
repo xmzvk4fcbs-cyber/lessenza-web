@@ -24,9 +24,11 @@ async function render() {
     const value = settings[key];
     if (type === "checkbox") {
       return `
-        <article class="stack-card" style="flex-direction:row;align-items:center;gap:0.75rem;">
-          <input id="st-${key}" type="checkbox" ${value ? "checked" : ""} style="width:auto;min-height:0;">
-          <label for="st-${key}" style="margin:0;">${label}</label>
+        <article class="stack-card">
+          <label class="check-row" for="st-${key}">
+            <input id="st-${key}" type="checkbox" ${value ? "checked" : ""}>
+            <span>${label}</span>
+          </label>
         </article>
       `;
     }
