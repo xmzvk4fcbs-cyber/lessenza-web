@@ -1273,7 +1273,7 @@ p {
 
   .services-preview {
     grid-template-columns: 1fr;
-    gap: 2px;
+    gap: 16px;
   }
 
   .service-card {
