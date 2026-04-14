@@ -135,40 +135,44 @@ p {
   padding: 16px 40px;
   border: none;
   cursor: pointer;
-  transition: all 0.4s cubic-bezier(0.25, 0, 0.15, 1);
+  transition: transform 0.4s var(--ease-luxe), box-shadow 0.4s var(--ease-luxe), background 0.4s var(--ease-luxe), color 0.4s var(--ease-luxe);
   position: relative;
   overflow: hidden;
+  will-change: transform;
 }
 
 .btn-primary {
   background: var(--gold);
-  color: var(--white);
+  color: var(--white-warm);
+  box-shadow: 0 4px 14px rgba(201, 169, 97, 0.25);
 }
 
 .btn-primary:hover {
-  background: var(--gold-dark);
+  background: var(--gold-light);
   transform: translateY(-2px);
-  box-shadow: 0 8px 30px rgba(196, 162, 101, 0.3);
+  box-shadow: 0 12px 30px rgba(201, 169, 97, 0.35);
 }
 
 .btn-outline {
   background: transparent;
-  color: var(--black);
-  border: 1px solid var(--black);
+  color: var(--sage);
+  border: 1px solid var(--sage);
 }
 
 .btn-outline:hover {
-  background: var(--black);
-  color: var(--white);
+  background: var(--sage);
+  color: var(--cream-soft);
+  transform: translateY(-2px);
 }
 
 .btn-dark {
-  background: var(--black);
-  color: var(--white);
+  background: var(--sage);
+  color: var(--cream-soft);
 }
 
 .btn-dark:hover {
   background: var(--gold);
+  color: var(--white-warm);
   transform: translateY(-2px);
 }
 
