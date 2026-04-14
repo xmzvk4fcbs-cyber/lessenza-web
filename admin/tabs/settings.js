@@ -5,14 +5,26 @@ const saveBtn = document.getElementById("settings-save");
 const pwForm = document.getElementById("password-form");
 
 const FIELDS = [
+  // --- Javni podaci (prikazuju se na sajtu) ---
+  ["salonAddress", "Ulica i broj (javno)", "text", {}],
+  ["salonCity", "Grad (javno)", "text", {}],
+  ["mapQuery", "Mapa — pretraga (npr. 'Bajova 22, Cetinje, Montenegro')", "text", {}],
+  ["publicPhone", "Javni telefon (prikazuje se na sajtu)", "tel", {}],
+  ["publicEmail", "Javni email (prikazuje se na sajtu)", "email", {}],
+  ["whatsappPhone", "WhatsApp broj (npr. +38269123456)", "tel", {}],
+  ["instagramUrl", "Instagram link", "url", {}],
+  ["tagline", "Tagline u hero sekciji", "text", {}],
+
+  // --- Rezervacije ---
   ["bookingWindowDays", "Prozor rezervacije (dana unaprijed)", "number", { min: 1, max: 365 }],
   ["minLeadHours", "Minimalno vrijeme unaprijed (sati)", "number", { min: 0, max: 168, step: 0.5 }],
   ["bufferMinutes", "Razmak između termina (min)", "number", { min: 0, max: 120 }],
   ["slotGranularityMinutes", "Razmak slotova (min)", "number", { min: 5, max: 60 }],
   ["defaultCountryCode", "Default pozivni broj", "text", { pattern: "\\+\\d{1,4}" }],
-  ["salonAddress", "Adresa salona", "text", {}],
+
+  // --- Notifikacije (interno) ---
   ["ownerEmail", "Email vlasnice (za notifikacije)", "email", {}],
-  ["ownerPhone", "Telefon vlasnice (za šablone)", "tel", {}],
+  ["ownerPhone", "Telefon vlasnice (interno)", "tel", {}],
   ["mailer", "Provajder za email", "select", { options: [["resend", "Resend"], ["gmail", "Gmail"]] }],
   ["reminderEmailEnabled", "Slati podsjetnik klijentu dan prije", "checkbox", {}],
   ["dailyDigestEnabled", "Slati dnevni pregled vlasnici u 20h", "checkbox", {}],
@@ -60,9 +72,10 @@ saveBtn.addEventListener("click", async () => {
     else if (type === "number") payload[key] = Number(el.value);
     else payload[key] = el.value;
   }
-  // Strip empty optional email/phone so Zod accepts as undefined
-  if (!payload.ownerEmail) delete payload.ownerEmail;
-  if (!payload.ownerPhone) delete payload.ownerPhone;
+  // Strip empty optional fields so Zod accepts as undefined
+  for (const k of ["ownerEmail", "ownerPhone", "publicPhone", "publicEmail", "whatsappPhone", "instagramUrl"]) {
+    if (!payload[k]) delete payload[k];
+  }
   try {
     await must("/api/admin/settings", { method: "PATCH", body: payload });
     toast("Podešavanja sačuvana.", "success");

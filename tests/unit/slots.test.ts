@@ -28,6 +28,9 @@ const settings: Settings = {
   dailyDigestEnabled: true,
   defaultCountryCode: "+382",
   salonAddress: "Bajova 22",
+  salonCity: "Cetinje",
+  mapQuery: "Bajova 22, Cetinje, Montenegro",
+  tagline: "Beauty Salon · Bajova 22",
   mailer: "resend",
 };
 

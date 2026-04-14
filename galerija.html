@@ -87,7 +87,7 @@
           <a href="index.html" class="footer__brand-logo" aria-label="L'Essenza Beauty Salon"><img src="img/logo-wordmark.png" alt="L'Essenza Beauty Salon"></a>
           <p class="footer__brand-desc">Beauty salon posvecen vasoj ljepoti i njezi. Jer vi zasluzujete samo najbolje.</p>
           <div class="footer__social">
-            <a href="https://www.instagram.com/l_essenza_beauty_salon/" target="_blank" rel="noopener" aria-label="Instagram">IG</a>
+            <a href="https://www.instagram.com/l_essenza_beauty_salon/" data-setting-href="instagram" target="_blank" rel="noopener" aria-label="Instagram">IG</a>
           </div>
         </div>
         <div>
@@ -112,15 +112,16 @@
         <div>
           <h4 class="footer__heading">Kontakt</h4>
           <div class="footer__links">
-            <a href="kontakt.html">Bajova 22</a>
-            <a href="tel:+38269000000">+382 69 000 000</a>
+            <a href="kontakt.html" data-setting-href="mapQuery" target="_blank" rel="noopener"><span data-setting="fullAddress">Bajova 22, Cetinje</span></a>
+            <a href="tel:+38269000000" data-setting-href="publicPhone"><span data-setting="publicPhone">+382 69 000 000</span></a>
+            <a href="https://wa.me/38269000000" data-setting-href="whatsapp" target="_blank" rel="noopener">WhatsApp</a>
             <a href="zakazivanje.html">Zakazi termin</a>
           </div>
         </div>
       </div>
       <div class="footer__bottom">
         <span>&copy; 2026 L'Essenza Beauty Salon. Sva prava zadrzana.</span>
-        <span>Bajova 22</span>
+        <span data-setting="fullAddress">Bajova 22, Cetinje</span>
       </div>
     </div>
   </footer>
@@ -131,6 +132,7 @@
     <img src="" alt="">
   </div>
 
+  <script src="js/site-config.js"></script>
   <script src="js/main.js"></script>
 </body>
 </html>

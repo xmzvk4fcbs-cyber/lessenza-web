@@ -99,7 +99,9 @@ document.addEventListener('DOMContentLoaded', () => {
       // Build WhatsApp message
       const message = `Zdravo! Zelim da zakazem termin.\n\nIme: ${data.name}\nTelefon: ${data.phone}\nUsluga: ${data.service}\nDatum: ${data.date}\nVrijeme: ${data.time}\n${data.message ? 'Napomena: ' + data.message : ''}`;
 
-      const phone = '38269000000'; // placeholder
+      const settings = window.__siteSettings || {};
+      const phoneRaw = settings.whatsappPhone || settings.publicPhone || '+38269000000';
+      const phone = String(phoneRaw).replace(/[^\d]/g, '');
       const waUrl = `https://wa.me/${phone}?text=${encodeURIComponent(message)}`;
 
       // Show confirmation

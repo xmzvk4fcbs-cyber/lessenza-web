@@ -62,8 +62,15 @@ export const SettingsSchema = z.object({
   dailyDigestEnabled: z.boolean().default(true),
   defaultCountryCode: z.string().regex(/^\+\d{1,4}$/).default("+382"),
   salonAddress: z.string().default("Bajova 22"),
+  salonCity: z.string().default("Cetinje"),
+  mapQuery: z.string().default("Bajova 22, Cetinje, Montenegro"),
   ownerEmail: z.string().email().optional(),
   ownerPhone: z.string().optional(),
+  publicPhone: z.string().optional(),
+  publicEmail: z.string().email().optional(),
+  whatsappPhone: z.string().optional(),
+  instagramUrl: z.string().url().optional(),
+  tagline: z.string().default("Beauty Salon · Bajova 22"),
   mailer: z.enum(["resend", "gmail"]).default("resend"),
 });
 export type Settings = z.infer<typeof SettingsSchema>;
