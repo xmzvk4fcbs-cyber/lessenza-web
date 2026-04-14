@@ -520,22 +520,30 @@ p {
   padding: var(--section-pad) clamp(20px, 4vw, 60px);
 }
 
-.section--dark {
-  background: var(--black);
-  color: var(--white);
+.section--dark,
+.section--champagne {
+  background: var(--champagne);
+  color: var(--text);
 }
 
+.section--dark h1,
 .section--dark h2,
-.section--dark h3 {
-  color: var(--white);
+.section--dark h3,
+.section--dark h4,
+.section--champagne h1,
+.section--champagne h2,
+.section--champagne h3,
+.section--champagne h4 {
+  color: var(--sage);
 }
 
-.section--dark p {
-  color: rgba(255,255,255,0.6);
+.section--dark p,
+.section--champagne p {
+  color: var(--text);
 }
 
 .section--cream {
-  background: var(--cream);
+  background: var(--cream-soft);
 }
 
 .section__inner {
@@ -710,8 +718,14 @@ p {
   color: var(--text-light);
 }
 
-.section--dark .stat__label {
-  color: rgba(255,255,255,0.5);
+.section--dark .stat__label,
+.section--champagne .stat__label {
+  color: var(--text);
+}
+
+.section--dark .stat__number,
+.section--champagne .stat__number {
+  color: var(--sage);
 }
 
 /* --- CTA Banner --- */
@@ -741,9 +755,10 @@ p {
 
 /* --- Footer --- */
 .footer {
-  background: var(--black);
-  color: rgba(255,255,255,0.6);
+  background: var(--cream-soft);
+  color: var(--text);
   padding: 80px clamp(20px, 4vw, 60px) 30px;
+  border-top: 1px solid var(--champagne-deep);
 }
 
 .footer__inner {
@@ -760,16 +775,17 @@ p {
 
 .footer__brand-name {
   font-family: var(--font-display);
-  font-size: 1.6rem;
-  color: var(--white);
-  margin-bottom: 16px;
+  font-size: 1.8rem;
+  color: var(--sage);
+  margin-bottom: 12px;
 }
 
 .footer__brand-desc {
   font-size: 0.9rem;
   line-height: 1.7;
-  max-width: 300px;
-  margin-bottom: 24px;
+  max-width: 320px;
+  margin-bottom: 22px;
+  color: var(--text-light);
 }
 
 .footer__social {
@@ -781,17 +797,20 @@ p {
   width: 40px;
   height: 40px;
   border-radius: 50%;
-  border: 1px solid rgba(255,255,255,0.15);
+  border: 1px solid var(--champagne-deep);
+  color: var(--sage);
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 0.8rem;
-  transition: all 0.3s ease;
+  font-size: 0.78rem;
+  letter-spacing: 0.1em;
+  transition: all 0.3s var(--ease-luxe);
 }
 
 .footer__social a:hover {
+  background: var(--gold);
   border-color: var(--gold);
-  color: var(--gold);
+  color: var(--white-warm);
   transform: translateY(-2px);
 }
 
@@ -801,20 +820,20 @@ p {
   font-weight: 500;
   letter-spacing: 0.2em;
   text-transform: uppercase;
-  color: var(--white);
-  margin-bottom: 24px;
+  color: var(--sage);
+  margin-bottom: 18px;
 }
 
 .footer__links {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 10px;
 }
 
 .footer__links a {
   font-size: 0.9rem;
-  color: rgba(255,255,255,0.5);
-  transition: color 0.3s ease;
+  color: var(--text-light);
+  transition: color 0.3s var(--ease-luxe);
 }
 
 .footer__links a:hover {
@@ -822,13 +841,13 @@ p {
 }
 
 .footer__bottom {
-  padding-top: 30px;
-  border-top: 1px solid rgba(255,255,255,0.08);
+  padding-top: 24px;
+  border-top: 1px solid var(--champagne-deep);
   display: flex;
   justify-content: space-between;
   align-items: center;
-  font-size: 0.8rem;
-  color: rgba(255,255,255,0.3);
+  font-size: 0.78rem;
+  color: var(--text-light);
 }
 
 /* --- Page Hero (for subpages) --- */
