@@ -13,12 +13,8 @@
   <!-- Header -->
   <header class="header header--transparent">
     <div class="header__inner">
-      <a href="index.html" class="header__logo">
-        <div class="header__logo-icon">L'E</div>
-        <div class="header__logo-text">
-          L'ESENZA
-          <span>beauty salon</span>
-        </div>
+      <a href="index.html" class="header__logo" aria-label="L'Essenza Beauty Salon">
+        <img src="img/logo-wordmark.png" alt="L'Essenza Beauty Salon">
       </a>
 
       <nav class="nav">
@@ -50,18 +46,27 @@
 
   <!-- Hero -->
   <section class="hero">
-    <div class="hero__bg"></div>
-    <div class="hero__overlay"></div>
-    <div class="hero__content">
-      <span class="hero__label">Beauty Salon</span>
-      <h1 class="hero__title">Otkrijte svoju<br><em>sustinu</em></h1>
-      <p class="hero__desc">L'Essenza znaci sustina. Prostor gdje se spajaju njega, ljepota i moderna tehnologija za rezultate koje zasluzujete.</p>
-      <div class="hero__actions">
-        <a href="zakazivanje.html" class="btn btn-primary">Zakazi Termin</a>
-        <a href="usluge.html" class="btn btn-outline" style="border-color: rgba(255,255,255,0.3); color: #fff;">Nase Usluge</a>
-      </div>
+    <div class="hero__bokeh" aria-hidden="true">
+      <span style="left:8%;  top:70%; animation-delay:0s;"></span>
+      <span style="left:22%; top:30%; animation-delay:3s;"></span>
+      <span style="left:38%; top:80%; animation-delay:6s;"></span>
+      <span style="left:55%; top:25%; animation-delay:9s;"></span>
+      <span style="left:72%; top:65%; animation-delay:12s;"></span>
+      <span style="left:88%; top:40%; animation-delay:15s;"></span>
     </div>
-    <div class="hero__scroll">
+
+    <img src="img/logo-wordmark.png" alt="L'Essenza Beauty Salon" class="hero__logo-img">
+
+    <span class="hero__label">Beauty Salon &middot; Bajova 22</span>
+    <h1 class="hero__title">Otkrijte svoju <em>sustinu</em></h1>
+    <p class="hero__desc">L'Essenza znaci sustina. Prostor gdje se spajaju njega, ljepota i moderna tehnologija &mdash; za rezultate koje zasluzujete.</p>
+
+    <div class="hero__actions">
+      <a href="zakazivanje.html" class="btn btn-primary">Zakazi Termin</a>
+      <a href="usluge.html" class="btn btn-outline">Nase Usluge</a>
+    </div>
+
+    <div class="hero__scroll" aria-hidden="true">
       <div class="hero__scroll-line"></div>
     </div>
   </section>
@@ -77,25 +82,25 @@
 
       <div class="services-preview">
         <a href="usluge.html" class="service-card reveal">
-          <div class="service-card__img" style="background: linear-gradient(135deg, #3d342a, #2a2520); width:100%; height:100%;"></div>
+          <div class="service-card__img" style="background-image: url('img/mx-sculpt.jpg');"></div>
           <div class="service-card__overlay">
             <div class="service-card__arrow">&nearr;</div>
             <h3 class="service-card__name">Body Sculpt</h3>
-            <p class="service-card__desc">MX Sculpt — zatezanje koze, izgradnja misica, uklanjanje celulita</p>
+            <p class="service-card__desc">MX Sculpt &mdash; zatezanje koze, izgradnja misica, uklanjanje celulita</p>
           </div>
         </a>
 
         <a href="usluge.html" class="service-card reveal">
-          <div class="service-card__img" style="background: linear-gradient(135deg, #4a3f35, #2f2925); width:100%; height:100%;"></div>
+          <div class="service-card__img" style="background-image: url('img/laser-treatment.jpg');"></div>
           <div class="service-card__overlay">
             <div class="service-card__arrow">&nearr;</div>
             <h3 class="service-card__name">Laserska Epilacija</h3>
-            <p class="service-card__desc">Trajna epilacija najnovijom laserskom tehnologijom</p>
+            <p class="service-card__desc">Aton Magnum &mdash; trajna epilacija najnovijom laserskom tehnologijom</p>
           </div>
         </a>
 
         <a href="usluge.html" class="service-card reveal">
-          <div class="service-card__img" style="background: linear-gradient(135deg, #504538, #3a332c); width:100%; height:100%;"></div>
+          <div class="service-card__img" style="background-image: url('img/nails.jpg');"></div>
           <div class="service-card__overlay">
             <div class="service-card__arrow">&nearr;</div>
             <h3 class="service-card__name">Manikir &amp; Pedikir</h3>
@@ -111,7 +116,7 @@
     <div class="section__inner">
       <div class="about-preview">
         <div class="about-preview__image reveal">
-          <div style="width:100%; height:100%; background: linear-gradient(135deg, var(--cream-dark), #d4c5b3); display:flex; align-items:center; justify-content:center; font-family: var(--font-display); font-size: 3rem; color: var(--gold-dark); opacity: 0.4;">L'E</div>
+          <img src="img/owner.jpg" alt="Vlasnica salona L'Essenza">
         </div>
         <div class="about-preview__content reveal">
           <span class="section-label">O Nama</span>
@@ -125,7 +130,7 @@
   </section>
 
   <!-- Stats -->
-  <section class="section section--dark">
+  <section class="section section--champagne">
     <div class="section__inner">
       <div class="stats reveal">
         <div class="stat">
