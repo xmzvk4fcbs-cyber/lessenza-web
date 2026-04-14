@@ -8,7 +8,7 @@
   directory = "netlify/functions"
 
 [dev]
-  command = "echo 'static site'"
+  command = "python3 -m http.server 8889"
   publish = "."
   port = 8888
   targetPort = 8889

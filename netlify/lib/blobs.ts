@@ -25,11 +25,29 @@ export class InMemoryStore implements KVStore {
   }
 }
 
+// Persistent in-process store for unlinked `netlify dev` (no Blobs context).
+// Holds data across requests within a single process; lost on restart.
+let devFallback: InMemoryStore | null = null;
+
+function getDevFallback(): InMemoryStore {
+  if (!devFallback) devFallback = new InMemoryStore();
+  return devFallback;
+}
+
 export function createConfigStore(opts: { testMode?: boolean } = {}): KVStore {
   if (opts.testMode || process.env.NODE_ENV === "test") {
     return new InMemoryStore();
   }
-  const store = getStore({ name: "lessenza-config", consistency: "strong" });
+  // Try to acquire the Netlify Blobs store. If the environment isn't
+  // configured (unlinked `netlify dev`), fall back to an in-memory store
+  // so the site is still demoable locally.
+  let store: ReturnType<typeof getStore>;
+  try {
+    store = getStore({ name: "lessenza-config", consistency: "strong" });
+  } catch {
+    const mem = getDevFallback();
+    return mem;
+  }
   return {
     async getJSON<T>(key: string): Promise<T | null> {
       const data = await store.get(key, { type: "json" });
