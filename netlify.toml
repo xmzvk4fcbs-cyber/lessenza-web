@@ -23,3 +23,7 @@
   schedule = "0 18 * * *"
 # 18:00 UTC == 20:00 Europe/Podgorica during CEST (Mar–Oct).
 # During CET (Nov–Feb) this runs at 19:00 local — acceptable; an adjusted second schedule would complicate things.
+
+[functions."cron-reminder"]
+  schedule = "0 * * * *"
+# Runs hourly. Each run looks 23–25h ahead, so any booking gets exactly one reminder roughly 24h before.
