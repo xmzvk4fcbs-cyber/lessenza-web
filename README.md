@@ -20,27 +20,22 @@ npm run dev   # netlify dev on http://localhost:8888
 
 ## Deployment
 
-Pushes to `main` auto-deploy to Netlify.
+Full step-by-step guide: [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md).
 
-### Required env vars
+Short version:
+1. Google Cloud service account + share calendar with it
+2. Push to GitHub, connect to Netlify
+3. Set env vars (see `.env.example`)
+4. Visit `/admin/` with `SETUP_TOKEN`, set password, delete `SETUP_TOKEN`
+5. Configure tabs, done.
 
-See `.env.example`. Set them in Netlify Site Settings → Environment variables.
+## Testing
 
-### First-time admin setup
-
-1. In Netlify env vars, set `SETUP_TOKEN` to a long random string (e.g. `openssl rand -hex 24`).
-2. Send the token to the owner.
-3. She visits `/admin/` and completes the "Prvo pokretanje" form.
-4. **Remove `SETUP_TOKEN`** from Netlify env vars.
-
-### Google Calendar setup
-
-1. Create a Google Cloud project.
-2. Enable the Google Calendar API.
-3. Create a service account; download the JSON key.
-4. In the owner's Google Calendar, share the target calendar with the service account's email, with "Make changes to events" permission.
-5. `base64 -i key.json` → paste into `GOOGLE_SERVICE_ACCOUNT_JSON`.
-6. Set `GOOGLE_CALENDAR_ID` to the owner's calendar id (her email for the primary calendar).
+```bash
+npm test        # run all Vitest suites
+npm run build   # tsc --noEmit
+npm run lint    # eslint
+```
 
 ## Project layout
 
