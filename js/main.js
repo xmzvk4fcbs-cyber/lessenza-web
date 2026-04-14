@@ -164,4 +164,34 @@ document.addEventListener('DOMContentLoaded', () => {
     dateInput.setAttribute('min', today);
   }
 
+  // --- Hero logo fade-in ---
+  const heroLogoImg = document.querySelector('.hero__logo-img');
+  if (heroLogoImg) {
+    const showLogo = () => requestAnimationFrame(() => heroLogoImg.classList.add('is-in'));
+    if (heroLogoImg.complete) showLogo();
+    else heroLogoImg.addEventListener('load', showLogo);
+  }
+
+  // --- Magnetic buttons (pointer-fine devices only) ---
+  const fine = window.matchMedia('(pointer: fine)').matches;
+  const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  if (fine && !reducedMotion) {
+    document.querySelectorAll('.btn').forEach(btn => {
+      btn.addEventListener('mousemove', (e) => {
+        const rect = btn.getBoundingClientRect();
+        const dx = (e.clientX - (rect.left + rect.width / 2)) / rect.width;
+        const dy = (e.clientY - (rect.top + rect.height / 2)) / rect.height;
+        const max = 8;
+        btn.style.transform = `translate(${dx * max}px, ${dy * max}px)`;
+      });
+      btn.addEventListener('mouseleave', () => { btn.style.transform = ''; });
+    });
+  }
+
+  // --- Bokeh: vary duration so dots don't loop in lockstep ---
+  document.querySelectorAll('.hero__bokeh span').forEach((dot) => {
+    const dur = 18 + Math.random() * 10;
+    dot.style.animationDuration = `${dur}s`;
+  });
+
 });
