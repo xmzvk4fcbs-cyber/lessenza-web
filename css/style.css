@@ -397,13 +397,13 @@ p {
 .hero__bg {
   position: absolute;
   inset: 0;
-  background: linear-gradient(
-    135deg,
-    var(--black) 0%,
-    #2a2520 40%,
-    #3d342a 70%,
-    var(--black) 100%
-  );
+  background-color: var(--cream);
+  background-image:
+    linear-gradient(135deg, rgba(246, 241, 235, 0.55) 0%, rgba(235, 228, 219, 0.65) 60%, rgba(168, 136, 78, 0.18) 100%),
+    url("https://images.unsplash.com/photo-1560066984-138dadb4c035?auto=format&fit=crop&w=2400&q=70");
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
   z-index: -2;
 }
 
@@ -412,8 +412,8 @@ p {
   position: absolute;
   inset: 0;
   background:
-    radial-gradient(ellipse at 30% 50%, rgba(196, 162, 101, 0.08) 0%, transparent 60%),
-    radial-gradient(ellipse at 80% 20%, rgba(196, 162, 101, 0.05) 0%, transparent 50%);
+    radial-gradient(ellipse at 30% 50%, rgba(196, 162, 101, 0.18) 0%, transparent 60%),
+    radial-gradient(ellipse at 80% 20%, rgba(255, 255, 255, 0.25) 0%, transparent 55%);
 }
 
 .hero__overlay {
@@ -421,9 +421,9 @@ p {
   inset: 0;
   background: linear-gradient(
     to bottom,
-    rgba(19, 18, 17, 0.2) 0%,
-    rgba(19, 18, 17, 0.1) 50%,
-    rgba(19, 18, 17, 0.6) 100%
+    rgba(246, 241, 235, 0.25) 0%,
+    rgba(246, 241, 235, 0.15) 45%,
+    rgba(168, 136, 78, 0.18) 100%
   );
   z-index: -1;
 }
@@ -437,10 +437,10 @@ p {
 .hero__label {
   font-family: var(--font-body);
   font-size: 0.72rem;
-  font-weight: 400;
+  font-weight: 500;
   letter-spacing: 0.35em;
   text-transform: uppercase;
-  color: var(--gold);
+  color: var(--gold-dark);
   margin-bottom: 24px;
   opacity: 0;
   transform: translateY(20px);
@@ -450,9 +450,10 @@ p {
 .hero__title {
   font-size: clamp(3rem, 8vw, 6.5rem);
   font-weight: 300;
-  color: var(--white);
+  color: var(--text);
   line-height: 1.05;
   margin-bottom: 24px;
+  text-shadow: 0 1px 2px rgba(255,255,255,0.4);
   opacity: 0;
   transform: translateY(30px);
   animation: fadeUp 0.8s 0.5s forwards;
@@ -460,12 +461,12 @@ p {
 
 .hero__title em {
   font-style: italic;
-  color: var(--gold-light);
+  color: var(--gold-dark);
 }
 
 .hero__desc {
   font-size: 1.05rem;
-  color: rgba(255,255,255,0.6);
+  color: var(--text-light);
   max-width: 480px;
   margin-bottom: 40px;
   opacity: 0;
@@ -491,7 +492,7 @@ p {
   flex-direction: column;
   align-items: center;
   gap: 8px;
-  color: rgba(255,255,255,0.35);
+  color: var(--text-light);
   font-size: 0.65rem;
   letter-spacing: 0.2em;
   text-transform: uppercase;
@@ -501,7 +502,7 @@ p {
 .hero__scroll-line {
   width: 1px;
   height: 40px;
-  background: linear-gradient(to bottom, var(--gold), transparent);
+  background: linear-gradient(to bottom, var(--gold-dark), transparent);
 }
 
 /* --- Sections --- */
@@ -824,7 +825,13 @@ p {
 .page-hero {
   position: relative;
   padding: calc(var(--header-height) + 80px) clamp(20px, 4vw, 60px) 80px;
-  background: var(--black);
+  background-color: var(--cream);
+  background-image:
+    linear-gradient(180deg, rgba(246, 241, 235, 0.65) 0%, rgba(235, 228, 219, 0.7) 100%),
+    url("https://images.unsplash.com/photo-1560066984-138dadb4c035?auto=format&fit=crop&w=2000&q=70");
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
   overflow: hidden;
   min-height: 340px;
   display: flex;
@@ -836,8 +843,8 @@ p {
   position: absolute;
   inset: 0;
   background:
-    radial-gradient(ellipse at 20% 80%, rgba(196, 162, 101, 0.08) 0%, transparent 60%),
-    radial-gradient(ellipse at 80% 20%, rgba(196, 162, 101, 0.04) 0%, transparent 50%);
+    radial-gradient(ellipse at 20% 80%, rgba(196, 162, 101, 0.18) 0%, transparent 60%),
+    radial-gradient(ellipse at 80% 20%, rgba(255, 255, 255, 0.25) 0%, transparent 50%);
 }
 
 .page-hero__inner {
@@ -849,14 +856,15 @@ p {
 
 .page-hero__title {
   font-size: clamp(2.5rem, 6vw, 4.5rem);
-  color: var(--white);
+  color: var(--text);
   font-weight: 300;
   margin-bottom: 12px;
+  text-shadow: 0 1px 2px rgba(255,255,255,0.4);
 }
 
 .page-hero__subtitle {
   font-size: 1rem;
-  color: rgba(255,255,255,0.5);
+  color: var(--text-light);
   max-width: 500px;
 }
 
