@@ -1,4 +1,6 @@
 import { getStore } from "@netlify/blobs";
+import * as fs from "node:fs";
+import * as path from "node:path";
 
 export interface KVStore {
   getJSON<T>(key: string): Promise<T | null>;
@@ -25,12 +27,59 @@ export class InMemoryStore implements KVStore {
   }
 }
 
-// Persistent in-process store for unlinked `netlify dev` (no Blobs context).
-// Holds data across requests within a single process; lost on restart.
-let devFallback: InMemoryStore | null = null;
+// Simple file-based store for unlinked `netlify dev` so data survives across
+// function invocations and worker restarts. Not for production use.
+class FileStore implements KVStore {
+  private dir: string;
+  constructor(dir: string) {
+    this.dir = dir;
+    try { fs.mkdirSync(dir, { recursive: true }); } catch {}
+  }
+  private file(key: string): string {
+    const safe = key.replace(/[^a-zA-Z0-9_.-]/g, "_");
+    return path.join(this.dir, safe + ".json");
+  }
+  async getJSON<T>(key: string): Promise<T | null> {
+    try {
+      const raw = fs.readFileSync(this.file(key), "utf8");
+      return JSON.parse(raw) as T;
+    } catch (err) {
+      const e = err as NodeJS.ErrnoException;
+      if (e.code === "ENOENT") return null;
+      throw err;
+    }
+  }
+  async setJSON(key: string, value: unknown): Promise<void> {
+    fs.writeFileSync(this.file(key), JSON.stringify(value, null, 2));
+  }
+  async delete(key: string): Promise<void> {
+    try { fs.unlinkSync(this.file(key)); } catch (err) {
+      const e = err as NodeJS.ErrnoException;
+      if (e.code !== "ENOENT") throw err;
+    }
+  }
+  async list(prefix = ""): Promise<string[]> {
+    try {
+      const files = fs.readdirSync(this.dir);
+      const keys: string[] = [];
+      for (const f of files) {
+        if (!f.endsWith(".json")) continue;
+        const key = f.slice(0, -5).replace(/_/g, "/"); // best-effort reverse of safe replacement
+        if (key.startsWith(prefix)) keys.push(key);
+      }
+      return keys;
+    } catch {
+      return [];
+    }
+  }
+}
 
-function getDevFallback(): InMemoryStore {
-  if (!devFallback) devFallback = new InMemoryStore();
+let devFallback: KVStore | null = null;
+function getDevFallback(): KVStore {
+  if (!devFallback) {
+    const dir = path.resolve(process.cwd(), ".netlify-dev-blobs");
+    devFallback = new FileStore(dir);
+  }
   return devFallback;
 }
 
