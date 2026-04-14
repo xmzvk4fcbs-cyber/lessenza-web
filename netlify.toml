@@ -18,3 +18,8 @@
   from = "/api/*"
   to = "/.netlify/functions/:splat"
   status = 200
+
+[functions."cron-daily-digest"]
+  schedule = "0 18 * * *"
+# 18:00 UTC == 20:00 Europe/Podgorica during CEST (Mar–Oct).
+# During CET (Nov–Feb) this runs at 19:00 local — acceptable; an adjusted second schedule would complicate things.

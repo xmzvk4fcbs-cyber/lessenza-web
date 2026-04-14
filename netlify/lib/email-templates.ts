@@ -194,3 +194,47 @@ export function inquiryDeclinedToClient(
   ].filter(Boolean).join("\n");
   return { to: i.email, subject: "L'Essenza — Upit", text };
 }
+
+export function dailyDigestToOwner(
+  bookings: Booking[],
+  nextDayLabel: string,
+  ctx: OwnerTemplateCtx
+): EmailMessage {
+  const lines = bookings.length
+    ? bookings
+        .map((b) => `• ${formatSalon(new Date(b.startISO), "HH:mm")} — ${b.serviceName} — ${b.name} (${b.phoneE164})`)
+        .join("\n")
+    : "Nema zakazanih termina za sutra.";
+  const text = [
+    `Podsjetnik za ${nextDayLabel}:`,
+    ``,
+    lines,
+    ``,
+    `Otvori u adminu: ${ctx.siteUrl.replace(/\/$/, "")}/admin/`,
+  ].join("\n");
+  return {
+    to: ctx.ownerEmail,
+    subject: `L'Essenza — Raspored za ${nextDayLabel}`,
+    text,
+  };
+}
+
+export function reminderToClient(b: Booking, ctx: ClientTemplateCtx): EmailMessage {
+  if (!b.email) throw new Error("Booking has no client email");
+  const when = formatDateHuman(b.startISO);
+  const phoneLine = ctx.ownerPhone ? `Za izmjene pozovite ${formatPhoneNational(ctx.ownerPhone)}.` : "";
+  const text = [
+    `Zdravo ${b.name},`,
+    ``,
+    `Podsjećamo vas na sutrašnji termin:`,
+    ``,
+    `Usluga: ${b.serviceName}`,
+    `Kada: ${when}`,
+    `Gdje: ${ctx.salonAddress}`,
+    ``,
+    phoneLine,
+    ``,
+    `— L'Essenza`,
+  ].filter(Boolean).join("\n");
+  return { to: b.email, subject: "L'Essenza — Podsjetnik za sutra", text };
+}
