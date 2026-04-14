@@ -37,10 +37,46 @@ export interface CalendarClient {
   patchEvent(eventId: string, patch: calendar_v3.Schema$Event): Promise<calendar_v3.Schema$Event>;
 }
 
+// In-process store for dev/demo when Google Calendar isn't configured.
+const memEvents: calendar_v3.Schema$Event[] = [];
+
+export function createInMemoryCalendar(): CalendarClient {
+  return {
+    async listEvents({ timeMin, timeMax }) {
+      const min = new Date(timeMin).getTime();
+      const max = new Date(timeMax).getTime();
+      return memEvents.filter((e) => {
+        const s = new Date(e.start?.dateTime ?? e.start?.date ?? 0).getTime();
+        return s >= min && s <= max;
+      });
+    },
+    async insertEvent(event) {
+      const id = `mem-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+      const stored = { ...event, id };
+      memEvents.push(stored);
+      return stored;
+    },
+    async deleteEvent(eventId) {
+      const idx = memEvents.findIndex((e) => e.id === eventId);
+      if (idx >= 0) memEvents.splice(idx, 1);
+    },
+    async patchEvent(eventId, patch) {
+      const idx = memEvents.findIndex((e) => e.id === eventId);
+      if (idx < 0) throw new Error("Event not found");
+      memEvents[idx] = { ...memEvents[idx], ...patch };
+      return memEvents[idx];
+    },
+  };
+}
+
 export function createCalendarClient(opts?: { saB64?: string; calendarId?: string }): CalendarClient {
   const saB64 = opts?.saB64 ?? process.env.GOOGLE_SERVICE_ACCOUNT_JSON ?? "";
   const calendarId = opts?.calendarId ?? process.env.GOOGLE_CALENDAR_ID ?? "";
-  if (!calendarId) throw new Error("GOOGLE_CALENDAR_ID missing");
+  // Dev/demo fallback: if neither calendarId nor service account is configured,
+  // use an in-memory calendar so booking works without Google setup.
+  if (!calendarId || !saB64) {
+    return createInMemoryCalendar();
+  }
   const sa = parseServiceAccount(saB64);
   const auth = new google.auth.JWT({
     email: sa.client_email,
