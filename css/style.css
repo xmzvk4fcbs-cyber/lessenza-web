@@ -5,25 +5,35 @@
 
 @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;0,700;1,300;1,400&family=Outfit:wght@300;400;500;600&display=swap');
 
-/* --- Variables --- */
+/* --- Variables (Champagne palette — 2026-04-14 redesign) --- */
 :root {
-  --black: #131211;
-  --dark: #1a1917;
-  --gold: #c4a265;
-  --gold-light: #d4b87a;
-  --gold-dark: #a8884e;
-  --cream: #f6f1eb;
-  --cream-dark: #ebe4db;
-  --warm-white: #faf8f5;
-  --text: #2c2a27;
-  --text-light: #6b6560;
+  --cream: #F4ECDB;
+  --cream-soft: #F9F2E5;
+  --champagne: #E8D5B5;
+  --champagne-deep: #D9C09A;
+  --gold: #C9A961;
+  --gold-light: #E0C58A;
+  --sage: #6B6F4F;
+  --sage-soft: #8B8E6F;
+  --text: #4A4238;
+  --text-light: #7A6F62;
+  --white-warm: #FBF8F2;
   --white: #ffffff;
+
+  /* Legacy aliases — keep so leftover refs resolve to a light tone. Don't add new uses. */
+  --black: var(--text);
+  --dark: var(--sage);
+  --gold-dark: var(--gold);
+  --cream-dark: var(--champagne);
+  --warm-white: var(--white-warm);
 
   --font-display: 'Cormorant Garamond', Georgia, serif;
   --font-body: 'Outfit', sans-serif;
 
   --header-height: 80px;
   --section-pad: clamp(60px, 10vw, 120px);
+
+  --ease-luxe: cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 /* --- Reset & Base --- */
