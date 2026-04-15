@@ -73,6 +73,10 @@ export function fmtDateTime(iso) {
   });
 }
 
+export function fmtTime(iso) {
+  return new Date(iso).toLocaleTimeString("sr-RS", { hour: "2-digit", minute: "2-digit" });
+}
+
 export function todayKey() {
   const d = new Date();
   return d.toISOString().slice(0, 10);
@@ -157,13 +161,11 @@ document.getElementById("logout-btn").addEventListener("click", async () => {
   location.reload();
 });
 
-// ---------- Router ----------
+// ---------- Screen + tab routing ----------
 
+// Underlying tabs (kept so tabs/*.js can register renderers by these names).
 const tabs = ["today", "hours", "blocks", "services", "pairs", "inquiries", "settings"];
 const panels = Object.fromEntries(tabs.map((t) => [t, document.getElementById(`tab-${t}`)]));
-const tabButtons = Object.fromEntries(
-  Array.from(document.querySelectorAll(".admin-tab")).map((el) => [el.dataset.tab, el])
-);
 
 const renderers = {
   today: null, hours: null, blocks: null, services: null,
@@ -174,26 +176,71 @@ export function registerTab(name, renderFn) {
   renderers[name] = renderFn;
 }
 
-async function activateTab(name) {
-  if (!tabs.includes(name)) name = "today";
-  for (const t of tabs) {
-    panels[t].hidden = t !== name;
-    tabButtons[t].classList.toggle("is-active", t === name);
+// Screens (top-level tabs shown in the bottom nav).
+const screens = ["dashboard", "schedule", "inquiries", "settings"];
+const screenEls = Object.fromEntries(screens.map((s) => [s, document.getElementById(`screen-${s}`)]));
+const navBtns = Array.from(document.querySelectorAll(".bottom-nav__btn"));
+
+// Map screen -> which tab renderers to invoke when activated.
+const screenTabs = {
+  dashboard: ["dashboard"],
+  schedule: ["today"],
+  inquiries: ["inquiries"],
+  settings: ["hours", "services", "blocks", "pairs", "settings"],
+};
+
+async function activateScreen(name) {
+  if (!screens.includes(name)) name = "dashboard";
+  for (const s of screens) {
+    if (screenEls[s]) screenEls[s].classList.toggle("is-active", s === name);
   }
-  try {
-    if (renderers[name]) await renderers[name]();
-  } catch (e) {
-    toast(e.message || "Greška pri učitavanju", "error");
+  navBtns.forEach((b) => b.classList.toggle("is-active", b.dataset.screen === name));
+
+  // Hide FAB on non-schedule/non-dashboard screens
+  const fab = document.getElementById("fab-add-booking");
+  if (fab) fab.style.display = (name === "dashboard" || name === "schedule") ? "" : "none";
+
+  // Lazy-render tabs belonging to this screen.
+  const tabsToRender = screenTabs[name] || [];
+  for (const t of tabsToRender) {
+    const r = renderers[t];
+    if (!r) continue;
+    try { await r(); } catch (e) { toast(e.message || "Greška pri učitavanju", "error"); }
   }
+
+  // Update URL hash.
+  if (location.hash.replace(/^#/, "") !== name) location.hash = `#${name}`;
 }
+
+navBtns.forEach((btn) => {
+  btn.addEventListener("click", () => activateScreen(btn.dataset.screen));
+});
 
 window.addEventListener("hashchange", () => {
   const name = location.hash.replace(/^#/, "");
-  activateTab(name);
+  if (screens.includes(name)) activateScreen(name);
 });
 
+// FAB → opens "Dodaj termin ručno" modal (delegated to today.js which owns it)
+document.getElementById("fab-add-booking").addEventListener("click", () => {
+  const btn = document.getElementById("today-add");
+  if (btn) btn.click();
+});
+
+// ---------- Inquiries badge (count of pending) ----------
+async function refreshInquiryBadge() {
+  try {
+    const { inquiries } = await must("/api/admin/inquiries?status=pending");
+    const badge = document.getElementById("inq-badge");
+    if (!badge) return;
+    const n = inquiries?.length ?? 0;
+    badge.textContent = String(n);
+    badge.classList.toggle("is-visible", n > 0);
+  } catch {}
+}
+
 async function initAdmin() {
-  // Load tab modules (each import registers itself)
+  // Load tab modules (each import registers itself via registerTab)
   await import("./tabs/today.js");
   await import("./tabs/hours.js");
   await import("./tabs/blocks.js");
@@ -201,9 +248,13 @@ async function initAdmin() {
   await import("./tabs/pairs.js");
   await import("./tabs/inquiries.js");
   await import("./tabs/settings.js");
-  const name = location.hash.replace(/^#/, "") || "today";
-  location.hash = `#${name}`;
-  await activateTab(name);
+  await import("./tabs/dashboard.js");
+
+  const name = location.hash.replace(/^#/, "") || "dashboard";
+  await activateScreen(name);
+
+  await refreshInquiryBadge();
+  setInterval(refreshInquiryBadge, 60_000);
 }
 
 // ---------- Expose helpers ----------
