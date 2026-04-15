@@ -7,7 +7,30 @@ const addBtn = document.getElementById("today-add");
 const list = document.getElementById("today-list");
 
 fromInput.value = todayKey();
-toInput.value = plusDays(todayKey(), 14);
+toInput.value = todayKey();
+
+const dayInput = document.getElementById("today-day");
+if (dayInput) {
+  dayInput.value = todayKey();
+  dayInput.addEventListener("change", () => {
+    if (!dayInput.value) return;
+    fromInput.value = dayInput.value;
+    toInput.value = dayInput.value;
+    renderList();
+  });
+}
+
+document.querySelectorAll("[data-quick]").forEach((btn) => {
+  btn.addEventListener("click", () => {
+    const t = todayKey();
+    const quick = btn.dataset.quick;
+    if (quick === "today")    { fromInput.value = t; toInput.value = t; dayInput.value = t; }
+    else if (quick === "tomorrow") { const d = plusDays(t, 1); fromInput.value = d; toInput.value = d; dayInput.value = d; }
+    else if (quick === "week")     { fromInput.value = t; toInput.value = plusDays(t, 6); dayInput.value = ""; }
+    else if (quick === "next14")   { fromInput.value = t; toInput.value = plusDays(t, 14); dayInput.value = ""; }
+    renderList();
+  });
+});
 
 refreshBtn.addEventListener("click", () => renderList());
 addBtn.addEventListener("click", () => openManualBookingModal());

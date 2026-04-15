@@ -69,18 +69,34 @@
       <div id="toast" class="toast" hidden></div>
 
       <section class="tab-panel" id="tab-today" hidden>
-        <h2>Danas i naredni termini</h2>
-        <div class="row-between">
-          <div class="field field--inline">
-            <label for="today-from">Od</label>
-            <input id="today-from" type="date">
+        <h2>Termini</h2>
+
+        <div class="field">
+          <label for="today-day">Izaberi dan (brzo)</label>
+          <input id="today-day" type="date">
+          <div class="row-between" style="margin-top:0.5rem;gap:0.5rem;flex-wrap:wrap;">
+            <button type="button" class="btn btn-ghost" data-quick="today">Danas</button>
+            <button type="button" class="btn btn-ghost" data-quick="tomorrow">Sjutra</button>
+            <button type="button" class="btn btn-ghost" data-quick="week">Ova sedmica</button>
+            <button type="button" class="btn btn-ghost" data-quick="next14">+14 dana</button>
           </div>
-          <div class="field field--inline">
-            <label for="today-to">Do</label>
-            <input id="today-to" type="date">
-          </div>
-          <button id="today-refresh" class="btn btn-ghost" type="button">Osvježi</button>
         </div>
+
+        <details>
+          <summary class="muted" style="cursor:pointer;margin-bottom:0.5rem;">Prošireni raspon (od–do)</summary>
+          <div class="row-between">
+            <div class="field field--inline">
+              <label for="today-from">Od</label>
+              <input id="today-from" type="date">
+            </div>
+            <div class="field field--inline">
+              <label for="today-to">Do</label>
+              <input id="today-to" type="date">
+            </div>
+            <button id="today-refresh" class="btn btn-ghost" type="button">Osvježi</button>
+          </div>
+        </details>
+
         <button id="today-add" class="btn btn-primary block" type="button">+ Dodaj termin ručno</button>
         <div id="today-list" class="stack"></div>
       </section>
