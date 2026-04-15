@@ -28,11 +28,14 @@ describe("GET /api/public-settings", () => {
     const r = await handler(ev(), {} as never);
     expect(r?.statusCode).toBe(200);
     const body = JSON.parse(r!.body as string);
-    expect(body).toEqual({
-      bookingWindowDays: 15,
-      defaultCountryCode: "+382",
-      salonAddress: "Bajova 22",
-    });
+    expect(body.bookingWindowDays).toBe(15);
+    expect(body.defaultCountryCode).toBe("+382");
+    expect(body.salonAddress).toBe("Bajova 22");
+    expect(body.salonCity).toBe("Cetinje");
+    expect(body.mapQuery).toBe("Bajova 22, Cetinje, Montenegro");
+    expect(body.tagline).toBe("Beauty Salon · Bajova 22");
+    expect(body.workingHours).toBeDefined();
+    expect(body.workingHours.monday.open).toBe(true);
   });
 
   it("reflects custom values", async () => {
