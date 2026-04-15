@@ -10,12 +10,60 @@ fromInput.value = todayKey();
 toInput.value = todayKey();
 
 const dayInput = document.getElementById("today-day");
+const noteWrap = document.getElementById("day-note-wrap");
+const noteInput = document.getElementById("day-note");
+const noteLabel = document.getElementById("day-note-label");
+const noteStatus = document.getElementById("day-note-status");
+
+function fmtDayLabel(dateKey) {
+  const d = new Date(dateKey + "T00:00:00");
+  return d.toLocaleDateString("sr-Latn", { weekday: "long", day: "numeric", month: "long" });
+}
+
+async function loadDayNote(dateKey) {
+  if (!noteWrap) return;
+  noteWrap.hidden = false;
+  noteLabel.textContent = fmtDayLabel(dateKey);
+  noteStatus.textContent = "";
+  try {
+    const r = await must(`/api/admin/day-notes?date=${dateKey}`);
+    noteInput.value = r.text || "";
+  } catch {
+    noteInput.value = "";
+  }
+}
+
+let noteSaveTimer = null;
+async function saveDayNote() {
+  if (!dayInput || !dayInput.value) return;
+  const dateKey = dayInput.value;
+  const text = noteInput.value;
+  noteStatus.textContent = "čuvam…";
+  try {
+    await must("/api/admin/day-notes", { method: "PUT", body: { dateKey, text } });
+    noteStatus.textContent = "sačuvano ✓";
+    setTimeout(() => { if (noteStatus) noteStatus.textContent = ""; }, 1800);
+  } catch (e) {
+    noteStatus.textContent = "greška: " + e.message;
+  }
+}
+
+if (noteInput) {
+  noteInput.addEventListener("input", () => {
+    if (noteSaveTimer) clearTimeout(noteSaveTimer);
+    noteSaveTimer = setTimeout(saveDayNote, 800);
+  });
+  noteInput.addEventListener("blur", saveDayNote);
+}
+
 if (dayInput) {
   dayInput.value = todayKey();
+  loadDayNote(dayInput.value);
   dayInput.addEventListener("change", () => {
-    if (!dayInput.value) return;
+    if (!dayInput.value) { if (noteWrap) noteWrap.hidden = true; return; }
     fromInput.value = dayInput.value;
     toInput.value = dayInput.value;
+    loadDayNote(dayInput.value);
     renderList();
   });
 }
@@ -24,10 +72,10 @@ document.querySelectorAll("[data-quick]").forEach((btn) => {
   btn.addEventListener("click", () => {
     const t = todayKey();
     const quick = btn.dataset.quick;
-    if (quick === "today")    { fromInput.value = t; toInput.value = t; dayInput.value = t; }
-    else if (quick === "tomorrow") { const d = plusDays(t, 1); fromInput.value = d; toInput.value = d; dayInput.value = d; }
-    else if (quick === "week")     { fromInput.value = t; toInput.value = plusDays(t, 6); dayInput.value = ""; }
-    else if (quick === "next14")   { fromInput.value = t; toInput.value = plusDays(t, 14); dayInput.value = ""; }
+    if (quick === "today")    { fromInput.value = t; toInput.value = t; dayInput.value = t; loadDayNote(t); }
+    else if (quick === "tomorrow") { const d = plusDays(t, 1); fromInput.value = d; toInput.value = d; dayInput.value = d; loadDayNote(d); }
+    else if (quick === "week")     { fromInput.value = t; toInput.value = plusDays(t, 6); dayInput.value = ""; if (noteWrap) noteWrap.hidden = true; }
+    else if (quick === "next14")   { fromInput.value = t; toInput.value = plusDays(t, 14); dayInput.value = ""; if (noteWrap) noteWrap.hidden = true; }
     renderList();
   });
 });

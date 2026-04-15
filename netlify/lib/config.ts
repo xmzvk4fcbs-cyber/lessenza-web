@@ -113,3 +113,20 @@ export async function updateInquiryStatus(id: string, status: Inquiry["status"])
   const next: Inquiry = { ...cur, status };
   await store().setJSON(`${INQUIRY_PREFIX}${id}.json`, next);
 }
+
+// --- Day notes (free-form per-day reminder text for owner) ---
+const DAY_NOTE_PREFIX = "day-notes/";
+
+export async function getDayNote(dateKey: string): Promise<string> {
+  const raw = await store().getJSON<{ text?: string }>(`${DAY_NOTE_PREFIX}${dateKey}.json`);
+  return (raw?.text ?? "").toString();
+}
+
+export async function setDayNote(dateKey: string, text: string): Promise<void> {
+  const trimmed = text.slice(0, 2000);
+  if (!trimmed) {
+    await store().delete(`${DAY_NOTE_PREFIX}${dateKey}.json`);
+    return;
+  }
+  await store().setJSON(`${DAY_NOTE_PREFIX}${dateKey}.json`, { text: trimmed });
+}
