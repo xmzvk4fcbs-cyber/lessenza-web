@@ -38,25 +38,26 @@ function minutesUntil(iso) {
 }
 
 function humanUntil(mins) {
-  if (mins < 0) return "u toku ili prošao";
-  if (mins < 60) return `za ${mins} min`;
+  if (mins < 0) return "u toku — ili tek prošao";
+  if (mins < 1) return "počinje odmah";
+  if (mins < 60) return `za ${mins} minuta`;
   const h = Math.floor(mins / 60);
   const m = mins % 60;
-  if (h < 24) return m ? `za ${h}h ${m}min` : `za ${h}h`;
+  if (h < 24) return m ? `za ${h}h ${m}min` : `za ${h} sata`;
   const d = Math.floor(h / 24);
-  return `za ${d} d`;
+  if (d === 1) return "sjutra";
+  return `za ${d} dana`;
 }
 
 function renderNextCard(appointment) {
   if (!appointment) {
     nextCard.innerHTML = `
       <span class="hero-card__eyebrow">Sljedeći termin</span>
-      <p class="hero-card__empty">Nema više termina danas 🌿</p>
+      <p class="hero-card__empty">Nema više zakazanih <em>danas</em></p>
       <p class="hero-card__meta">Slobodna si — ili dodaj nešto ručno.</p>
     `;
     return;
   }
-  const when = new Date(appointment.startISO);
   const untilMin = minutesUntil(appointment.startISO);
   const name = escapeHtml(appointment.name || "");
   const service = escapeHtml(appointment.serviceName || "");
@@ -64,8 +65,8 @@ function renderNextCard(appointment) {
   const note = appointment.note ? `<p class="hero-card__meta">📝 ${escapeHtml(appointment.note)}</p>` : "";
   nextCard.innerHTML = `
     <span class="hero-card__eyebrow">Sljedeći termin</span>
-    <h3 class="hero-card__title">${service} — ${name}</h3>
-    <p class="hero-card__time">🕐 ${fmtTime(appointment.startISO)} · ${humanUntil(untilMin)}</p>
+    <h3 class="hero-card__title"><em>${service}</em> — ${name}</h3>
+    <p class="hero-card__time"><strong>${fmtTime(appointment.startISO)}</strong>${humanUntil(untilMin)}</p>
     ${phone ? `<p class="hero-card__meta">📞 ${phone}</p>` : ""}
     ${note}
     <div class="hero-card__actions">
