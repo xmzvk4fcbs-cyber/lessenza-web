@@ -71,7 +71,7 @@ export const BlocksSchema = z.array(BlockSchema);
 export const SettingsSchema = z.object({
   bookingWindowDays: z.number().int().min(1).max(365).default(15),
   minLeadHours: z.number().min(0).max(720).default(2),
-  bufferMinutes: z.number().int().min(0).max(120).default(5),
+  bufferMinutes: z.number().int().min(0).max(120).default(0),
   slotGranularityMinutes: z.number().int().min(5).max(60).default(15),
   reminderEmailEnabled: z.boolean().default(true),
   dailyDigestEnabled: z.boolean().default(true),
