@@ -95,16 +95,27 @@ export function createConfigStore(opts: { testMode?: boolean } = {}): KVStore {
   if (opts.testMode || process.env.NODE_ENV === "test") {
     return new InMemoryStore();
   }
-  // Try to acquire the Netlify Blobs store.
+  // Try to acquire the Netlify Blobs store — first via auto-context,
+  // then via explicit siteID + token (required for classic v1 handlers).
   let store: ReturnType<typeof getStore>;
   try {
     store = getStore({ name: "lessenza-config", consistency: "strong" });
-  } catch (err) {
-    // In local dev (unlinked), fall back to a file-backed store so the site is demoable.
-    if (isLocalDev()) return getDevFallback();
-    // In production, log and rethrow — caller (handler) turns it into 500.
-    console.error("Netlify Blobs unavailable:", err);
-    throw err;
+  } catch (autoErr) {
+    const siteID = process.env.NETLIFY_SITE_ID || process.env.SITE_ID;
+    const token = process.env.NETLIFY_BLOBS_TOKEN;
+    if (siteID && token) {
+      try {
+        store = getStore({ name: "lessenza-config", consistency: "strong", siteID, token });
+      } catch (manualErr) {
+        if (isLocalDev()) return getDevFallback();
+        console.error("Netlify Blobs (manual) unavailable:", manualErr);
+        throw manualErr;
+      }
+    } else {
+      if (isLocalDev()) return getDevFallback();
+      console.error("Netlify Blobs unavailable and no NETLIFY_BLOBS_TOKEN set:", autoErr);
+      throw autoErr;
+    }
   }
   return {
     async getJSON<T>(key: string): Promise<T | null> {
