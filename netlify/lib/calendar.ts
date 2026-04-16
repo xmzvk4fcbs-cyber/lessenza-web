@@ -88,11 +88,64 @@ export function createInMemoryCalendar(): CalendarClient {
   };
 }
 
+function buildCalendarClientFromAuth(
+  auth: { type: "jwt"; client: import("googleapis").Auth.JWT } | { type: "oauth"; client: import("googleapis").Auth.OAuth2Client },
+  calendarId: string,
+): CalendarClient {
+  const cal = google.calendar({ version: "v3", auth: auth.client });
+  return {
+    async listEvents({ timeMin, timeMax }) {
+      const { data } = await cal.events.list({
+        calendarId,
+        timeMin,
+        timeMax,
+        singleEvents: true,
+        orderBy: "startTime",
+        maxResults: 2500,
+      });
+      return data.items ?? [];
+    },
+    async insertEvent(event) {
+      const { data } = await cal.events.insert({ calendarId, requestBody: event });
+      return data;
+    },
+    async deleteEvent(eventId) {
+      await cal.events.delete({ calendarId, eventId });
+    },
+    async patchEvent(eventId, patch) {
+      const { data } = await cal.events.patch({ calendarId, eventId, requestBody: patch });
+      return data;
+    },
+  };
+}
+
+/**
+ * Async variant that prefers OAuth-connected calendar (via admin UI),
+ * falls back to service account, then to in-memory. Use from any handler
+ * that can await — book.ts, slots.ts, admin-day-view, etc.
+ */
+export async function createCalendarClientAsync(opts?: { saB64?: string; calendarId?: string }): Promise<CalendarClient> {
+  const { getStoredTokens, getAuthenticatedClient } = await import("./google-auth");
+  const tokens = await getStoredTokens();
+  if (tokens && tokens.email) {
+    const auth = await getAuthenticatedClient();
+    return buildCalendarClientFromAuth({ type: "oauth", client: auth }, "primary");
+  }
+  const saB64 = opts?.saB64 ?? process.env.GOOGLE_SERVICE_ACCOUNT_JSON ?? "";
+  const calendarId = opts?.calendarId ?? process.env.GOOGLE_CALENDAR_ID ?? "";
+  if (!calendarId || !saB64) return createInMemoryCalendar();
+  const sa = parseServiceAccount(saB64);
+  const jwt = new google.auth.JWT({
+    email: sa.client_email,
+    key: sa.private_key,
+    scopes: ["https://www.googleapis.com/auth/calendar"],
+  });
+  return buildCalendarClientFromAuth({ type: "jwt", client: jwt }, calendarId);
+}
+
 export function createCalendarClient(opts?: { saB64?: string; calendarId?: string }): CalendarClient {
   const saB64 = opts?.saB64 ?? process.env.GOOGLE_SERVICE_ACCOUNT_JSON ?? "";
   const calendarId = opts?.calendarId ?? process.env.GOOGLE_CALENDAR_ID ?? "";
-  // Dev/demo fallback: if neither calendarId nor service account is configured,
-  // use an in-memory calendar so booking works without Google setup.
   if (!calendarId || !saB64) {
     return createInMemoryCalendar();
   }

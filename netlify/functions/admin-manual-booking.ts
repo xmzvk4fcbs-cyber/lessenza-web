@@ -2,7 +2,7 @@ import { randomUUID } from "node:crypto";
 import type { Handler } from "@netlify/functions";
 import { json, badRequest, notFound, methodNotAllowed, parseJson, serverError } from "../lib/http";
 import { adminGuard } from "../lib/admin-guard";
-import { createCalendarClient, type CalendarClient } from "../lib/calendar";
+import { createCalendarClient, createCalendarClientAsync, type CalendarClient } from "../lib/calendar";
 import { getServices, getSettings } from "../lib/config";
 import { bookingToEvent, type Booking } from "../lib/calendar-domain";
 import { normalizePhone } from "../lib/phone";
@@ -11,9 +11,9 @@ let factory: (() => CalendarClient) | null = null;
 export function __setCalendarFactoryForTests(f: (() => CalendarClient) | null): void {
   factory = f;
 }
-function makeCalendar(): CalendarClient {
+async function makeCalendar(): Promise<CalendarClient> {
   if (factory) return factory();
-  return createCalendarClient();
+  return createCalendarClientAsync();
 }
 
 interface Req {
@@ -57,7 +57,7 @@ const inner: Handler = async (event) => {
 
   // Check for conflicts — warn (409) unless force=true.
   if (!body.force) {
-    const cal = makeCalendar();
+    const cal = await makeCalendar();
     const existing = await cal.listEvents({ timeMin: start.toISOString(), timeMax: endISO });
     const overlaps = existing.filter((e) => {
       const s = new Date(e.start?.dateTime ?? e.start?.date ?? 0).getTime();
@@ -94,7 +94,7 @@ const inner: Handler = async (event) => {
 
   let inserted;
   try {
-    inserted = await makeCalendar().insertEvent(bookingToEvent(booking));
+    inserted = await (await makeCalendar()).insertEvent(bookingToEvent(booking));
   } catch (e) {
     return serverError(`Calendar insert failed: ${(e as Error).message}`);
   }

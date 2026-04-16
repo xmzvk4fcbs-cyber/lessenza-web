@@ -2,7 +2,7 @@ import type { Handler } from "@netlify/functions";
 import { json, badRequest, methodNotAllowed } from "../lib/http";
 import { getWorkingHours, getBlocks } from "../lib/config";
 import { adminGuard } from "../lib/admin-guard";
-import { createCalendarClient } from "../lib/calendar";
+import { createCalendarClientAsync } from "../lib/calendar";
 import { fromTZ, weekdayInTZ } from "../lib/time";
 import { eventToBooking } from "../lib/calendar-domain";
 import { getServices } from "../lib/config";
@@ -37,7 +37,7 @@ const inner: Handler = async (event) => {
   // Fetch calendar events for the day
   const dayStart = fromTZ(date, "00:00");
   const dayEnd = fromTZ(date, "23:59");
-  const cal = createCalendarClient();
+  const cal = await createCalendarClientAsync();
   const events = await cal.listEvents({ timeMin: dayStart.toISOString(), timeMax: dayEnd.toISOString() });
 
   const appointments = events

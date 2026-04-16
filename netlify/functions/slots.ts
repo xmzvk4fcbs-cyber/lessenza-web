@@ -2,16 +2,16 @@ import type { Handler } from "@netlify/functions";
 import { json, badRequest, notFound, methodNotAllowed } from "../lib/http";
 import { getServices, getWorkingHours, getParallelPairs, getBlocks, getSettings } from "../lib/config";
 import { computeSlots } from "../lib/slots";
-import { createCalendarClient, type CalendarClient } from "../lib/calendar";
+import { createCalendarClient, createCalendarClientAsync, type CalendarClient } from "../lib/calendar";
 import { fromTZ } from "../lib/time";
 
 let factory: (() => CalendarClient) | null = null;
 export function __setCalendarFactoryForTests(f: (() => CalendarClient) | null): void {
   factory = f;
 }
-function makeCalendar(): CalendarClient {
+async function makeCalendar(): Promise<CalendarClient> {
   if (factory) return factory();
-  return createCalendarClient();
+  return createCalendarClientAsync();
 }
 
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
@@ -41,7 +41,7 @@ export const handler: Handler = async (event) => {
 
   let events: Awaited<ReturnType<CalendarClient["listEvents"]>> = [];
   try {
-    const cal = makeCalendar();
+    const cal = await makeCalendar();
     events = await cal.listEvents({ timeMin: dayStart.toISOString(), timeMax: dayEnd.toISOString() });
   } catch {
     events = [];

@@ -164,12 +164,12 @@ document.getElementById("logout-btn").addEventListener("click", async () => {
 // ---------- Screen + tab routing ----------
 
 // Underlying tabs (kept so tabs/*.js can register renderers by these names).
-const tabs = ["today", "hours", "blocks", "services", "pairs", "inquiries", "settings"];
+const tabs = ["today", "hours", "blocks", "services", "pairs", "inquiries", "settings", "google"];
 const panels = Object.fromEntries(tabs.map((t) => [t, document.getElementById(`tab-${t}`)]));
 
 const renderers = {
   today: null, hours: null, blocks: null, services: null,
-  pairs: null, inquiries: null, settings: null,
+  pairs: null, inquiries: null, settings: null, google: null,
 };
 
 export function registerTab(name, renderFn) {
@@ -186,7 +186,7 @@ const screenTabs = {
   dashboard: ["dashboard"],
   schedule: ["today"],
   inquiries: ["inquiries"],
-  settings: ["hours", "services", "blocks", "pairs", "settings"],
+  settings: ["hours", "services", "blocks", "pairs", "settings", "google"],
 };
 
 async function activateScreen(name) {
@@ -249,6 +249,7 @@ async function initAdmin() {
   await import("./tabs/inquiries.js");
   await import("./tabs/settings.js");
   await import("./tabs/dashboard.js");
+  await import("./tabs/google.js");
 
   const name = location.hash.replace(/^#/, "") || "dashboard";
   await activateScreen(name);

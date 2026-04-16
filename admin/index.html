@@ -285,6 +285,36 @@
               </div>
             </details>
 
+            <!-- Google Kalendar -->
+            <details class="acc" data-acc="google">
+              <summary>
+                <span style="display:flex;align-items:center;gap:10px;">
+                  <span class="acc__icon">🗓️</span>
+                  <span>Google Kalendar i Email</span>
+                </span>
+                <span class="acc__chev">▸</span>
+              </summary>
+              <div class="acc__body">
+                <section class="tab-panel" id="tab-google">
+                  <div id="google-status" class="muted" style="margin-bottom:0.75rem;">Učitavanje…</div>
+                  <p class="muted" style="font-size:0.85rem;">Kad povežeš Google nalog, termini idu u tvoj kalendar, a klijenti dobijaju potvrdu na email — sve kroz tvoj Gmail.</p>
+                  <div id="google-actions" class="stack-card__actions" style="margin-top:0.75rem;"></div>
+                  <details style="margin-top:1rem;">
+                    <summary class="muted" style="cursor:pointer;">Prvi put? Kako podesiti</summary>
+                    <ol class="muted" style="padding-left:1.25rem;font-size:0.85rem;line-height:1.6;">
+                      <li>Otvori <a href="https://console.cloud.google.com/apis/credentials" target="_blank" rel="noopener">Google Cloud Console</a> i napravi novi projekat "Lessenza".</li>
+                      <li>U istom projektu: APIs &amp; Services → Library → uključi <strong>Calendar API</strong> i <strong>Gmail API</strong>.</li>
+                      <li>OAuth consent screen: External + tvoj email kao test user.</li>
+                      <li>Credentials → Create OAuth client → <strong>Web application</strong>. Authorized redirect URI: <code>https://lessenza.me/api/admin/google-callback</code>.</li>
+                      <li>Copy <strong>Client ID</strong> i <strong>Client Secret</strong>.</li>
+                      <li>U Netlify → Site configuration → Environment variables → dodaj <code>GOOGLE_OAUTH_CLIENT_ID</code> i <code>GOOGLE_OAUTH_CLIENT_SECRET</code>.</li>
+                      <li>Redeploy → vrati se ovdje → "Poveži Google".</li>
+                    </ol>
+                  </details>
+                </section>
+              </div>
+            </details>
+
             <!-- Lozinka -->
             <details class="acc" data-acc="password">
               <summary>

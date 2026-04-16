@@ -3,7 +3,7 @@ import type { Handler } from "@netlify/functions";
 import { json, badRequest, notFound, methodNotAllowed, parseJson, serverError } from "../lib/http";
 import { getServices, getWorkingHours, getParallelPairs, getBlocks, getSettings } from "../lib/config";
 import { computeSlots } from "../lib/slots";
-import { createCalendarClient, type CalendarClient } from "../lib/calendar";
+import { createCalendarClient, createCalendarClientAsync, type CalendarClient } from "../lib/calendar";
 import { bookingToEvent, type Booking } from "../lib/calendar-domain";
 import { normalizePhone } from "../lib/phone";
 import { fromTZ, dayKeyInTZ, formatSalon } from "../lib/time";
@@ -19,6 +19,9 @@ interface Deps {
 let deps: Deps | null = null;
 export function __setDepsForTests(d: Deps | null): void {
   deps = d;
+}
+async function getDefaultCalendar(): Promise<CalendarClient> {
+  return createCalendarClientAsync();
 }
 function getDeps(): Deps {
   return deps ?? { makeCalendar: () => createCalendarClient(), makeMailer: () => getMailer() };
@@ -78,8 +81,8 @@ export const handler: Handler = async (event) => {
 
   const dayStart = fromTZ(dateKey, "00:00");
   const dayEnd = fromTZ(dateKey, "23:59");
-  const { makeCalendar, makeMailer } = getDeps();
-  const cal = makeCalendar();
+  const { makeMailer } = getDeps();
+  const cal = deps?.makeCalendar ? deps.makeCalendar() : await getDefaultCalendar();
   const events = await cal.listEvents({ timeMin: dayStart.toISOString(), timeMax: dayEnd.toISOString() });
 
   const available = computeSlots({
