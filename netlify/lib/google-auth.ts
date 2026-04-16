@@ -4,6 +4,30 @@ import { randomBytes } from "node:crypto";
 
 const KEY_TOKENS = "google/oauth-tokens.json";
 const KEY_STATES = "google/oauth-states.json";
+const KEY_APP_CREDS = "google/oauth-app.json";
+
+export interface OAuthAppCredentials {
+  clientId: string;
+  clientSecret: string;
+}
+
+export async function getAppCreds(): Promise<OAuthAppCredentials | null> {
+  const fromStore = await store().getJSON<OAuthAppCredentials>(KEY_APP_CREDS);
+  if (fromStore?.clientId && fromStore?.clientSecret) return fromStore;
+  const envId = process.env.GOOGLE_OAUTH_CLIENT_ID;
+  const envSecret = process.env.GOOGLE_OAUTH_CLIENT_SECRET;
+  if (envId && envSecret) return { clientId: envId, clientSecret: envSecret };
+  return null;
+}
+
+export async function saveAppCreds(creds: OAuthAppCredentials): Promise<void> {
+  if (!creds.clientId || !creds.clientSecret) throw new Error("missing-credentials");
+  await store().setJSON(KEY_APP_CREDS, creds);
+}
+
+export async function clearAppCreds(): Promise<void> {
+  await store().delete(KEY_APP_CREDS);
+}
 const STATE_TTL_MS = 10 * 60 * 1000; // 10 minutes
 
 export const GOOGLE_SCOPES = [
@@ -40,6 +64,13 @@ export function getRedirectUri(): string {
   return `${base.replace(/\/$/, "")}/api/admin/google-callback`;
 }
 
+export async function getOAuth2ClientAsync(): Promise<Auth.OAuth2Client> {
+  const creds = await getAppCreds();
+  if (!creds) throw new Error("oauth-not-configured");
+  return new google.auth.OAuth2(creds.clientId, creds.clientSecret, getRedirectUri());
+}
+
+/** Synchronous legacy — kept for callers not yet migrated. */
 export function getOAuth2Client(): Auth.OAuth2Client {
   const clientId = process.env.GOOGLE_OAUTH_CLIENT_ID || "";
   const clientSecret = process.env.GOOGLE_OAUTH_CLIENT_SECRET || "";
@@ -52,7 +83,7 @@ export function getOAuth2Client(): Auth.OAuth2Client {
 export async function getAuthenticatedClient(): Promise<Auth.OAuth2Client> {
   const tokens = await getStoredTokens();
   if (!tokens) throw new Error("google-not-connected");
-  const client = getOAuth2Client();
+  const client = await getOAuth2ClientAsync();
   client.setCredentials({
     refresh_token: tokens.refresh_token,
     access_token: tokens.access_token,
@@ -89,8 +120,8 @@ export async function consumeState(state: string): Promise<boolean> {
   return true;
 }
 
-export function getAuthUrl(state: string): string {
-  const client = getOAuth2Client();
+export async function getAuthUrl(state: string): Promise<string> {
+  const client = await getOAuth2ClientAsync();
   return client.generateAuthUrl({
     access_type: "offline",
     prompt: "consent",

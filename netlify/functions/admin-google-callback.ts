@@ -1,6 +1,6 @@
 import type { Handler } from "@netlify/functions";
 import { google } from "googleapis";
-import { consumeState, getOAuth2Client, saveTokens } from "../lib/google-auth";
+import { consumeState, saveTokens } from "../lib/google-auth";
 
 const html = (title: string, body: string) => ({
   statusCode: 200,
@@ -33,7 +33,8 @@ export const handler: Handler = async (event) => {
   }
 
   try {
-    const client = getOAuth2Client();
+    const { getOAuth2ClientAsync } = await import("../lib/google-auth");
+    const client = await getOAuth2ClientAsync();
     const { tokens } = await client.getToken(code);
     if (!tokens.refresh_token) {
       return html("Greška", `<h1>Google nije vratio refresh token</h1><p>Idi u <a href="https://myaccount.google.com/permissions">Google dozvole</a>, ukloni "Lessenza" pa probaj ponovo — mora biti prva autorizacija.</p>`);

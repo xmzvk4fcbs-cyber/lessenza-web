@@ -5,10 +5,12 @@ import { getStoredTokens } from "../lib/google-auth";
 
 const inner: Handler = async (event) => {
   if (event.httpMethod !== "GET") return methodNotAllowed(["GET"]);
+  const { getAppCreds, getRedirectUri } = await import("../lib/google-auth");
   const tokens = await getStoredTokens();
-  const clientConfigured = !!(process.env.GOOGLE_OAUTH_CLIENT_ID && process.env.GOOGLE_OAUTH_CLIENT_SECRET);
+  const creds = await getAppCreds();
+  const clientConfigured = !!creds;
   if (!tokens) {
-    return json({ connected: false, clientConfigured });
+    return json({ connected: false, clientConfigured, redirectUri: getRedirectUri() });
   }
   return json({
     connected: true,

@@ -7,7 +7,7 @@ const inner: Handler = async (event) => {
   if (event.httpMethod !== "GET") return methodNotAllowed(["GET"]);
   try {
     const state = await createState();
-    const url = getAuthUrl(state);
+    const url = await getAuthUrl(state);
     return {
       statusCode: 302,
       headers: { Location: url },
