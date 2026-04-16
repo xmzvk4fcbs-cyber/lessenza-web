@@ -25,15 +25,15 @@ function envAuth(): AdminAuth | null {
 }
 
 async function readAuth(): Promise<AdminAuth | null> {
-  const env = envAuth();
-  if (env) return env;
+  // Blobs-stored password (set via admin "Change password") takes precedence
+  // over the ENV default, so the owner can change her password via UI.
   try {
     const raw = await store().getJSON<unknown>(KEY_AUTH);
-    if (raw == null) return null;
-    return AdminAuthSchema.parse(raw);
+    if (raw != null) return AdminAuthSchema.parse(raw);
   } catch {
-    return null;
+    // Blobs may not be available yet — fall through to env.
   }
+  return envAuth();
 }
 
 export async function isAdminInitialized(): Promise<boolean> {
@@ -127,11 +127,15 @@ export async function requireAdmin(cookieHeader: string | undefined): Promise<Se
 
 export async function changePassword(oldPassword: string, newPassword: string): Promise<void> {
   if (newPassword.length < 8) throw new Error("password-too-short");
-  if (envAuth()) throw new Error("env-managed");
   const ok = await verifyPassword(oldPassword);
   if (!ok) throw new Error("wrong-password");
-  const auth = await readAuth();
-  if (!auth) throw new Error("not-initialized");
+  const existing = await readAuth();
   const passwordHash = await bcrypt.hash(newPassword, 12);
-  await store().setJSON(KEY_AUTH, { ...auth, passwordHash });
+  // Preserve JWT secret if already stored; otherwise mint a fresh one.
+  const jwtSecret = existing?.jwtSecret || randomBytes(48).toString("base64url");
+  await store().setJSON(KEY_AUTH, {
+    passwordHash,
+    jwtSecret,
+    createdAt: existing?.createdAt || new Date().toISOString(),
+  });
 }
