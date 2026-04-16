@@ -214,4 +214,23 @@ document.addEventListener('DOMContentLoaded', () => {
     dot.style.animationDuration = `${dur}s`;
   });
 
+  // --- Marquee: JS-driven so it moves on iOS Reduce Motion + Low Power Mode ---
+  document.querySelectorAll('.marquee__track').forEach((track) => {
+    track.style.animation = 'none';
+    track.style.willChange = 'transform';
+    let x = 0;
+    const speed = 0.35; // px per frame at 60fps ≈ 21 px/s (slow, luxurious)
+    let last = performance.now();
+    function step(now) {
+      const dt = now - last;
+      last = now;
+      x -= speed * (dt / 16.67);
+      const half = track.scrollWidth / 2;
+      if (-x >= half) x += half;
+      track.style.transform = `translate3d(${x}px, 0, 0)`;
+      requestAnimationFrame(step);
+    }
+    requestAnimationFrame(step);
+  });
+
 });
