@@ -8,10 +8,32 @@ const KEY_AUTH = "auth/admin.json";
 const COOKIE_NAME = "lessenza_admin";
 const TOKEN_TTL_SECONDS = 7 * 24 * 60 * 60;
 
+/**
+ * Simple env-based auth: when ADMIN_PASSWORD_HASH is set we skip the Blobs
+ * entirely so the owner can log in even if Blobs isn't configured yet.
+ * JWT_SECRET (or a fallback random-but-deploy-stable string) signs the cookie.
+ */
+function envAuth(): AdminAuth | null {
+  const passwordHash = process.env.ADMIN_PASSWORD_HASH || "";
+  if (!passwordHash) return null;
+  const jwtSecret = process.env.JWT_SECRET || process.env.ADMIN_PASSWORD_HASH; // stable across restarts
+  return {
+    passwordHash,
+    jwtSecret,
+    createdAt: new Date(0).toISOString(),
+  };
+}
+
 async function readAuth(): Promise<AdminAuth | null> {
-  const raw = await store().getJSON<unknown>(KEY_AUTH);
-  if (raw == null) return null;
-  return AdminAuthSchema.parse(raw);
+  const env = envAuth();
+  if (env) return env;
+  try {
+    const raw = await store().getJSON<unknown>(KEY_AUTH);
+    if (raw == null) return null;
+    return AdminAuthSchema.parse(raw);
+  } catch {
+    return null;
+  }
 }
 
 export async function isAdminInitialized(): Promise<boolean> {
@@ -19,6 +41,9 @@ export async function isAdminInitialized(): Promise<boolean> {
 }
 
 export async function setupAdmin(password: string): Promise<void> {
+  if (envAuth()) {
+    throw new Error("env-managed");
+  }
   if (await isAdminInitialized()) {
     throw new Error("already-initialized");
   }
@@ -102,6 +127,7 @@ export async function requireAdmin(cookieHeader: string | undefined): Promise<Se
 
 export async function changePassword(oldPassword: string, newPassword: string): Promise<void> {
   if (newPassword.length < 8) throw new Error("password-too-short");
+  if (envAuth()) throw new Error("env-managed");
   const ok = await verifyPassword(oldPassword);
   if (!ok) throw new Error("wrong-password");
   const auth = await readAuth();
