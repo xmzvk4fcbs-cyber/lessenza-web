@@ -69,9 +69,7 @@ export const handler: Handler = async (event) => {
     .filter((t): t is number => t !== null);
   const ADJACENT_MS = 30 * 60_000;
   const recommended = slots.filter((hhmm) => {
-    const [h, m] = hhmm.split(":").map(Number);
-    const [y, mo, d] = date.split("-").map(Number);
-    const slotMs = new Date(Date.UTC(y, mo - 1, d, h - 2, m)).getTime();
+    const slotMs = fromTZ(date, hhmm).getTime();
     for (const b of bookedEnds) {
       if (Math.abs(slotMs - b) <= ADJACENT_MS) return true;
     }
