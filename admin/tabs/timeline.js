@@ -10,7 +10,7 @@ function hhmmToMin(hhmm) {
 
 function isoLocalHHMM(iso) {
   const d = new Date(iso);
-  return d.toLocaleTimeString("sr-RS", { hour: "2-digit", minute: "2-digit" });
+  return d.toLocaleTimeString("sr-Latn", { hour: "2-digit", minute: "2-digit" });
 }
 
 function isoToDayMinutes(iso, dateKey) {

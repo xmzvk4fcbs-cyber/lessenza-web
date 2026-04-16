@@ -14,7 +14,7 @@ const FIELDS = [
   ["whatsappPhone", "WhatsApp broj (npr. +38269123456)", "tel", {}],
   ["instagramUrl", "Instagram link", "url", {}],
   ["tagline", "Tagline u hero sekciji", "text", {}],
-  ["displayHoursOverride", "Radno vrijeme za prikaz (opciono — npr. 'Pon–Pet 09:00–20:00' ili 'za inspekciju'). Ostavi prazno da prikaže po danima iz kalendara.", "textarea", {}],
+  ["displayHoursOverride", "Radno vrijeme za prikaz na sajtu (opciono). Npr. 'Pon–Pet 09:00–20:00, Sub 09:00–15:00'. Ako ostaviš prazno, radno vrijeme se NE prikazuje klijentima.", "textarea", {}],
 
   // --- Rezervacije ---
   ["bookingWindowDays", "Prozor rezervacije (dana unaprijed)", "number", { min: 1, max: 365 }],

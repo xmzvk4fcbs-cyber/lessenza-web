@@ -85,21 +85,9 @@
             </div>
             <div class="field">
               <label for="f-phone">Telefon</label>
-              <div class="phone-field">
-                <select id="f-dial" aria-label="Pozivni broj">
-                  <option value="+382" selected>+382</option>
-                  <option value="+381">+381</option>
-                  <option value="+385">+385</option>
-                  <option value="+387">+387</option>
-                  <option value="+386">+386</option>
-                  <option value="+389">+389</option>
-                  <option value="+49">+49</option>
-                  <option value="+43">+43</option>
-                  <option value="+39">+39</option>
-                  <option value="+33">+33</option>
-                  <option value="+44">+44</option>
-                  <option value="+1">+1</option>
-                </select>
+              <div class="phone-field phone-field--fixed">
+                <span class="phone-prefix" id="f-dial-prefix">+382</span>
+                <input type="hidden" id="f-dial" value="+382">
                 <input id="f-phone" name="phone" type="tel" required autocomplete="tel-national" inputmode="tel" placeholder="69 123 456">
               </div>
               <p class="field__hint">Obavezno — za potvrdu ili izmjene termina.</p>
@@ -148,15 +136,10 @@
             </div>
             <div class="field">
               <label for="i-phone">Telefon</label>
-              <div class="phone-field">
-                <select id="i-dial" aria-label="Pozivni broj">
-                  <option value="+382" selected>+382</option>
-                  <option value="+381">+381</option>
-                  <option value="+385">+385</option>
-                  <option value="+387">+387</option>
-                  <option value="+386">+386</option>
-                </select>
-                <input id="i-phone" name="phone" type="tel" required inputmode="tel">
+              <div class="phone-field phone-field--fixed">
+                <span class="phone-prefix" id="i-dial-prefix">+382</span>
+                <input type="hidden" id="i-dial" value="+382">
+                <input id="i-phone" name="phone" type="tel" required inputmode="tel" placeholder="69 123 456">
               </div>
             </div>
             <div class="field">

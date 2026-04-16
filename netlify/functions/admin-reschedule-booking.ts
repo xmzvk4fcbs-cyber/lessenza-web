@@ -67,6 +67,7 @@ const inner: Handler = async (event) => {
 
   let emailSent = false;
   let whatsappLink: string | null = null;
+  let viberLink: string | null = null;
   if (updated.email) {
     try {
       await makeMailer().send(
@@ -80,12 +81,13 @@ const inner: Handler = async (event) => {
       emailSent = false;
     }
   }
+  const newLine = formatSalon(newStart, "dd.MM.yyyy. 'u' HH:mm");
+  const msg = `Draga ${updated.name}, moram pomjeriti naš termin za ${updated.serviceName} na ${newLine}. Molim Vas da mi javite da li Vam to odgovara, ili ćemo naći drugi termin. Izvinjavam se na neprijatnosti ✿ L'Essenza`;
   if (updated.phoneE164) {
-    const newLine = formatSalon(newStart, "dd.MM.yyyy. 'u' HH:mm");
-    const msg = `Zdravo ${updated.name}, vaš termin (${updated.serviceName}) je pomjeren na ${newLine}. Hvala na razumijevanju — L'Essenza.`;
     whatsappLink = waLink(updated.phoneE164, msg);
+    viberLink = `viber://chat?number=${encodeURIComponent(updated.phoneE164)}`;
   }
-  return json({ ok: true, emailSent, whatsappLink, booking: updated });
+  return json({ ok: true, emailSent, whatsappLink, viberLink, message: msg, booking: updated });
 };
 
 export const handler = adminGuard(inner);

@@ -63,7 +63,7 @@ export function escapeHtml(s) {
 
 export function fmtDateTime(iso) {
   const d = new Date(iso);
-  return d.toLocaleString("sr-RS", {
+  return d.toLocaleString("sr-Latn", {
     weekday: "short",
     day: "2-digit",
     month: "2-digit",
@@ -74,7 +74,7 @@ export function fmtDateTime(iso) {
 }
 
 export function fmtTime(iso) {
-  return new Date(iso).toLocaleTimeString("sr-RS", { hour: "2-digit", minute: "2-digit" });
+  return new Date(iso).toLocaleTimeString("sr-Latn", { hour: "2-digit", minute: "2-digit" });
 }
 
 export function todayKey() {

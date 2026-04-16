@@ -53,6 +53,8 @@ const inner: Handler = async (event) => {
 
   let emailSent = false;
   let whatsappLink: string | null = null;
+  let viberLink: string | null = null;
+  let message: string | null = null;
   if (booking) {
     if (booking.email) {
       try {
@@ -67,15 +69,15 @@ const inner: Handler = async (event) => {
         emailSent = false;
       }
     }
+    const dateLine = formatSalon(new Date(booking.startISO), "dd.MM.yyyy. 'u' HH:mm");
+    const reasonLine = reason ? ` (${reason})` : "";
+    message = `Draga ${booking.name}, moram otkazati naš termin za ${booking.serviceName}, ${dateLine}${reasonLine}. Izvinjavam se na neprijatnosti — javite se kad stignete da ugovorimo novi termin. Hvala na razumijevanju, srdačan pozdrav ✿ L'Essenza`;
     if (booking.phoneE164) {
-      const dateLine = formatSalon(new Date(booking.startISO), "dd.MM.yyyy. 'u' HH:mm");
-      const msg = reason
-        ? `Zdravo ${booking.name}, nažalost moramo otkazati vaš termin (${booking.serviceName}, ${dateLine}). Razlog: ${reason}. Javite se za novi termin.`
-        : `Zdravo ${booking.name}, nažalost moramo otkazati vaš termin (${booking.serviceName}, ${dateLine}). Javite se za novi termin.`;
-      whatsappLink = waLink(booking.phoneE164, msg);
+      whatsappLink = waLink(booking.phoneE164, message);
+      viberLink = `viber://chat?number=${encodeURIComponent(booking.phoneE164)}`;
     }
   }
-  return json({ ok: true, emailSent, whatsappLink });
+  return json({ ok: true, emailSent, whatsappLink, viberLink, message });
 };
 
 export const handler = adminGuard(inner);

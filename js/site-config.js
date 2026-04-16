@@ -44,19 +44,17 @@
     return "Zatvoreno";
   }
 
-  function renderWorkingHours(container, hours, override) {
+  function renderWorkingHours(container, _hours, override) {
     if (!container) return;
-    if (override && override.trim()) {
-      container.innerHTML = `<div class="wh-freeform" style="white-space:pre-line;">${override.replace(/</g, "&lt;")}</div>`;
+    const text = (override || "").trim();
+    if (!text) {
+      // No display text configured → hide entire working-hours block.
+      const item = container.closest(".contact-info-item");
+      if (item) item.style.display = "none";
+      else container.style.display = "none";
       return;
     }
-    if (!hours) return;
-    const lines = DAY_ORDER.map((key) => {
-      const label = DAY_NAMES[key];
-      const value = formatDay(hours[key]);
-      return `<div class="wh-row"><span class="wh-day">${label}</span><span class="wh-time">${value}</span></div>`;
-    }).join("");
-    container.innerHTML = lines;
+    container.innerHTML = `<div class="wh-freeform" style="white-space:pre-line;">${text.replace(/</g, "&lt;")}</div>`;
   }
 
   async function loadSettings() {
@@ -112,6 +110,11 @@
       const q = encodeURIComponent(settings.mapQuery || fullAddress || "Cetinje, Montenegro");
       mapFrame.setAttribute("src", `https://maps.google.com/maps?q=${q}&output=embed`);
     }
+
+    // Apply default country code to phone prefix chips.
+    const cc = settings.defaultCountryCode || "+382";
+    document.querySelectorAll(".phone-prefix").forEach((el) => { el.textContent = cc; });
+    document.querySelectorAll("[id$='-dial']").forEach((el) => { if (el.tagName === "INPUT") el.value = cc; });
 
     // Expose for other scripts (e.g. booking WhatsApp fallback)
     window.__siteSettings = settings;

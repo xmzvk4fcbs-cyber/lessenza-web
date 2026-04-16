@@ -250,7 +250,7 @@ async function submitBooking() {
   };
   const { booking } = await apiPost("/api/book", payload);
   const d = new Date(booking.startISO);
-  const when = d.toLocaleString("sr-RS", { weekday: "long", day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" });
+  const when = d.toLocaleString("sr-Latn", { weekday: "long", day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" });
   showSuccess(`${booking.serviceName} — ${when}.`, Boolean(email));
 }
 

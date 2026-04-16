@@ -212,7 +212,8 @@ function renderCard(a) {
       </div>
       <div class="stack-card__actions">
         <a class="btn btn-ghost" href="tel:${phone}">📞 Pozovi</a>
-        <a class="btn btn-ghost" data-action="wa">📱 WhatsApp</a>
+        <a class="btn btn-ghost" data-action="wa">📱 WA</a>
+        <a class="btn btn-ghost" data-action="viber">💜 Viber</a>
         <button class="btn btn-ghost" type="button" data-action="reschedule">✏️ Pomjeri</button>
         <button class="btn btn-danger" type="button" data-action="cancel">✕ Otkaži</button>
       </div>
@@ -231,10 +232,28 @@ async function onAction(e) {
 
   if (action === "wa") {
     const when = fmtDateTime(start);
-    const msg = `Zdravo ${name}, vezano za vaš termin (${service}, ${when}) — L'Essenza.`;
-    const digits = phone.replace(/\D+/g, "");
-    window.open(`https://wa.me/${digits}?text=${encodeURIComponent(msg)}`, "_blank");
-    e.preventDefault();
+    const msg = `Draga ${name}, potrebno je da porazgovaramo o Vašem terminu za ${service} (${when}). Hvala — L'Essenza ✿`;
+    if (!phone) {
+      openMessageModal("Broj nije unešen", msg);
+    } else {
+      const digits = phone.replace(/\D+/g, "");
+      window.open(`https://wa.me/${digits}?text=${encodeURIComponent(msg)}`, "_blank");
+    }
+    if (e.preventDefault) e.preventDefault();
+    return;
+  }
+
+  if (action === "viber") {
+    const when = fmtDateTime(start);
+    const msg = `Draga ${name}, potrebno je da porazgovaramo o Vašem terminu za ${service} (${when}). Hvala — L'Essenza ✿`;
+    if (!phone) {
+      openMessageModal("Broj nije unešen", msg);
+    } else {
+      window.open(`viber://chat?number=${encodeURIComponent(phone)}`, "_blank");
+      // Also give option to copy message (Viber doesn't support pre-filled text)
+      openCopyMessageToast(msg);
+    }
+    if (e.preventDefault) e.preventDefault();
     return;
   }
 
@@ -256,9 +275,7 @@ async function onAction(e) {
         const r = await must("/api/admin/cancel-booking", { method: "POST", body: { eventId, reason } });
         closeModal();
         toast("Termin otkazan.", "success");
-        if (r.whatsappLink && !r.emailSent) {
-          window.open(r.whatsappLink, "_blank");
-        }
+        if (r.message) showMessageActions("Obavijesti klijentkinju", r.message, r.whatsappLink, r.viberLink);
         await renderList();
       } catch (err) {
         toast(err.message, "error");
@@ -288,7 +305,7 @@ async function onAction(e) {
         const r = await must("/api/admin/reschedule-booking", { method: "POST", body: { eventId, newStartISO: iso } });
         closeModal();
         toast("Termin pomjeren.", "success");
-        if (r.whatsappLink && !r.emailSent) window.open(r.whatsappLink, "_blank");
+        if (r.message) showMessageActions("Obavijesti klijentkinju", r.message, r.whatsappLink, r.viberLink);
         await renderList();
       } catch (err) {
         toast(err.message, "error");
@@ -361,6 +378,39 @@ async function openManualBookingModal() {
   }
 
   saveBtn.addEventListener("click", submit);
+}
+
+function showMessageActions(title, message, whatsappLink, viberLink) {
+  const waBtn = whatsappLink ? `<a class="btn btn-primary" href="${whatsappLink}" target="_blank" rel="noopener">📱 Pošalji WhatsApp</a>` : "";
+  const viBtn = viberLink ? `<a class="btn btn-ghost" href="${viberLink}" target="_blank" rel="noopener">💜 Otvori Viber</a>` : "";
+  openModal(title, `
+    <p class="muted" style="font-size:0.88rem;">Poruka za klijentkinju:</p>
+    <textarea id="msg-copy" readonly rows="5" style="width:100%;">${escapeHtml(message)}</textarea>
+    <div class="stack-card__actions" style="margin-top:0.75rem;">
+      ${waBtn}
+      ${viBtn}
+      <button type="button" class="btn btn-ghost" id="msg-copy-btn">📋 Kopiraj poruku</button>
+      <button type="button" class="btn btn-ghost" data-close="1">Zatvori</button>
+    </div>
+  `);
+  const cbtn = document.getElementById("msg-copy-btn");
+  cbtn.addEventListener("click", async () => {
+    const ta = document.getElementById("msg-copy");
+    try { await navigator.clipboard.writeText(ta.value); cbtn.textContent = "Kopirano ✓"; }
+    catch { ta.select(); document.execCommand("copy"); cbtn.textContent = "Kopirano ✓"; }
+    setTimeout(() => { cbtn.textContent = "📋 Kopiraj poruku"; }, 1800);
+  });
+}
+
+function openMessageModal(title, msg) {
+  showMessageActions(title, msg, null, null);
+}
+
+function openCopyMessageToast(msg) {
+  navigator.clipboard?.writeText(msg).then(
+    () => toast("Poruka kopirana (Viber nema pre-fill). Nalijepi je u chat.", "success"),
+    () => toast("Otvaram Viber — poruku otkucaj ručno.", "success"),
+  );
 }
 
 registerTab("today", renderList);
