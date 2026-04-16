@@ -3,7 +3,15 @@ import type { HandlerResponse } from "@netlify/functions";
 export function json(data: unknown, statusCode = 200, extraHeaders: Record<string, string> = {}): HandlerResponse {
   return {
     statusCode,
-    headers: { "content-type": "application/json", ...extraHeaders },
+    headers: {
+      "content-type": "application/json",
+      // Prevent any edge/CDN/browser caching of dynamic endpoints so admin
+      // changes (blocks, services, settings) show up immediately for everyone.
+      "cache-control": "no-store, no-cache, must-revalidate, max-age=0",
+      pragma: "no-cache",
+      expires: "0",
+      ...extraHeaders,
+    },
     body: JSON.stringify(data),
   };
 }

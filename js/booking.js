@@ -97,7 +97,7 @@ function showInquirySuccess() {
 }
 
 async function apiGet(url) {
-  const res = await fetch(url);
+  const res = await fetch(url, { cache: "no-store", headers: { "cache-control": "no-cache" } });
   const body = await res.json().catch(() => ({}));
   if (!res.ok) throw new Error(body.message || `HTTP ${res.status}`);
   return body;
@@ -184,23 +184,33 @@ function renderDatePicker() {
 
 // --- Step 3: slots ---
 
+let slotRefreshTimer = null;
+
 async function loadSlots() {
+  // Cache-bust: append timestamp so no CDN/browser caches this.
+  const t0 = Date.now();
   ui.slotGrid.innerHTML = "";
   ui.slotEmpty.hidden = true;
-  const { slots, recommended = [] } = await apiGet(
-    `/api/slots?serviceId=${encodeURIComponent(state.chosenService.id)}&date=${encodeURIComponent(state.chosenDate)}`
-  );
+  // Clean any legend from previous render to avoid duplicates.
+  ui.slotGrid.parentNode.querySelectorAll(".slot-legend").forEach((el) => el.remove());
+
+  const url = `/api/slots?serviceId=${encodeURIComponent(state.chosenService.id)}&date=${encodeURIComponent(state.chosenDate)}&_=${t0}`;
+  const { slots, recommended = [] } = await apiGet(url);
   state.slots = slots;
   const recSet = new Set(recommended);
+
   if (slots.length === 0) {
     ui.slotEmpty.hidden = false;
     return;
   }
+  // Preserve selection across refresh if still valid.
+  const prev = state.chosenSlot;
   for (const t of slots) {
     const btn = document.createElement("button");
     btn.type = "button";
     btn.className = "slot-btn";
     if (recSet.has(t)) btn.classList.add("is-recommended");
+    if (prev && t === prev) btn.classList.add("is-selected");
     btn.textContent = t;
     btn.addEventListener("click", () => {
       state.chosenSlot = t;
@@ -209,13 +219,29 @@ async function loadSlots() {
     });
     ui.slotGrid.appendChild(btn);
   }
-  if (recommended.length > 0 && ui.slotEmpty) {
-    // Add a small legend above the grid
+  if (prev && !slots.includes(prev)) {
+    state.chosenSlot = null;
+    showError("Odabrani termin više nije slobodan — izaberi drugi.");
+  }
+  if (recommended.length > 0) {
     const legend = document.createElement("div");
     legend.className = "slot-legend";
     legend.innerHTML = `<span class="slot-legend__dot"></span> Preporučeno (odmah pored već zakazanog termina)`;
     ui.slotGrid.parentNode.insertBefore(legend, ui.slotGrid);
   }
+}
+
+/** Auto-refresh slots every 30s while user is on step 3, so blocks/bookings
+ *  added by admin appear immediately and stale selections get caught. */
+function startSlotAutoRefresh() {
+  stopSlotAutoRefresh();
+  slotRefreshTimer = setInterval(() => {
+    if (state.step !== 3) return stopSlotAutoRefresh();
+    loadSlots().catch(() => {});
+  }, 30_000);
+}
+function stopSlotAutoRefresh() {
+  if (slotRefreshTimer) { clearInterval(slotRefreshTimer); slotRefreshTimer = null; }
 }
 
 // --- Step 4: submit booking ---
@@ -299,10 +325,17 @@ async function onNext() {
       if (!state.chosenDate) throw new Error("Izaberi datum.");
       await loadSlots();
       setStep(3);
+      startSlotAutoRefresh();
       return;
     }
     if (state.step === 3) {
       if (!state.chosenSlot) throw new Error("Izaberi vrijeme.");
+      // Final freshness check — re-fetch and confirm slot still free.
+      await loadSlots();
+      if (!state.slots.includes(state.chosenSlot)) {
+        throw new Error("Termin više nije slobodan — izaberi drugi.");
+      }
+      stopSlotAutoRefresh();
       setStep(4);
       return;
     }
