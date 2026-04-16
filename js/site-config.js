@@ -35,12 +35,25 @@
     return "https://wa.me/" + clean + msg;
   }
 
-  function renderWorkingHours(container, hours) {
-    if (!container || !hours) return;
+  function formatDay(d) {
+    if (!d || !d.open) return "Zatvoreno";
+    if (Array.isArray(d.windows) && d.windows.length) {
+      return d.windows.map((w) => `${w.from} – ${w.to}`).join(", ");
+    }
+    if (d.from && d.to) return `${d.from} – ${d.to}`;
+    return "Zatvoreno";
+  }
+
+  function renderWorkingHours(container, hours, override) {
+    if (!container) return;
+    if (override && override.trim()) {
+      container.innerHTML = `<div class="wh-freeform" style="white-space:pre-line;">${override.replace(/</g, "&lt;")}</div>`;
+      return;
+    }
+    if (!hours) return;
     const lines = DAY_ORDER.map((key) => {
-      const d = hours[key];
       const label = DAY_NAMES[key];
-      const value = d && d.open ? `${d.from} – ${d.to}` : "Zatvoreno";
+      const value = formatDay(hours[key]);
       return `<div class="wh-row"><span class="wh-day">${label}</span><span class="wh-time">${value}</span></div>`;
     }).join("");
     container.innerHTML = lines;
@@ -72,7 +85,7 @@
         case "publicPhone":      return setText(el, settings.publicPhone);
         case "publicEmail":      return setText(el, settings.publicEmail);
         case "whatsappPhone":    return setText(el, settings.whatsappPhone || settings.publicPhone);
-        case "workingHours":     return renderWorkingHours(el, settings.workingHours);
+        case "workingHours":     return renderWorkingHours(el, settings.workingHours, settings.displayHoursOverride);
         default:                 return;
       }
     });

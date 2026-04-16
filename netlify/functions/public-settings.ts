@@ -16,6 +16,7 @@ export const handler: Handler = async (event) => {
     whatsappPhone: s.whatsappPhone ?? s.publicPhone ?? s.ownerPhone,
     instagramUrl: s.instagramUrl,
     tagline: s.tagline,
+    displayHoursOverride: s.displayHoursOverride,
     workingHours: hours,
   });
 };
