@@ -16,7 +16,7 @@ const TOKEN_TTL_SECONDS = 7 * 24 * 60 * 60;
 function envAuth(): AdminAuth | null {
   const passwordHash = process.env.ADMIN_PASSWORD_HASH || "";
   if (!passwordHash) return null;
-  const jwtSecret = process.env.JWT_SECRET || process.env.ADMIN_PASSWORD_HASH; // stable across restarts
+  const jwtSecret = process.env.JWT_SECRET || passwordHash; // stable across restarts
   return {
     passwordHash,
     jwtSecret,
