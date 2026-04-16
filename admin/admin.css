@@ -610,6 +610,193 @@
   margin-top: 0.1rem;
 }
 
+/* === Day timeline === */
+.tl-summary {
+  display: flex; flex-wrap: wrap; gap: 8px;
+  margin: 0.5rem 0 1rem;
+}
+.tl-summary__chip {
+  padding: 6px 12px;
+  border-radius: 999px;
+  font-size: 0.78rem;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+}
+.tl-summary__chip--open  { background: rgba(107, 111, 79, 0.12); color: var(--sage, #6B6F4F); }
+.tl-summary__chip--block { background: rgba(139, 58, 62, 0.12); color: #8B3A3E; }
+.tl-summary__chip--appt  { background: rgba(201, 169, 97, 0.15); color: var(--gold, #C9A961); }
+
+.timeline {
+  position: relative;
+  display: grid;
+  grid-template-columns: 54px 1fr;
+  gap: 4px;
+  margin: 0 0 1rem;
+  border-radius: 14px;
+  background: var(--white-warm, #FBF8F2);
+  overflow: hidden;
+  box-shadow: 0 2px 10px rgba(74, 66, 56, 0.06);
+}
+.timeline--closed {
+  min-height: 140px;
+  display: flex;
+  align-items: center; justify-content: center;
+  padding: 2rem;
+  background: repeating-linear-gradient(
+    45deg,
+    rgba(217, 192, 154, 0.08),
+    rgba(217, 192, 154, 0.08) 10px,
+    rgba(217, 192, 154, 0.18) 10px,
+    rgba(217, 192, 154, 0.18) 20px
+  );
+}
+.timeline__closed-label {
+  font-family: 'Cormorant Garamond', Georgia, serif;
+  font-style: italic;
+  font-size: 1.4rem;
+  color: var(--sage, #6B6F4F);
+}
+
+.tl-hours {
+  position: relative;
+  grid-column: 1;
+  border-right: 1px solid var(--champagne-deep, #D9C09A);
+}
+.tl-hour {
+  position: absolute;
+  left: 0; right: 6px;
+  text-align: right;
+  font-family: 'Outfit', sans-serif;
+  font-size: 0.68rem;
+  color: var(--text-light, #7A6F62);
+  letter-spacing: 0.05em;
+  transform: translateY(-50%);
+}
+
+.tl-track {
+  position: relative;
+  grid-column: 2;
+  min-height: 200px;
+}
+
+.tl-offhours {
+  position: absolute; inset: 0;
+  background: repeating-linear-gradient(
+    45deg,
+    rgba(217, 192, 154, 0.06),
+    rgba(217, 192, 154, 0.06) 8px,
+    transparent 8px, transparent 16px
+  );
+}
+
+.tl-window {
+  position: absolute;
+  left: 0; right: 0;
+  background: linear-gradient(90deg, rgba(107, 111, 79, 0.06), rgba(201, 169, 97, 0.08));
+  border-left: 3px solid var(--sage, #6B6F4F);
+}
+
+.tl-block {
+  position: absolute;
+  left: 4px; right: 4px;
+  background: repeating-linear-gradient(
+    135deg,
+    rgba(139, 58, 62, 0.18),
+    rgba(139, 58, 62, 0.18) 6px,
+    rgba(139, 58, 62, 0.28) 6px,
+    rgba(139, 58, 62, 0.28) 12px
+  );
+  border-left: 3px solid #8B3A3E;
+  border-radius: 4px;
+  display: flex; align-items: flex-start;
+  padding: 4px 8px;
+  overflow: hidden;
+  pointer-events: none;
+}
+.tl-block__label {
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: #8B3A3E;
+  letter-spacing: 0.02em;
+}
+
+.tl-appt, .tl-raw {
+  position: absolute;
+  left: 8px; right: 8px;
+  padding: 6px 10px;
+  border-radius: 8px;
+  cursor: pointer;
+  overflow: hidden;
+  display: flex; flex-direction: column;
+  gap: 1px;
+  transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.tl-appt {
+  background: linear-gradient(135deg, #F4DBAA, #C9A961);
+  color: var(--text, #4A4238);
+  box-shadow: 0 2px 8px rgba(201, 169, 97, 0.35);
+  border-left: 3px solid #A88940;
+}
+.tl-appt:hover {
+  transform: translateX(2px);
+  box-shadow: 0 6px 16px rgba(201, 169, 97, 0.5);
+}
+.tl-raw {
+  background: rgba(107, 111, 79, 0.18);
+  color: var(--sage, #6B6F4F);
+  border-left: 3px solid var(--sage, #6B6F4F);
+  cursor: default;
+}
+.tl-item__time {
+  font-family: 'Outfit', sans-serif;
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  opacity: 0.85;
+}
+.tl-item__title {
+  font-family: 'Cormorant Garamond', Georgia, serif;
+  font-weight: 500;
+  font-size: 0.95rem;
+  line-height: 1.2;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.tl-item__phone {
+  font-size: 0.72rem;
+  opacity: 0.8;
+}
+
+.tl-now {
+  position: absolute;
+  left: 0; right: 0;
+  height: 2px;
+  background: #8B3A3E;
+  box-shadow: 0 0 12px rgba(139, 58, 62, 0.5);
+  pointer-events: none;
+  z-index: 5;
+}
+.tl-now__dot {
+  position: absolute;
+  left: -4px; top: -4px;
+  width: 10px; height: 10px;
+  border-radius: 50%;
+  background: #8B3A3E;
+  box-shadow: 0 0 8px rgba(139, 58, 62, 0.8);
+}
+.tl-now__label {
+  position: absolute;
+  right: 6px; top: -10px;
+  padding: 2px 8px;
+  background: #8B3A3E;
+  color: #fff;
+  border-radius: 999px;
+  font-size: 0.65rem;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+}
+
 /* === Check row (working hours, etc.) === */
 .check-row {
   display: flex;

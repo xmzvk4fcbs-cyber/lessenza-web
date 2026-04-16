@@ -1477,8 +1477,10 @@ p {
   display: flex;
   gap: 3rem;
   white-space: nowrap;
+  -webkit-animation: marquee-scroll 28s linear infinite;
   animation: marquee-scroll 28s linear infinite;
   will-change: transform;
+  transform: translateZ(0); /* hint GPU layer, helps iOS */
 }
 
 .marquee__item {
@@ -1499,9 +1501,13 @@ p {
   vertical-align: middle;
 }
 
+@-webkit-keyframes marquee-scroll {
+  from { -webkit-transform: translate3d(0, 0, 0); transform: translate3d(0, 0, 0); }
+  to   { -webkit-transform: translate3d(-50%, 0, 0); transform: translate3d(-50%, 0, 0); }
+}
 @keyframes marquee-scroll {
-  from { transform: translateX(0); }
-  to   { transform: translateX(-50%); }
+  from { transform: translate3d(0, 0, 0); }
+  to   { transform: translate3d(-50%, 0, 0); }
 }
 
 /* --- Text shimmer on luxe em headings --- */

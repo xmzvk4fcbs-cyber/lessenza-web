@@ -136,6 +136,36 @@
   outline: none;
 }
 .slot-btn.is-selected { background: var(--gold); color: var(--white-warm); }
+
+.slot-btn.is-recommended {
+  position: relative;
+  border-color: var(--gold);
+  background: rgba(201, 169, 97, 0.08);
+  font-weight: 600;
+}
+.slot-btn.is-recommended::before {
+  content: "";
+  position: absolute;
+  top: 4px; right: 4px;
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  background: var(--gold);
+  box-shadow: 0 0 6px rgba(201, 169, 97, 0.7);
+}
+.slot-btn.is-recommended.is-selected::before { background: var(--cream-soft); }
+
+.slot-legend {
+  display: flex; align-items: center; gap: 6px;
+  margin-bottom: 0.5rem;
+  font-size: 0.8rem;
+  color: var(--text-light);
+}
+.slot-legend__dot {
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  background: var(--gold);
+  box-shadow: 0 0 4px rgba(201, 169, 97, 0.7);
+}
 .slot-empty { padding: 1rem; color: var(--text-light); background: var(--cream-soft); border-radius: 10px; }
 
 .field { display: block; margin-bottom: 1rem; }

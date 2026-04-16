@@ -58,5 +58,28 @@ export const handler: Handler = async (event) => {
     settings,
     now: new Date(),
   });
-  return json({ slots });
+
+  // Recommended slots — those adjacent (within 30 min) to an existing booking,
+  // so a client filling gaps gets efficiency hints. Returns subset of slots.
+  const bookedStarts = events
+    .map((e) => e.start?.dateTime ? new Date(e.start.dateTime).getTime() : null)
+    .filter((t): t is number => t !== null);
+  const bookedEnds = events
+    .map((e) => e.end?.dateTime ? new Date(e.end.dateTime).getTime() : null)
+    .filter((t): t is number => t !== null);
+  const ADJACENT_MS = 30 * 60_000;
+  const recommended = slots.filter((hhmm) => {
+    const [h, m] = hhmm.split(":").map(Number);
+    const [y, mo, d] = date.split("-").map(Number);
+    const slotMs = new Date(Date.UTC(y, mo - 1, d, h - 2, m)).getTime();
+    for (const b of bookedEnds) {
+      if (Math.abs(slotMs - b) <= ADJACENT_MS) return true;
+    }
+    for (const b of bookedStarts) {
+      if (Math.abs(slotMs - b) <= ADJACENT_MS) return true;
+    }
+    return false;
+  });
+
+  return json({ slots, recommended });
 };

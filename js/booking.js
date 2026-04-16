@@ -187,10 +187,11 @@ function renderDatePicker() {
 async function loadSlots() {
   ui.slotGrid.innerHTML = "";
   ui.slotEmpty.hidden = true;
-  const { slots } = await apiGet(
+  const { slots, recommended = [] } = await apiGet(
     `/api/slots?serviceId=${encodeURIComponent(state.chosenService.id)}&date=${encodeURIComponent(state.chosenDate)}`
   );
   state.slots = slots;
+  const recSet = new Set(recommended);
   if (slots.length === 0) {
     ui.slotEmpty.hidden = false;
     return;
@@ -199,6 +200,7 @@ async function loadSlots() {
     const btn = document.createElement("button");
     btn.type = "button";
     btn.className = "slot-btn";
+    if (recSet.has(t)) btn.classList.add("is-recommended");
     btn.textContent = t;
     btn.addEventListener("click", () => {
       state.chosenSlot = t;
@@ -206,6 +208,13 @@ async function loadSlots() {
       btn.classList.add("is-selected");
     });
     ui.slotGrid.appendChild(btn);
+  }
+  if (recommended.length > 0 && ui.slotEmpty) {
+    // Add a small legend above the grid
+    const legend = document.createElement("div");
+    legend.className = "slot-legend";
+    legend.innerHTML = `<span class="slot-legend__dot"></span> Preporučeno (odmah pored već zakazanog termina)`;
+    ui.slotGrid.parentNode.insertBefore(legend, ui.slotGrid);
   }
 }
 

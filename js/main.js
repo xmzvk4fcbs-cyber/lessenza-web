@@ -129,34 +129,52 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
-  // --- Counter animation ---
-  const statNumbers = document.querySelectorAll('.stat__number');
+  // --- Counter animation (with reduced-motion fallback and robust init) ---
+  const statNumbers = document.querySelectorAll('.stat__number[data-count]');
   if (statNumbers.length) {
-    const counterObserver = new IntersectionObserver((entries) => {
-      entries.forEach(entry => {
-        if (entry.isIntersecting) {
-          const el = entry.target;
-          const target = parseInt(el.dataset.count) || 0;
-          const suffix = el.dataset.suffix || '';
-          let current = 0;
-          const duration = 1500;
-          const step = target / (duration / 16);
+    const prefersReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-          const timer = setInterval(() => {
-            current += step;
-            if (current >= target) {
-              current = target;
-              clearInterval(timer);
-            }
-            el.textContent = Math.round(current) + suffix;
-          }, 16);
+    const setFinal = (el) => {
+      const target = parseInt(el.dataset.count) || 0;
+      const suffix = el.dataset.suffix || '';
+      el.textContent = target + suffix;
+    };
 
-          counterObserver.unobserve(el);
-        }
+    const animate = (el) => {
+      const target = parseInt(el.dataset.count) || 0;
+      const suffix = el.dataset.suffix || '';
+      if (prefersReduced || target <= 1) { setFinal(el); return; }
+      let current = 0;
+      const duration = 1500;
+      const step = target / (duration / 16);
+      const timer = setInterval(() => {
+        current += step;
+        if (current >= target) { current = target; clearInterval(timer); }
+        el.textContent = Math.round(current) + suffix;
+      }, 16);
+    };
+
+    // IntersectionObserver where available; otherwise fire immediately.
+    if (typeof IntersectionObserver === 'function') {
+      const counterObserver = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+          if (entry.isIntersecting) {
+            animate(entry.target);
+            counterObserver.unobserve(entry.target);
+          }
+        });
+      }, { threshold: 0.3 });
+      statNumbers.forEach(el => counterObserver.observe(el));
+    } else {
+      statNumbers.forEach(el => animate(el));
+    }
+
+    // Safety net: after 4s, force-final any stat still showing "0".
+    setTimeout(() => {
+      statNumbers.forEach(el => {
+        if (el.textContent.trim() === '0') setFinal(el);
       });
-    }, { threshold: 0.5 });
-
-    statNumbers.forEach(el => counterObserver.observe(el));
+    }, 4000);
   }
 
   // --- Set min date for booking ---
