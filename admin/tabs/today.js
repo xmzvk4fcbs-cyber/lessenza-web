@@ -1,4 +1,5 @@
 import { registerTab, must, api, toast, openModal, closeModal, escapeHtml, fmtDateTime, todayKey, plusDays, getServices } from "../admin.js";
+import { renderTimeline } from "./timeline.js";
 
 const fromInput = document.getElementById("today-from");
 const toInput = document.getElementById("today-to");
@@ -85,6 +86,29 @@ addBtn.addEventListener("click", () => openManualBookingModal());
 
 async function renderList() {
   list.innerHTML = `<p class="muted">Učitavanje...</p>`;
+
+  // Single-day mode → show visual timeline above the list.
+  const singleDay = fromInput.value && fromInput.value === toInput.value;
+  let timelineHtml = "";
+  if (singleDay) {
+    timelineHtml = `<div id="timeline-host" class="mt-xl"></div>`;
+    list.insertAdjacentHTML("beforebegin", timelineHtml);
+    // If a timeline-host already exists from prior render, use it
+    let host = document.getElementById("timeline-host");
+    if (!host) {
+      host = document.createElement("div");
+      host.id = "timeline-host";
+      host.className = "mt-xl";
+      list.parentNode.insertBefore(host, list);
+    }
+    renderTimeline(host, fromInput.value).then(() => {
+      wireTimelineClicks(host);
+    });
+  } else {
+    const host = document.getElementById("timeline-host");
+    if (host) host.remove();
+  }
+
   try {
     const { appointments, rawEvents } = await must(
       `/api/admin/appointments?from=${fromInput.value}&to=${toInput.value}`
@@ -102,6 +126,58 @@ async function renderList() {
   } catch (e) {
     list.innerHTML = `<p class="muted">${escapeHtml(e.message)}</p>`;
   }
+}
+
+function wireTimelineClicks(host) {
+  host.querySelectorAll(".tl-appt").forEach((el) => {
+    el.addEventListener("click", () => {
+      const name = el.dataset.name;
+      const phone = el.dataset.phone;
+      const service = el.dataset.service;
+      const start = el.dataset.start;
+      const eventId = el.dataset.eventId;
+      openModal(`${service} — ${name}`, `
+        <p class="muted">${fmtDateTime(start)}</p>
+        ${phone ? `<p>📞 ${escapeHtml(phone)}</p>` : ""}
+        <div class="stack-card__actions">
+          ${phone ? `<a class="btn btn-ghost" href="tel:${escapeHtml(phone)}">Pozovi</a>` : ""}
+          ${phone ? `<a class="btn btn-ghost" href="https://wa.me/${escapeHtml(phone).replace(/[^\d]/g, '')}" target="_blank" rel="noopener">WhatsApp</a>` : ""}
+          <button class="btn btn-ghost" type="button" id="tl-reschedule">Pomjeri</button>
+          <button class="btn btn-danger" type="button" id="tl-cancel">Otkaži</button>
+        </div>
+      `);
+      document.getElementById("tl-reschedule").onclick = () => {
+        closeModal();
+        // simulate card click for existing reschedule path
+        const fakeCard = document.createElement("div");
+        fakeCard.className = "stack-card";
+        fakeCard.dataset.eventId = eventId;
+        fakeCard.dataset.name = name;
+        fakeCard.dataset.phone = phone;
+        fakeCard.dataset.service = service;
+        fakeCard.dataset.start = start;
+        const btn = document.createElement("button");
+        btn.dataset.action = "reschedule";
+        fakeCard.appendChild(btn);
+        btn.dispatchEvent(new Event("click", { bubbles: true }));
+        onAction({ currentTarget: btn });
+      };
+      document.getElementById("tl-cancel").onclick = () => {
+        closeModal();
+        const fakeCard = document.createElement("div");
+        fakeCard.className = "stack-card";
+        fakeCard.dataset.eventId = eventId;
+        fakeCard.dataset.name = name;
+        fakeCard.dataset.phone = phone;
+        fakeCard.dataset.service = service;
+        fakeCard.dataset.start = start;
+        const btn = document.createElement("button");
+        btn.dataset.action = "cancel";
+        fakeCard.appendChild(btn);
+        onAction({ currentTarget: btn });
+      };
+    });
+  });
 }
 
 function renderCard(a) {

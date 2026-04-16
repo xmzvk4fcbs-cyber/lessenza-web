@@ -1,6 +1,5 @@
 import { google, type calendar_v3 } from "googleapis";
-import * as fs from "node:fs";
-import * as path from "node:path";
+import { store } from "./blobs";
 
 export interface ServiceAccountKey {
   client_email: string;
@@ -39,24 +38,18 @@ export interface CalendarClient {
   patchEvent(eventId: string, patch: calendar_v3.Schema$Event): Promise<calendar_v3.Schema$Event>;
 }
 
-// File-backed calendar for dev/demo when Google Calendar isn't configured.
-// Events are persisted to .netlify-dev-blobs/calendar-events.json so the
-// booking flow is consistent across function worker invocations.
-const EVENTS_FILE = path.resolve(process.cwd(), ".netlify-dev-blobs", "calendar-events.json");
+// Blobs-backed calendar for demos without Google Calendar configured.
+// Events are persisted via the same storage layer as settings/services
+// (Netlify Blobs in production; file-based in local dev; in-memory in tests).
+const EVENTS_KEY = "calendar/events.json";
 
-function readEvents(): calendar_v3.Schema$Event[] {
-  try {
-    return JSON.parse(fs.readFileSync(EVENTS_FILE, "utf8")) as calendar_v3.Schema$Event[];
-  } catch (err) {
-    const e = err as NodeJS.ErrnoException;
-    if (e.code === "ENOENT") return [];
-    return [];
-  }
+async function readEvents(): Promise<calendar_v3.Schema$Event[]> {
+  const raw = await store().getJSON<calendar_v3.Schema$Event[]>(EVENTS_KEY);
+  return Array.isArray(raw) ? raw : [];
 }
 
-function writeEvents(events: calendar_v3.Schema$Event[]): void {
-  try { fs.mkdirSync(path.dirname(EVENTS_FILE), { recursive: true }); } catch {}
-  fs.writeFileSync(EVENTS_FILE, JSON.stringify(events, null, 2));
+async function writeEvents(events: calendar_v3.Schema$Event[]): Promise<void> {
+  await store().setJSON(EVENTS_KEY, events);
 }
 
 export function createInMemoryCalendar(): CalendarClient {
@@ -64,30 +57,33 @@ export function createInMemoryCalendar(): CalendarClient {
     async listEvents({ timeMin, timeMax }) {
       const min = new Date(timeMin).getTime();
       const max = new Date(timeMax).getTime();
-      return readEvents().filter((e) => {
+      const events = await readEvents();
+      return events.filter((e) => {
         const s = new Date(e.start?.dateTime ?? e.start?.date ?? 0).getTime();
         return s >= min && s <= max;
       });
     },
     async insertEvent(event) {
-      const events = readEvents();
+      const events = await readEvents();
       const id = `mem-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
       const stored = { ...event, id };
       events.push(stored);
-      writeEvents(events);
+      await writeEvents(events);
       return stored;
     },
     async deleteEvent(eventId) {
-      const events = readEvents().filter((e) => e.id !== eventId);
-      writeEvents(events);
+      const events = (await readEvents()).filter((e) => e.id !== eventId);
+      await writeEvents(events);
     },
     async patchEvent(eventId, patch) {
-      const events = readEvents();
+      const events = await readEvents();
       const idx = events.findIndex((e) => e.id === eventId);
       if (idx < 0) throw new Error("Event not found");
       events[idx] = { ...events[idx], ...patch };
-      writeEvents(events);
-      return events[idx];
+      await writeEvents(events);
+      const result = events[idx];
+      if (!result) throw new Error("Event not found after update");
+      return result;
     },
   };
 }
