@@ -77,25 +77,34 @@ class FileStore implements KVStore {
 let devFallback: KVStore | null = null;
 function getDevFallback(): KVStore {
   if (!devFallback) {
-    const dir = path.resolve(process.cwd(), ".netlify-dev-blobs");
-    devFallback = new FileStore(dir);
+    // Use /tmp (writable on Lambda) if in Netlify, else local folder.
+    const baseDir = process.env.NETLIFY_DEV
+      ? path.resolve(process.cwd(), ".netlify-dev-blobs")
+      : path.join("/tmp", "lessenza-blobs");
+    devFallback = new FileStore(baseDir);
   }
   return devFallback;
+}
+
+function isLocalDev(): boolean {
+  // true when running `netlify dev` unlinked, false in production functions.
+  return !!process.env.NETLIFY_DEV;
 }
 
 export function createConfigStore(opts: { testMode?: boolean } = {}): KVStore {
   if (opts.testMode || process.env.NODE_ENV === "test") {
     return new InMemoryStore();
   }
-  // Try to acquire the Netlify Blobs store. If the environment isn't
-  // configured (unlinked `netlify dev`), fall back to an in-memory store
-  // so the site is still demoable locally.
+  // Try to acquire the Netlify Blobs store.
   let store: ReturnType<typeof getStore>;
   try {
     store = getStore({ name: "lessenza-config", consistency: "strong" });
-  } catch {
-    const mem = getDevFallback();
-    return mem;
+  } catch (err) {
+    // In local dev (unlinked), fall back to a file-backed store so the site is demoable.
+    if (isLocalDev()) return getDevFallback();
+    // In production, log and rethrow — caller (handler) turns it into 500.
+    console.error("Netlify Blobs unavailable:", err);
+    throw err;
   }
   return {
     async getJSON<T>(key: string): Promise<T | null> {
