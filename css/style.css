@@ -1628,9 +1628,25 @@ h2 em {
   .gallery-grid { columns: 2; column-gap: 10px; }
   .gallery-item { margin-bottom: 10px; border-radius: 4px; }
 
-  .footer { padding: 48px clamp(14px, 4vw, 24px) 24px; }
-  .footer__brand-logo img { height: 38px; }
-  .footer__grid { gap: 24px; }
+  .footer { padding: 56px clamp(18px, 5vw, 28px) 28px; text-align: center; }
+  .footer__brand-logo { display: inline-block; margin: 0 auto 18px; line-height: 0; }
+  .footer__brand-logo img { height: 44px; }
+  .footer__brand-desc { margin: 0 auto 18px; max-width: 320px; font-size: 0.9rem; }
+  .footer__social { justify-content: center; display: flex; }
+  .footer__grid { grid-template-columns: 1fr; gap: 36px; text-align: center; }
+  .footer__heading { margin-bottom: 12px; font-size: 0.7rem; letter-spacing: 0.22em; }
+  .footer__links { align-items: center; gap: 8px; }
+  .footer__links a { font-size: 0.92rem; padding: 4px 0; }
+  .footer__bottom {
+    flex-direction: column;
+    gap: 10px;
+    padding-top: 22px;
+    margin-top: 8px;
+    font-size: 0.72rem;
+    letter-spacing: 0.08em;
+    color: var(--text-light);
+    text-align: center;
+  }
 
   .btn { padding: 14px 22px; font-size: 0.78rem; letter-spacing: 0.12em; }
   .nav__cta { padding: 10px 18px; font-size: 0.7rem; }

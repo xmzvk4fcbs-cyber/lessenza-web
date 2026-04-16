@@ -7,7 +7,7 @@ import { createCalendarClient, createCalendarClientAsync, type CalendarClient } 
 import { bookingToEvent, type Booking } from "../lib/calendar-domain";
 import { normalizePhone } from "../lib/phone";
 import { fromTZ, dayKeyInTZ, formatSalon } from "../lib/time";
-import { getMailer, type Mailer } from "../lib/mailer";
+import { getMailer, getMailerAsync, type Mailer } from "../lib/mailer";
 import { bookingConfirmedToClient, bookingCreatedToOwner } from "../lib/email-templates";
 import { isHoneypotTriggered } from "../lib/honeypot";
 import { rateLimitAllow, clientIP } from "../lib/rate-limit";
@@ -81,7 +81,6 @@ export const handler: Handler = async (event) => {
 
   const dayStart = fromTZ(dateKey, "00:00");
   const dayEnd = fromTZ(dateKey, "23:59");
-  const { makeMailer } = getDeps();
   const cal = deps?.makeCalendar ? deps.makeCalendar() : await getDefaultCalendar();
   const events = await cal.listEvents({ timeMin: dayStart.toISOString(), timeMax: dayEnd.toISOString() });
 
@@ -124,7 +123,7 @@ export const handler: Handler = async (event) => {
   }
   booking.calendarEventId = inserted.id ?? undefined;
 
-  const mailer = makeMailer();
+  const mailer = deps?.makeMailer ? deps.makeMailer() : await getMailerAsync(settings);
   const sends: Promise<string>[] = [];
   if (booking.email) {
     sends.push(

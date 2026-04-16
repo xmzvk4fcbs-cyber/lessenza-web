@@ -116,6 +116,73 @@ function defaultGmailTransport(opts: { user: string; pass: string }): {
   };
 }
 
+/**
+ * Gmail sender via OAuth (uses the token the owner granted through the admin UI).
+ * Requires `gmail.send` scope (included by default in google-auth.ts).
+ */
+export function createGmailOAuthMailer(opts: {
+  getAuth: () => Promise<import("google-auth-library").OAuth2Client>;
+  from: string;
+}): Mailer {
+  return {
+    async send(msg) {
+      const auth = await opts.getAuth();
+      const { google } = await import("googleapis");
+      const gmail = google.gmail({ version: "v1", auth });
+      const boundary = "lessenza_" + randomUUID().slice(0, 8);
+      const headers = [
+        `From: ${opts.from}`,
+        `To: ${msg.to}`,
+        `Subject: =?UTF-8?B?${Buffer.from(msg.subject, "utf8").toString("base64")}?=`,
+        "MIME-Version: 1.0",
+      ];
+      if (msg.replyTo) headers.push(`Reply-To: ${msg.replyTo}`);
+      let body: string;
+      if (msg.html) {
+        headers.push(`Content-Type: multipart/alternative; boundary="${boundary}"`);
+        body = [
+          "",
+          `--${boundary}`,
+          'Content-Type: text/plain; charset="UTF-8"',
+          "Content-Transfer-Encoding: 7bit",
+          "",
+          msg.text,
+          `--${boundary}`,
+          'Content-Type: text/html; charset="UTF-8"',
+          "Content-Transfer-Encoding: 7bit",
+          "",
+          msg.html,
+          `--${boundary}--`,
+        ].join("\r\n");
+      } else {
+        headers.push('Content-Type: text/plain; charset="UTF-8"');
+        body = "\r\n" + msg.text;
+      }
+      const raw = Buffer.from(headers.join("\r\n") + body, "utf8")
+        .toString("base64")
+        .replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+      const res = await gmail.users.messages.send({ userId: "me", requestBody: { raw } });
+      return res.data.id ?? randomUUID();
+    },
+  };
+}
+
+export async function getMailerAsync(settings?: { mailer?: "resend" | "gmail" }): Promise<Mailer> {
+  if (process.env.NODE_ENV === "test") return createLogMailer();
+  // Prefer Google OAuth (Gmail) when owner has connected via admin UI.
+  try {
+    const { getStoredTokens, getAuthenticatedClient } = await import("./google-auth");
+    const tokens = await getStoredTokens();
+    if (tokens?.email && (tokens.scope ?? "").includes("gmail.send")) {
+      return createGmailOAuthMailer({
+        getAuth: async () => getAuthenticatedClient() as unknown as import("google-auth-library").OAuth2Client,
+        from: `L'Essenza <${tokens.email}>`,
+      });
+    }
+  } catch { /* fall through */ }
+  return getMailer(settings);
+}
+
 export function getMailer(settings?: { mailer?: "resend" | "gmail" }): Mailer {
   if (process.env.NODE_ENV === "test") return createLogMailer();
   const which = settings?.mailer ?? (process.env.GMAIL_USER ? "gmail" : "resend");
