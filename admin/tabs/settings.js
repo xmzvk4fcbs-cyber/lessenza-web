@@ -14,6 +14,7 @@ const FIELDS = [
   ["whatsappPhone", "WhatsApp broj (npr. +38269123456)", "tel", {}],
   ["instagramUrl", "Instagram link", "url", {}],
   ["tagline", "Tagline u hero sekciji", "text", {}],
+  ["displayHoursOverride", "Radno vrijeme za prikaz (opciono — npr. 'Pon–Pet 09:00–20:00' ili 'za inspekciju'). Ostavi prazno da prikaže po danima iz kalendara.", "textarea", {}],
 
   // --- Rezervacije ---
   ["bookingWindowDays", "Prozor rezervacije (dana unaprijed)", "number", { min: 1, max: 365 }],
@@ -50,6 +51,14 @@ async function render() {
         <div class="field">
           <label for="st-${key}">${label}</label>
           <select id="st-${key}">${optsHtml}</select>
+        </div>
+      `;
+    }
+    if (type === "textarea") {
+      return `
+        <div class="field">
+          <label for="st-${key}">${label}</label>
+          <textarea id="st-${key}" rows="3" maxlength="500">${(value ?? "").replace(/</g, "&lt;")}</textarea>
         </div>
       `;
     }

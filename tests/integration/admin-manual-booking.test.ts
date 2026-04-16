@@ -55,13 +55,13 @@ describe("/api/admin/manual-booking", () => {
     expect(body.booking.bookingId).toBeTruthy();
   });
 
-  it("rejects invalid phone", async () => {
+  it("accepts booking without phone (walk-in)", async () => {
     const tok = await auth();
     await setServices([{ id: "manikir-gel", name: "Manikir Gel", durationMinutes: 60, active: true }]);
     const r = await handler(
-      ev({ serviceId: "manikir-gel", startISO: "2099-04-20T08:00:00Z", name: "Ana", phone: "abc" }, tok),
+      ev({ serviceId: "manikir-gel", startISO: "2099-04-20T08:00:00Z", name: "Ana" }, tok),
       {} as never
     );
-    expect(r?.statusCode).toBe(400);
+    expect(r?.statusCode).toBe(200);
   });
 });

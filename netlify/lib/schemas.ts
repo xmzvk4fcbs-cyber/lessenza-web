@@ -21,15 +21,30 @@ export const ParallelPairSchema = z
 export type ParallelPair = z.infer<typeof ParallelPairSchema>;
 export const ParallelPairsSchema = z.array(ParallelPairSchema);
 
+const TimeWindowSchema = z
+  .object({
+    from: z.string().regex(hhmm),
+    to: z.string().regex(hhmm),
+  })
+  .refine((w) => w.from < w.to, { message: "from must be before to" });
+
 const DayHoursSchema = z.union([
   z.object({ open: z.literal(false) }),
+  // Legacy single-window shape (kept for backwards compat; UI can normalize to windows[]).
   z.object({
     open: z.literal(true),
     from: z.string().regex(hhmm),
     to: z.string().regex(hhmm),
+    windows: z.undefined().optional(),
   }).refine((d) => d.from < d.to, { message: "from must be before to" }),
+  // Split-shift: two or more windows per day (e.g. 09:00–13:00 and 16:00–20:00).
+  z.object({
+    open: z.literal(true),
+    windows: z.array(TimeWindowSchema).min(1).max(4),
+  }),
 ]);
 export type DayHours = z.infer<typeof DayHoursSchema>;
+export type TimeWindow = z.infer<typeof TimeWindowSchema>;
 
 export const WorkingHoursSchema = z.object({
   monday: DayHoursSchema,
@@ -71,6 +86,10 @@ export const SettingsSchema = z.object({
   whatsappPhone: z.string().optional(),
   instagramUrl: z.string().url().optional(),
   tagline: z.string().default("Beauty Salon · Bajova 22"),
+  // Free-form display-only hours shown on public site (e.g. on kontakt page
+  // and for inspection posting). Falls back to rendered operational hours
+  // when empty. Overrides operational hours purely for display.
+  displayHoursOverride: z.string().max(500).optional(),
   mailer: z.enum(["resend", "gmail"]).default("resend"),
 });
 export type Settings = z.infer<typeof SettingsSchema>;

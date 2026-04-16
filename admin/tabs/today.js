@@ -229,38 +229,62 @@ async function openManualBookingModal() {
     <div class="field"><label for="mb-service">Usluga</label><select id="mb-service">${opts}</select></div>
     <div class="field"><label for="mb-start">Početak</label><input id="mb-start" type="datetime-local" required></div>
     <div class="field"><label for="mb-name">Ime</label><input id="mb-name" type="text" required maxlength="120"></div>
-    <div class="field"><label for="mb-phone">Telefon</label><input id="mb-phone" type="tel" required placeholder="+38269123456 ili 069123456"></div>
+    <div class="field"><label for="mb-phone">Telefon (opciono)</label><input id="mb-phone" type="tel" placeholder="+38269123456 ili 069123456"></div>
     <div class="field"><label for="mb-email">Email (opciono)</label><input id="mb-email" type="email"></div>
     <div class="field"><label for="mb-note">Napomena (opciono)</label><input id="mb-note" type="text" maxlength="500"></div>
+    <div id="mb-conflict" hidden style="background:#FBEDEC;color:#8B3A3E;padding:0.75rem;border-radius:10px;margin:0.75rem 0;"></div>
     <div class="stack-card__actions">
       <button class="btn btn-ghost" type="button" data-close="1">Nazad</button>
       <button class="btn btn-primary" type="button" id="mb-save">Dodaj</button>
     </div>
   `);
-  document.getElementById("mb-save").addEventListener("click", async () => {
+  const saveBtn = document.getElementById("mb-save");
+  const conflictBox = document.getElementById("mb-conflict");
+  let forceNext = false;
+
+  async function submit() {
     const serviceId = document.getElementById("mb-service").value;
     const local = document.getElementById("mb-start").value;
     const name = document.getElementById("mb-name").value.trim();
     const phone = document.getElementById("mb-phone").value.trim();
     const email = document.getElementById("mb-email").value.trim();
     const note = document.getElementById("mb-note").value.trim();
-    if (!serviceId || !local || !name || !phone) {
-      toast("Popuni sva obavezna polja.", "error");
+    if (!serviceId || !local || !name) {
+      toast("Obavezno: usluga, vrijeme, ime.", "error");
       return;
     }
     const startISO = new Date(local).toISOString();
+    const body = { serviceId, startISO, name };
+    if (phone) body.phone = phone;
+    if (email) body.email = email;
+    if (note) body.note = note;
+    if (forceNext) body.force = true;
+
     try {
-      await must("/api/admin/manual-booking", {
+      const res = await fetch("/api/admin/manual-booking", {
         method: "POST",
-        body: { serviceId, startISO, name, phone, email: email || undefined, note: note || undefined },
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify(body),
+        credentials: "same-origin",
       });
+      const data = await res.json().catch(() => ({}));
+      if (res.status === 409 && data.error === "conflict") {
+        conflictBox.hidden = false;
+        conflictBox.innerHTML = `⚠️ Već postoji termin: <strong>${escapeHtml(data.existing?.summary || "zauzeto")}</strong>. Klikni ponovo "Dodaj svejedno" da forsiraš.`;
+        saveBtn.textContent = "Dodaj svejedno";
+        forceNext = true;
+        return;
+      }
+      if (!res.ok) throw new Error(data.message || `HTTP ${res.status}`);
       closeModal();
       toast("Termin dodan.", "success");
       await renderList();
     } catch (e) {
       toast(e.message, "error");
     }
-  });
+  }
+
+  saveBtn.addEventListener("click", submit);
 }
 
 registerTab("today", renderList);
