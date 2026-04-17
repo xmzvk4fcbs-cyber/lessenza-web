@@ -433,9 +433,11 @@ async function submitInquiry() {
 // --- Navigation ---
 
 async function onNext() {
+  const origText = ui.navNext.textContent;
   try {
     if (state.mode === "inquiry") {
       ui.navNext.disabled = true;
+      ui.navNext.textContent = "Šaljem...";
       await submitInquiry();
       return;
     }
@@ -465,12 +467,17 @@ async function onNext() {
     }
     if (state.step === 4) {
       ui.navNext.disabled = true;
+      ui.navNext.textContent = "Čuvam...";
       await submitBooking();
     }
   } catch (e) {
     showError(e.message || "Greška. Probaj ponovo.");
   } finally {
-    ui.navNext.disabled = false;
+    // Keep disabled only if success screen is showing; re-enable on error so user can retry.
+    if (!ui.navNext.hidden) {
+      ui.navNext.disabled = false;
+      ui.navNext.textContent = origText;
+    }
   }
 }
 
