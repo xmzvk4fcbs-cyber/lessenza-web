@@ -208,6 +208,7 @@ function wireTimelineClicks(host) {
           ${phone ? `<a class="btn btn-ghost" href="https://wa.me/${escapeHtml(phone).replace(/[^\d]/g, '')}" target="_blank" rel="noopener">WhatsApp</a>` : ""}
           <button class="btn btn-ghost" type="button" id="tl-reschedule">Pomjeri</button>
           <button class="btn btn-ghost" type="button" id="tl-swap">🔄 Zamijeni</button>
+          <button class="btn btn-ghost" type="button" id="tl-reject">Odbij</button>
           <button class="btn btn-danger" type="button" id="tl-cancel">Otkaži</button>
         </div>
       `);
@@ -242,6 +243,20 @@ function wireTimelineClicks(host) {
         fakeCard.dataset.start = start;
         const btn = document.createElement("button");
         btn.dataset.action = "cancel";
+        fakeCard.appendChild(btn);
+        onAction({ currentTarget: btn });
+      };
+      document.getElementById("tl-reject").onclick = () => {
+        closeModal();
+        const fakeCard = document.createElement("div");
+        fakeCard.className = "stack-card";
+        fakeCard.dataset.eventId = eventId;
+        fakeCard.dataset.name = name;
+        fakeCard.dataset.phone = phone;
+        fakeCard.dataset.service = service;
+        fakeCard.dataset.start = start;
+        const btn = document.createElement("button");
+        btn.dataset.action = "reject";
         fakeCard.appendChild(btn);
         onAction({ currentTarget: btn });
       };
@@ -285,6 +300,7 @@ function renderCard(a) {
         <a class="btn btn-ghost" data-action="viber">💜 Viber</a>
         <button class="btn btn-ghost" type="button" data-action="reschedule">✏️ Pomjeri</button>
         <button class="btn btn-ghost" type="button" data-action="swap">🔄 Zamijeni</button>
+        <button class="btn btn-ghost" type="button" data-action="reject">🚫 Odbij</button>
         <button class="btn btn-danger" type="button" data-action="cancel">✕ Otkaži</button>
       </div>
     </article>
@@ -345,6 +361,34 @@ async function onAction(e) {
         const r = await must("/api/admin/cancel-booking", { method: "POST", body: { eventId, reason } });
         closeModal();
         toast("Termin otkazan.", "success");
+        if (r.message) showMessageActions("Obavijesti klijentkinju", r.message, r.whatsappLink, r.viberLink);
+        await renderList();
+      } catch (err) {
+        toast(err.message, "error");
+      }
+    });
+    return;
+  }
+
+  if (action === "reject") {
+    openModal("Odbij termin", `
+      <p><strong>${escapeHtml(service)}</strong> — ${escapeHtml(name)}<br><span class="muted">${fmtDateTime(start)}</span></p>
+      <p class="muted" style="font-size:0.88rem;">Klijent dobija poruku da termin nije moguć, bez poziva na novi termin.</p>
+      <label class="check-row" for="reject-block" style="margin-top:0.5rem;">
+        <input id="reject-block" type="checkbox">
+        <span>Blokiraj ovaj broj da više ne može zakazati</span>
+      </label>
+      <div class="stack-card__actions" style="margin-top:0.75rem;">
+        <button class="btn btn-ghost" type="button" data-close="1">Nazad</button>
+        <button class="btn btn-danger" type="button" id="confirm-reject">Odbij termin</button>
+      </div>
+    `);
+    document.getElementById("confirm-reject").addEventListener("click", async () => {
+      const block = document.getElementById("reject-block").checked;
+      try {
+        const r = await must("/api/admin/reject-booking", { method: "POST", body: { eventId, block } });
+        closeModal();
+        toast(r.blocked ? "Termin odbijen i broj blokiran." : "Termin odbijen.", "success");
         if (r.message) showMessageActions("Obavijesti klijentkinju", r.message, r.whatsappLink, r.viberLink);
         await renderList();
       } catch (err) {
