@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import type { Handler } from "@netlify/functions";
 import { json, badRequest, notFound, methodNotAllowed, parseJson, serverError } from "../lib/http";
-import { getServices, getWorkingHours, getParallelPairs, getBlocks, getSettings } from "../lib/config";
+import { getServices, getWorkingHours, getParallelPairs, getBlocks, getSettings, isPhoneBlocked } from "../lib/config";
 import { computeSlots } from "../lib/slots";
 import { createCalendarClient, createCalendarClientAsync, type CalendarClient } from "../lib/calendar";
 import { bookingToEvent, type Booking } from "../lib/calendar-domain";
@@ -69,6 +69,16 @@ export const handler: Handler = async (event) => {
   const settings = await getSettings();
   const phoneE164 = normalizePhone(body.phone, settings.defaultCountryCode);
   if (!phoneE164) return badRequest("bad-phone", "Phone number is invalid");
+
+  if (await isPhoneBlocked(phoneE164)) {
+    const contactLine = settings.ownerPhone
+      ? ` Za termin kontaktirajte salon direktno na ${settings.ownerPhone}.`
+      : "";
+    return json(
+      { error: "phone-blocked", message: `Nažalost ne možete zakazati online.${contactLine}` },
+      403
+    );
+  }
 
   const services = await getServices();
   const service = services.find((s) => s.id === body.serviceId && s.active);

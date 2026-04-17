@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import type { Handler } from "@netlify/functions";
 import { json, badRequest, methodNotAllowed, parseJson, notFound } from "../lib/http";
-import { addInquiry, getServices, getSettings } from "../lib/config";
+import { addInquiry, getServices, getSettings, isPhoneBlocked } from "../lib/config";
 import { normalizePhone } from "../lib/phone";
 import { getMailerAsync, type Mailer } from "../lib/mailer";
 import { inquiryCreatedToOwner } from "../lib/email-templates";
@@ -63,6 +63,16 @@ export const handler: Handler = async (event) => {
   const settings = await getSettings();
   const phone = normalizePhone(body.phone, settings.defaultCountryCode);
   if (!phone) return badRequest("bad-phone", "Phone number is invalid");
+
+  if (await isPhoneBlocked(phone)) {
+    const contactLine = settings.ownerPhone
+      ? ` Za termin kontaktirajte salon direktno na ${settings.ownerPhone}.`
+      : "";
+    return json(
+      { error: "phone-blocked", message: `Nažalost ne možete zakazati online.${contactLine}` },
+      403
+    );
+  }
 
   const services = await getServices();
   const service = services.find((s) => s.id === body.serviceId);
