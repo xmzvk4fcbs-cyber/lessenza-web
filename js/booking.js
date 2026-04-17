@@ -146,40 +146,87 @@ function renderDatePicker() {
   ui.datePicker.innerHTML = "";
   const today = new Date();
   today.setHours(0, 0, 0, 0);
-  const grid = document.createElement("div");
-  grid.className = "date-grid";
-  const headers = ["Po", "Ut", "Sr", "Če", "Pe", "Su", "Ne"];
-  headers.forEach((h) => {
-    const el = document.createElement("div");
-    el.className = "date-grid__header";
-    el.textContent = h;
-    grid.appendChild(el);
-  });
-  // Align first day: Monday-based.
-  const firstWeekday = (today.getDay() + 6) % 7;
-  for (let i = 0; i < firstWeekday; i++) {
-    const el = document.createElement("div");
-    el.className = "date-cell";
-    el.setAttribute("disabled", "true");
-    grid.appendChild(el);
-  }
+
+  const MONTHS = [
+    "Januar", "Februar", "Mart", "April", "Maj", "Jun",
+    "Jul", "Avgust", "Septembar", "Oktobar", "Novembar", "Decembar",
+  ];
+
+  // Build the set of selectable ISO dates.
+  const available = new Set();
   for (let i = 0; i < state.bookingWindowDays; i++) {
     const d = new Date(today);
     d.setDate(today.getDate() + i);
-    const iso = d.toISOString().slice(0, 10);
-    const cell = document.createElement("button");
-    cell.type = "button";
-    cell.className = "date-cell is-available";
-    cell.textContent = String(d.getDate());
-    cell.title = iso;
-    cell.addEventListener("click", () => {
-      state.chosenDate = iso;
-      grid.querySelectorAll(".date-cell").forEach((el) => el.classList.remove("is-selected"));
-      cell.classList.add("is-selected");
-    });
-    grid.appendChild(cell);
+    available.add(d.toISOString().slice(0, 10));
   }
-  ui.datePicker.appendChild(grid);
+
+  // Group available dates by year-month so we can render labeled sections.
+  const monthsPresent = [];
+  for (let i = 0; i < state.bookingWindowDays; i++) {
+    const d = new Date(today);
+    d.setDate(today.getDate() + i);
+    const key = `${d.getFullYear()}-${d.getMonth()}`;
+    if (!monthsPresent.includes(key)) monthsPresent.push(key);
+  }
+
+  const wrap = document.createElement("div");
+  wrap.className = "date-calendar";
+
+  monthsPresent.forEach((key) => {
+    const [y, mIdx] = key.split("-").map(Number);
+    const monthLabel = document.createElement("div");
+    monthLabel.className = "date-month-label";
+    monthLabel.textContent = `${MONTHS[mIdx]} ${y}`;
+    wrap.appendChild(monthLabel);
+
+    const grid = document.createElement("div");
+    grid.className = "date-grid";
+    const headers = ["Po", "Ut", "Sr", "Če", "Pe", "Su", "Ne"];
+    headers.forEach((h) => {
+      const el = document.createElement("div");
+      el.className = "date-grid__header";
+      el.textContent = h;
+      grid.appendChild(el);
+    });
+
+    // Align first day of the month: Monday-based.
+    const firstOfMonth = new Date(y, mIdx, 1);
+    const firstWeekday = (firstOfMonth.getDay() + 6) % 7;
+    for (let i = 0; i < firstWeekday; i++) {
+      const el = document.createElement("div");
+      el.className = "date-cell is-empty";
+      el.setAttribute("aria-hidden", "true");
+      grid.appendChild(el);
+    }
+
+    const daysInMonth = new Date(y, mIdx + 1, 0).getDate();
+    for (let day = 1; day <= daysInMonth; day++) {
+      const d = new Date(y, mIdx, day);
+      const iso = d.toISOString().slice(0, 10);
+      const isAvailable = available.has(iso);
+      const cell = isAvailable
+        ? document.createElement("button")
+        : document.createElement("div");
+      if (isAvailable) {
+        cell.type = "button";
+        cell.className = "date-cell is-available";
+        cell.title = iso;
+        cell.addEventListener("click", () => {
+          state.chosenDate = iso;
+          wrap.querySelectorAll(".date-cell.is-selected").forEach((el) => el.classList.remove("is-selected"));
+          cell.classList.add("is-selected");
+        });
+      } else {
+        cell.className = "date-cell is-past";
+        cell.setAttribute("aria-disabled", "true");
+      }
+      cell.textContent = String(day);
+      grid.appendChild(cell);
+    }
+    wrap.appendChild(grid);
+  });
+
+  ui.datePicker.appendChild(wrap);
 }
 
 // --- Step 3: slots ---

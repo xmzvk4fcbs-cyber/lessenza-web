@@ -2,7 +2,7 @@ import type { Handler } from "@netlify/functions";
 import { json, badRequest, notFound, methodNotAllowed, parseJson } from "../lib/http";
 import { adminGuard } from "../lib/admin-guard";
 import { createCalendarClient, type CalendarClient } from "../lib/calendar";
-import { getMailer, type Mailer } from "../lib/mailer";
+import { getMailerAsync, type Mailer } from "../lib/mailer";
 import { getServices, getSettings } from "../lib/config";
 import { eventToBooking, type Booking } from "../lib/calendar-domain";
 import { bookingRescheduledToClient } from "../lib/email-templates";
@@ -12,14 +12,14 @@ import { formatSalon } from "../lib/time";
 
 interface Deps {
   makeCalendar: () => CalendarClient;
-  makeMailer: () => Mailer;
+  makeMailer: () => Mailer | Promise<Mailer>;
 }
 let deps: Deps | null = null;
 export function __setDepsForTests(d: Deps | null): void {
   deps = d;
 }
 function getDeps(): Deps {
-  return deps ?? { makeCalendar: () => createCalendarClient(), makeMailer: () => getMailer() };
+  return deps ?? { makeCalendar: () => createCalendarClient(), makeMailer: () => getMailerAsync() };
 }
 
 const inner: Handler = async (event) => {
@@ -70,7 +70,8 @@ const inner: Handler = async (event) => {
   let viberLink: string | null = null;
   if (updated.email) {
     try {
-      await makeMailer().send(
+      const mailer = await makeMailer();
+      await mailer.send(
         bookingRescheduledToClient(original, updated, {
           salonAddress: settings.salonAddress,
           ownerPhone: settings.ownerPhone,

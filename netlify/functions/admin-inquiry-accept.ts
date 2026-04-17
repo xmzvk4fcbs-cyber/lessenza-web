@@ -3,7 +3,7 @@ import type { Handler } from "@netlify/functions";
 import { json, badRequest, notFound, methodNotAllowed, parseJson, serverError } from "../lib/http";
 import { adminGuard } from "../lib/admin-guard";
 import { createCalendarClient, type CalendarClient } from "../lib/calendar";
-import { getMailer, type Mailer } from "../lib/mailer";
+import { getMailerAsync, type Mailer } from "../lib/mailer";
 import { getInquiry, getServices, getSettings, updateInquiryStatus } from "../lib/config";
 import { bookingToEvent, type Booking } from "../lib/calendar-domain";
 import { inquiryAcceptedToClient } from "../lib/email-templates";
@@ -12,14 +12,14 @@ import { formatSalon } from "../lib/time";
 
 interface Deps {
   makeCalendar: () => CalendarClient;
-  makeMailer: () => Mailer;
+  makeMailer: () => Mailer | Promise<Mailer>;
 }
 let deps: Deps | null = null;
 export function __setDepsForTests(d: Deps | null): void {
   deps = d;
 }
 function getDeps(): Deps {
-  return deps ?? { makeCalendar: () => createCalendarClient(), makeMailer: () => getMailer() };
+  return deps ?? { makeCalendar: () => createCalendarClient(), makeMailer: () => getMailerAsync() };
 }
 
 const inner: Handler = async (event) => {
@@ -72,7 +72,8 @@ const inner: Handler = async (event) => {
   let whatsappLink: string | null = null;
   if (inquiry.email) {
     try {
-      await makeMailer().send(
+      const mailer = await makeMailer();
+      await mailer.send(
         inquiryAcceptedToClient(
           { ...inquiry, serviceName: service.name },
           start.toISOString(),

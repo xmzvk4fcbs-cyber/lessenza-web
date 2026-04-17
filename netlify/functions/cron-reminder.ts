@@ -1,7 +1,7 @@
 import type { Handler } from "@netlify/functions";
 import { json } from "../lib/http";
 import { createCalendarClient, type CalendarClient } from "../lib/calendar";
-import { getMailer, type Mailer } from "../lib/mailer";
+import { getMailerAsync, type Mailer } from "../lib/mailer";
 import { getSettings, getServices } from "../lib/config";
 import { eventToBooking } from "../lib/calendar-domain";
 import { reminderToClient } from "../lib/email-templates";
@@ -9,7 +9,7 @@ import { store } from "../lib/blobs";
 
 interface Deps {
   makeCalendar: () => CalendarClient;
-  makeMailer: () => Mailer;
+  makeMailer: () => Mailer | Promise<Mailer>;
 }
 let deps: Deps | null = null;
 export function __setDepsForTests(d: Deps | null): void {
@@ -23,7 +23,7 @@ function now(): Date {
   return nowOverride ?? new Date();
 }
 function getDeps(): Deps {
-  return deps ?? { makeCalendar: () => createCalendarClient(), makeMailer: () => getMailer() };
+  return deps ?? { makeCalendar: () => createCalendarClient(), makeMailer: () => getMailerAsync() };
 }
 
 async function alreadySent(bookingId: string): Promise<boolean> {
@@ -48,7 +48,7 @@ export const handler: Handler = async () => {
     timeMin: windowStart.toISOString(),
     timeMax: windowEnd.toISOString(),
   });
-  const mailer = makeMailer();
+  const mailer = await makeMailer();
   let sent = 0;
   for (const e of events) {
     const b = eventToBooking(e, services);

@@ -3,18 +3,19 @@ import type { Handler } from "@netlify/functions";
 import { json, badRequest, methodNotAllowed, parseJson, notFound } from "../lib/http";
 import { addInquiry, getServices, getSettings } from "../lib/config";
 import { normalizePhone } from "../lib/phone";
-import { getMailer, type Mailer } from "../lib/mailer";
+import { getMailerAsync, type Mailer } from "../lib/mailer";
 import { inquiryCreatedToOwner } from "../lib/email-templates";
 import type { Inquiry } from "../lib/schemas";
 import { isHoneypotTriggered } from "../lib/honeypot";
 import { rateLimitAllow, clientIP } from "../lib/rate-limit";
 
-let mailerFactory: (() => Mailer) | null = null;
-export function __setMailerForTests(f: (() => Mailer) | null): void {
+type MailerFactory = () => Mailer | Promise<Mailer>;
+let mailerFactory: MailerFactory | null = null;
+export function __setMailerForTests(f: MailerFactory | null): void {
   mailerFactory = f;
 }
-function makeMailer(): Mailer {
-  return mailerFactory ? mailerFactory() : getMailer();
+async function makeMailer(): Promise<Mailer> {
+  return mailerFactory ? mailerFactory() : getMailerAsync();
 }
 
 interface InquiryRequest {
@@ -83,7 +84,8 @@ export const handler: Handler = async (event) => {
 
   if (settings.ownerEmail) {
     try {
-      await makeMailer().send(
+      const mailer = await makeMailer();
+      await mailer.send(
         inquiryCreatedToOwner(
           { ...inquiry, serviceName: service.name },
           { ownerEmail: settings.ownerEmail, siteUrl: process.env.SITE_URL ?? "" }

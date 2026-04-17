@@ -1,17 +1,18 @@
 import type { Handler } from "@netlify/functions";
 import { json, badRequest, notFound, methodNotAllowed, parseJson } from "../lib/http";
 import { adminGuard } from "../lib/admin-guard";
-import { getMailer, type Mailer } from "../lib/mailer";
+import { getMailerAsync, type Mailer } from "../lib/mailer";
 import { getInquiry, getServices, getSettings, updateInquiryStatus } from "../lib/config";
 import { inquiryDeclinedToClient } from "../lib/email-templates";
 import { waLink } from "../lib/phone";
 
-let mailerFactory: (() => Mailer) | null = null;
-export function __setMailerForTests(f: (() => Mailer) | null): void {
+type MailerFactory = () => Mailer | Promise<Mailer>;
+let mailerFactory: MailerFactory | null = null;
+export function __setMailerForTests(f: MailerFactory | null): void {
   mailerFactory = f;
 }
-function makeMailer(): Mailer {
-  return mailerFactory ? mailerFactory() : getMailer();
+async function makeMailer(): Promise<Mailer> {
+  return mailerFactory ? mailerFactory() : getMailerAsync();
 }
 
 const inner: Handler = async (event) => {
@@ -38,7 +39,8 @@ const inner: Handler = async (event) => {
   let whatsappLink: string | null = null;
   if (inquiry.email) {
     try {
-      await makeMailer().send(
+      const mailer = await makeMailer();
+      await mailer.send(
         inquiryDeclinedToClient(
           { ...inquiry, serviceName: service?.name ?? inquiry.serviceId },
           reason,
