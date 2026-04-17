@@ -1,4 +1,4 @@
-import { registerTab, must, toast } from "../admin.js";
+import { registerTab, must, toast, escapeHtml } from "../admin.js";
 
 const form = document.getElementById("settings-form");
 const saveBtn = document.getElementById("settings-save");
@@ -70,6 +70,7 @@ async function render() {
       </div>
     `;
   }).join("");
+  await renderBlocked();
 }
 
 saveBtn.addEventListener("click", async () => {
@@ -105,5 +106,69 @@ pwForm.addEventListener("submit", async (e) => {
     toast(err.message, "error");
   }
 });
+
+const bpList = document.getElementById("bp-list");
+const bpAdd = document.getElementById("bp-add");
+const bpPhone = document.getElementById("bp-phone");
+const bpName = document.getElementById("bp-name");
+const bpReason = document.getElementById("bp-reason");
+
+function bpFmtDate(iso) {
+  try {
+    return new Date(iso).toLocaleDateString("sr-Latn", { day: "numeric", month: "long", year: "numeric" });
+  } catch { return iso; }
+}
+
+async function renderBlocked() {
+  if (!bpList) return;
+  bpList.innerHTML = `<p class="muted">Učitavanje...</p>`;
+  try {
+    const { entries } = await must("/api/admin/blocked-phones");
+    if (!entries.length) {
+      bpList.innerHTML = `<p class="muted">Nema blokiranih brojeva.</p>`;
+      return;
+    }
+    bpList.innerHTML = entries.map((e) => `
+      <article class="stack-card" data-phone="${escapeHtml(e.phoneE164)}">
+        <div class="stack-card__head">
+          <div>
+            <div class="stack-card__title">${escapeHtml(e.name || e.phoneE164)}</div>
+            <div class="stack-card__meta">${escapeHtml(e.phoneE164)} · blokiran ${escapeHtml(bpFmtDate(e.blockedAt))}${e.reason ? " · " + escapeHtml(e.reason) : ""}</div>
+          </div>
+          <button type="button" class="btn btn-ghost" data-unblock title="Odblokiraj">✕</button>
+        </div>
+      </article>
+    `).join("");
+    bpList.querySelectorAll("[data-unblock]").forEach((btn) => {
+      btn.addEventListener("click", async () => {
+        const card = btn.closest(".stack-card");
+        const phone = card.dataset.phone;
+        if (!confirm(`Odblokirati ${phone}?`)) return;
+        try {
+          await must("/api/admin/blocked-phones", { method: "DELETE", body: { phoneE164: phone } });
+          toast("Odblokiran.", "success");
+          await renderBlocked();
+        } catch (e) { toast(e.message, "error"); }
+      });
+    });
+  } catch (e) {
+    bpList.innerHTML = `<p class="muted">${escapeHtml(e.message)}</p>`;
+  }
+}
+
+if (bpAdd) {
+  bpAdd.addEventListener("click", async () => {
+    const phoneE164 = bpPhone.value.trim();
+    if (!phoneE164) { toast("Unesi broj.", "error"); return; }
+    const name = bpName.value.trim();
+    const reason = bpReason.value.trim();
+    try {
+      await must("/api/admin/blocked-phones", { method: "POST", body: { phoneE164, name, reason } });
+      bpPhone.value = ""; bpName.value = ""; bpReason.value = "";
+      toast("Broj blokiran.", "success");
+      await renderBlocked();
+    } catch (e) { toast(e.message, "error"); }
+  });
+}
 
 registerTab("settings", render);
