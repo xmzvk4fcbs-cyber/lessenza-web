@@ -1657,3 +1657,55 @@ h2 em {
   .hero { overflow: hidden; }
   .hero::after { display: none; }
 }
+
+/* --- Sticky mobile booking CTA --- */
+.sticky-cta {
+  position: fixed;
+  right: 16px;
+  bottom: 16px;
+  z-index: 50;
+  display: none;
+  align-items: center;
+  gap: 8px;
+  padding: 14px 22px;
+  background: var(--gold);
+  color: #fff;
+  font-family: var(--font-sans);
+  font-weight: 600;
+  font-size: 0.82rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  text-decoration: none;
+  border-radius: 999px;
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.22);
+  transform: translateY(calc(100% + 40px));
+  opacity: 0;
+  transition: transform 0.35s ease, opacity 0.3s ease, background 0.2s ease;
+  pointer-events: none;
+  /* Honour the iPhone home-indicator area */
+  bottom: calc(16px + env(safe-area-inset-bottom, 0px));
+}
+.sticky-cta::before {
+  content: "";
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 0 0 4px rgba(255, 255, 255, 0.3);
+}
+.sticky-cta:hover,
+.sticky-cta:active {
+  background: var(--gold-light);
+  color: #fff;
+}
+.sticky-cta.is-visible {
+  transform: translateY(0);
+  opacity: 1;
+  pointer-events: auto;
+}
+@media (max-width: 768px) {
+  .sticky-cta { display: inline-flex; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .sticky-cta { transition: opacity 0.2s ease; }
+}

@@ -116,6 +116,28 @@
     document.querySelectorAll(".phone-prefix").forEach((el) => { el.textContent = cc; });
     document.querySelectorAll("[id$='-dial']").forEach((el) => { if (el.tagName === "INPUT") el.value = cc; });
 
+    // Keep JSON-LD structured data in sync with real phone/email/address.
+    document.querySelectorAll('script[type="application/ld+json"]').forEach((el) => {
+      try {
+        const data = JSON.parse(el.textContent);
+        if (!data || typeof data !== "object") return;
+        if (settings.publicPhone) data.telephone = settings.publicPhone;
+        if (settings.publicEmail) data.email = settings.publicEmail;
+        if (settings.salonAddress || settings.salonCity) {
+          data.address = {
+            "@type": "PostalAddress",
+            streetAddress: settings.salonAddress || (data.address && data.address.streetAddress) || "",
+            addressLocality: settings.salonCity || (data.address && data.address.addressLocality) || "",
+            addressCountry: "ME",
+          };
+        }
+        if (settings.instagramUrl) {
+          data.sameAs = Array.from(new Set([...(data.sameAs || []), settings.instagramUrl]));
+        }
+        el.textContent = JSON.stringify(data);
+      } catch { /* ignore malformed JSON-LD */ }
+    });
+
     // Expose for other scripts (e.g. booking WhatsApp fallback)
     window.__siteSettings = settings;
   }

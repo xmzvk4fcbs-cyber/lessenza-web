@@ -214,6 +214,38 @@ document.addEventListener('DOMContentLoaded', () => {
     dot.style.animationDuration = `${dur}s`;
   });
 
+  // --- Sticky mobile booking CTA ---
+  (function stickyCTA() {
+    // Skip on the booking page itself and on admin.
+    const path = location.pathname;
+    if (/zakazivanje\.html$/i.test(path) || path.startsWith('/admin')) return;
+    // Desktop: skip. CSS also hides >768px, but avoid DOM + observers entirely.
+    if (window.matchMedia('(min-width: 769px)').matches) return;
+
+    const cta = document.createElement('a');
+    cta.href = 'zakazivanje.html';
+    cta.className = 'sticky-cta';
+    cta.setAttribute('aria-label', 'Zakazi termin');
+    cta.textContent = 'Zakazi Termin';
+    document.body.appendChild(cta);
+
+    const hero = document.querySelector('.hero, .page-hero');
+    const footer = document.querySelector('.footer');
+    let heroVisible = !!hero;
+    let footerVisible = false;
+    const sync = () => cta.classList.toggle('is-visible', !heroVisible && !footerVisible);
+
+    if (hero && 'IntersectionObserver' in window) {
+      new IntersectionObserver(([e]) => { heroVisible = e.isIntersecting; sync(); }, { threshold: 0.1 }).observe(hero);
+    } else {
+      heroVisible = false;
+    }
+    if (footer && 'IntersectionObserver' in window) {
+      new IntersectionObserver(([e]) => { footerVisible = e.isIntersecting; sync(); }, { rootMargin: '0px 0px -80px 0px', threshold: 0 }).observe(footer);
+    }
+    sync();
+  })();
+
   // --- Marquee: JS-driven so it moves on iOS Reduce Motion + Low Power Mode ---
   document.querySelectorAll('.marquee__track').forEach((track) => {
     track.style.animation = 'none';
