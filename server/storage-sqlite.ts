@@ -38,7 +38,7 @@ export class SqliteStore implements KVStore {
         "ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at"
     );
     this.stmtDel = this.db.prepare("DELETE FROM kv WHERE key = ?");
-    this.stmtList = this.db.prepare("SELECT key FROM kv WHERE key LIKE ? ORDER BY key");
+    this.stmtList = this.db.prepare("SELECT key FROM kv WHERE key LIKE ? ESCAPE '\\' ORDER BY key");
   }
 
   async getJSON<T>(key: string): Promise<T | null> {

@@ -340,6 +340,24 @@
                   </div>
                   <button class="btn btn-primary" type="submit">Promijeni lozinku</button>
                 </form>
+                <section class="stack-card" id="blocked-phones-card" style="margin-top:1.5rem;">
+                  <div class="stack-card__head">
+                    <div>
+                      <div class="stack-card__title">Blokirani brojevi</div>
+                      <div class="stack-card__meta muted">Ovi brojevi ne mogu zakazati termin online.</div>
+                    </div>
+                  </div>
+                  <div class="field" style="margin-top:0.75rem;">
+                    <label for="bp-phone">Dodaj broj ručno</label>
+                    <div class="stack-card__actions" style="gap:0.5rem;flex-wrap:wrap;">
+                      <input id="bp-phone" type="tel" placeholder="+38269123456 ili 069123456" style="flex:1;min-width:200px;">
+                      <input id="bp-name" type="text" placeholder="Ime (opciono)" maxlength="120" style="flex:1;min-width:160px;">
+                      <input id="bp-reason" type="text" placeholder="Razlog (opciono, interno)" maxlength="200" style="flex:1;min-width:160px;">
+                      <button type="button" id="bp-add" class="btn btn-primary">Blokiraj</button>
+                    </div>
+                  </div>
+                  <div id="bp-list" style="margin-top:1rem;"></div>
+                </section>
               </div>
             </details>
 
