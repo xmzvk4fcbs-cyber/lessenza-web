@@ -108,6 +108,15 @@ export const InquirySchema = z.object({
 });
 export type Inquiry = z.infer<typeof InquirySchema>;
 
+export const BlockedPhoneSchema = z.object({
+  phoneE164: z.string().min(4).max(32),
+  name: z.string().max(120).optional(),
+  blockedAt: z.string().datetime(),
+  reason: z.string().max(200).optional(),
+});
+export type BlockedPhone = z.infer<typeof BlockedPhoneSchema>;
+export const BlockedPhonesSchema = z.array(BlockedPhoneSchema);
+
 export const AdminAuthSchema = z.object({
   passwordHash: z.string(),
   jwtSecret: z.string(),

@@ -7,12 +7,15 @@ import {
   ParallelPairsSchema,
   BlocksSchema,
   InquirySchema,
+  BlockedPhoneSchema,
+  BlockedPhonesSchema,
   type Service,
   type WorkingHours,
   type Settings,
   type ParallelPair,
   type Block,
   type Inquiry,
+  type BlockedPhone,
 } from "./schemas";
 import { DEFAULT_SERVICES, DEFAULT_WORKING_HOURS, DEFAULT_PARALLEL_PAIRS } from "./defaults";
 
@@ -21,6 +24,7 @@ const KEY_HOURS = "config/working-hours.json";
 const KEY_SETTINGS = "config/settings.json";
 const KEY_PAIRS = "config/parallel-pairs.json";
 const KEY_BLOCKS = "config/blocks.json";
+const KEY_BLOCKED_PHONES = "config/blocked-phones.json";
 
 export async function getServices(): Promise<Service[]> {
   const raw = await store().getJSON<unknown>(KEY_SERVICES);
@@ -129,4 +133,36 @@ export async function setDayNote(dateKey: string, text: string): Promise<void> {
     return;
   }
   await store().setJSON(`${DAY_NOTE_PREFIX}${dateKey}.json`, { text: trimmed });
+}
+
+// --- Blocked phones ---
+
+export async function getBlockedPhones(): Promise<BlockedPhone[]> {
+  const raw = await store().getJSON<unknown>(KEY_BLOCKED_PHONES);
+  if (raw == null) return [];
+  return BlockedPhonesSchema.parse(raw);
+}
+
+export async function isPhoneBlocked(phoneE164: string): Promise<boolean> {
+  if (!phoneE164) return false;
+  const list = await getBlockedPhones();
+  return list.some((e) => e.phoneE164 === phoneE164);
+}
+
+export async function addBlockedPhone(entry: BlockedPhone): Promise<BlockedPhone[]> {
+  const validated = BlockedPhoneSchema.parse(entry);
+  const current = await getBlockedPhones();
+  const existing = current.find((e) => e.phoneE164 === validated.phoneE164);
+  const next = existing
+    ? current.map((e) => (e.phoneE164 === validated.phoneE164 ? validated : e))
+    : [...current, validated];
+  await store().setJSON(KEY_BLOCKED_PHONES, BlockedPhonesSchema.parse(next));
+  return next;
+}
+
+export async function removeBlockedPhone(phoneE164: string): Promise<BlockedPhone[]> {
+  const current = await getBlockedPhones();
+  const next = current.filter((e) => e.phoneE164 !== phoneE164);
+  await store().setJSON(KEY_BLOCKED_PHONES, BlockedPhonesSchema.parse(next));
+  return next;
 }
