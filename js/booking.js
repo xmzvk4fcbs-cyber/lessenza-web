@@ -60,6 +60,7 @@ function setStep(step) {
   ui.navNext.hidden = false;
   showError(null);
   window.scrollTo({ top: 0, behavior: "smooth" });
+  ui.navNext.disabled = false;
 }
 
 function showSuccess(summary, withEmail) {
@@ -87,6 +88,7 @@ function showInquiry() {
   d.setDate(d.getDate() + state.bookingWindowDays + 1);
   document.getElementById("i-date").value = d.toISOString().slice(0, 10);
   document.getElementById("i-date").min = d.toISOString().slice(0, 10);
+  ui.navNext.disabled = false;
 }
 
 function showInquirySuccess() {
@@ -117,7 +119,7 @@ async function apiPost(url, payload) {
 // --- Phone validation (client-side instant feedback) ---
 // Server-side libphonenumber remains authoritative; this is UX-only.
 const PHONE_RULES = {
-  "+382": { min: 8, max: 8, label: "MNE broj (8 cifara)" },
+  "+382": { min: 8, max: 8, label: "MNE mobilni (8 cifara)" },
   "+381": { min: 8, max: 9, label: "SRB broj (8–9 cifara)" },
   "+385": { min: 8, max: 9, label: "HR broj (8–9 cifara)" },
   "+387": { min: 8, max: 9, label: "BiH broj (8–9 cifara)" },
