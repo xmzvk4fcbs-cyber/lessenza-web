@@ -90,7 +90,7 @@ export const SettingsSchema = z.object({
   // and for inspection posting). Falls back to rendered operational hours
   // when empty. Overrides operational hours purely for display.
   displayHoursOverride: z.string().max(500).optional(),
-  mailer: z.enum(["resend", "gmail"]).default("resend"),
+  mailer: z.enum(["resend", "gmail", "smtp"]).default("resend"),
 });
 export type Settings = z.infer<typeof SettingsSchema>;
 

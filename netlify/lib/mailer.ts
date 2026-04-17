@@ -116,6 +116,75 @@ function defaultGmailTransport(opts: { user: string; pass: string }): {
   };
 }
 
+export interface SmtpMailerOpts {
+  host: string;
+  port: number;
+  secure: boolean;
+  user: string;
+  pass: string;
+  from: string;
+  transportFactory?: (opts: { host: string; port: number; secure: boolean; user: string; pass: string }) => {
+    sendMail(msg: {
+      from: string;
+      to: string;
+      subject: string;
+      text: string;
+      html?: string;
+      replyTo?: string;
+    }): Promise<{ messageId: string }>;
+  };
+}
+
+export function createSmtpMailer(opts: SmtpMailerOpts): Mailer {
+  const transport = (opts.transportFactory ?? defaultSmtpTransport)({
+    host: opts.host,
+    port: opts.port,
+    secure: opts.secure,
+    user: opts.user,
+    pass: opts.pass,
+  });
+  return {
+    async send(msg) {
+      const info = await transport.sendMail({
+        from: opts.from,
+        to: msg.to,
+        subject: msg.subject,
+        text: msg.text,
+        html: msg.html,
+        replyTo: msg.replyTo,
+      });
+      return info.messageId;
+    },
+  };
+}
+
+function defaultSmtpTransport(opts: { host: string; port: number; secure: boolean; user: string; pass: string }): {
+  sendMail(msg: {
+    from: string;
+    to: string;
+    subject: string;
+    text: string;
+    html?: string;
+    replyTo?: string;
+  }): Promise<{ messageId: string }>;
+} {
+  return nodemailer.createTransport({
+    host: opts.host,
+    port: opts.port,
+    secure: opts.secure,
+    auth: { user: opts.user, pass: opts.pass },
+  }) as unknown as {
+    sendMail(msg: {
+      from: string;
+      to: string;
+      subject: string;
+      text: string;
+      html?: string;
+      replyTo?: string;
+    }): Promise<{ messageId: string }>;
+  };
+}
+
 /**
  * Gmail sender via OAuth (uses the token the owner granted through the admin UI).
  * Requires `gmail.send` scope (included by default in google-auth.ts).
@@ -167,7 +236,7 @@ export function createGmailOAuthMailer(opts: {
   };
 }
 
-export async function getMailerAsync(settings?: { mailer?: "resend" | "gmail" }): Promise<Mailer> {
+export async function getMailerAsync(settings?: { mailer?: "resend" | "gmail" | "smtp" }): Promise<Mailer> {
   if (process.env.NODE_ENV === "test") return createLogMailer();
   // Prefer Google OAuth (Gmail) when owner has connected via admin UI.
   try {
@@ -183,9 +252,28 @@ export async function getMailerAsync(settings?: { mailer?: "resend" | "gmail" })
   return getMailer(settings);
 }
 
-export function getMailer(settings?: { mailer?: "resend" | "gmail" }): Mailer {
+export function getMailer(settings?: { mailer?: "resend" | "gmail" | "smtp" }): Mailer {
   if (process.env.NODE_ENV === "test") return createLogMailer();
-  const which = settings?.mailer ?? (process.env.GMAIL_USER ? "gmail" : "resend");
+  const explicit = settings?.mailer;
+  // Auto-detect: SMTP_HOST > GMAIL_USER > RESEND_API_KEY > log.
+  const which =
+    explicit ??
+    (process.env.SMTP_HOST
+      ? "smtp"
+      : process.env.GMAIL_USER
+      ? "gmail"
+      : "resend");
+  if (which === "smtp") {
+    const host = process.env.SMTP_HOST ?? "";
+    const port = Number(process.env.SMTP_PORT ?? "465");
+    const user = process.env.SMTP_USER ?? "";
+    const pass = process.env.SMTP_PASS ?? "";
+    const from = process.env.SMTP_FROM ?? `L'Essenza <${user || "info@lessenza.me"}>`;
+    // secure=true for port 465 (implicit TLS); false for 587 (STARTTLS upgrade).
+    const secure = process.env.SMTP_SECURE ? process.env.SMTP_SECURE === "true" : port === 465;
+    if (!host || !user || !pass) return createLogMailer();
+    return createSmtpMailer({ host, port, secure, user, pass, from });
+  }
   if (which === "gmail") {
     const user = process.env.GMAIL_USER ?? "";
     const pass = process.env.GMAIL_APP_PASSWORD ?? "";
@@ -193,7 +281,7 @@ export function getMailer(settings?: { mailer?: "resend" | "gmail" }): Mailer {
     return createGmailMailer({ user, pass });
   }
   const apiKey = process.env.RESEND_API_KEY ?? "";
-  const from = process.env.RESEND_FROM ?? "L'Essenza <onboarding@resend.dev>";
+  const from = process.env.RESEND_FROM ?? "L'Essenza <info@lessenza.me>";
   if (!apiKey) return createLogMailer();
   return createResendMailer({ apiKey, from });
 }
