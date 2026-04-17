@@ -21,15 +21,11 @@
     <section id="view-setup" class="admin-view hidden">
       <div class="admin-card">
         <h1>Dobrodošla</h1>
-        <p>Prvi put? Unesi setup token i postavi svoju lozinku.</p>
+        <p>Postavi svoju lozinku za ulazak u admin panel.</p>
         <form id="setup-form">
           <div class="field">
-            <label for="setup-token">Setup token</label>
-            <input id="setup-token" name="token" type="text" required autocomplete="off">
-          </div>
-          <div class="field" style="margin-top:0.75rem;">
             <label for="setup-password">Nova lozinka (min. 8)</label>
-            <input id="setup-password" name="password" type="password" minlength="8" required>
+            <input id="setup-password" name="password" type="password" minlength="8" required autofocus>
           </div>
           <button type="submit" class="btn btn-primary block">Uđi prvi put</button>
           <p class="admin-error" id="setup-error" hidden></p>

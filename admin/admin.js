@@ -123,11 +123,10 @@ document.getElementById("setup-form").addEventListener("submit", async (e) => {
   e.preventDefault();
   const err = document.getElementById("setup-error");
   err.hidden = true;
-  const token = document.getElementById("setup-token").value;
   const password = document.getElementById("setup-password").value;
   const res = await fetch("/api/admin/setup", {
     method: "POST",
-    headers: { "content-type": "application/json", "x-setup-token": token },
+    headers: { "content-type": "application/json" },
     body: JSON.stringify({ password }),
   });
   if (!res.ok) {

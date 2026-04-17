@@ -5,10 +5,22 @@ import { setupAdmin, isAdminInitialized } from "../lib/auth";
 export const handler: Handler = async (event) => {
   if (event.httpMethod !== "POST") return methodNotAllowed(["POST"]);
 
+  // If admin password is already set, setup is locked. Prevents hijack
+  // after first-run: only a fresh install (no ADMIN_PASSWORD_HASH env and
+  // no stored hash in Blobs/SQLite) can reach the password-set branch.
+  if (await isAdminInitialized()) {
+    return json({ error: "already-initialized", message: "Admin already set up" }, 409);
+  }
+
+  // SETUP_TOKEN is OPTIONAL. When present, it acts as an extra gate on the
+  // first-set endpoint — useful for shared hosting / CI. When absent (the
+  // usual self-hosted case), the first-visit-sets-password flow is allowed
+  // because the window between deploy and first-login is owner-controlled.
   const setupToken = process.env.SETUP_TOKEN;
-  if (!setupToken) return unauthorized("Setup disabled");
-  const provided = event.headers["x-setup-token"] ?? event.headers["X-Setup-Token"];
-  if (!provided || provided !== setupToken) return unauthorized();
+  if (setupToken) {
+    const provided = event.headers["x-setup-token"] ?? event.headers["X-Setup-Token"];
+    if (!provided || provided !== setupToken) return unauthorized();
+  }
 
   let body: { password?: unknown };
   try {
@@ -18,10 +30,6 @@ export const handler: Handler = async (event) => {
   }
   const password = typeof body.password === "string" ? body.password : "";
   if (password.length < 8) return badRequest("password-too-short", "Password must be at least 8 characters");
-
-  if (await isAdminInitialized()) {
-    return json({ error: "already-initialized", message: "Admin already set up" }, 409);
-  }
 
   try {
     await setupAdmin(password);
