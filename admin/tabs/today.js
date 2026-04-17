@@ -388,6 +388,7 @@ async function onAction(e) {
       try {
         const r = await must("/api/admin/reject-booking", { method: "POST", body: { eventId, block } });
         closeModal();
+        // Use server's r.blocked (not local `block`) — addBlockedPhone is best-effort; server is authoritative.
         toast(r.blocked ? "Termin odbijen i broj blokiran." : "Termin odbijen.", "success");
         if (r.message) showMessageActions("Obavijesti klijentkinju", r.message, r.whatsappLink, r.viberLink);
         await renderList();
