@@ -13,5 +13,5 @@
     "noEmit": true,
     "types": ["node"]
   },
-  "include": ["netlify/**/*.ts", "tests/**/*.ts", "vitest.config.ts"]
+  "include": ["netlify/**/*.ts", "server/**/*.ts", "tests/**/*.ts", "vitest.config.ts"]
 }

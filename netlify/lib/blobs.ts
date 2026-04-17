@@ -91,6 +91,12 @@ function isLocalDev(): boolean {
   return !!process.env.NETLIFY_DEV;
 }
 
+/**
+ * Resolve the store for the current runtime:
+ *   - tests                   → InMemoryStore
+ *   - setStore() was called   → whatever was set (self-hosted server injects SQLite here at boot)
+ *   - otherwise               → Netlify Blobs (with FileStore fallback during `netlify dev`)
+ */
 export function createConfigStore(opts: { testMode?: boolean } = {}): KVStore {
   if (opts.testMode || process.env.NODE_ENV === "test") {
     return new InMemoryStore();
@@ -146,6 +152,9 @@ export function store(): KVStore {
   if (!runtimeStore) runtimeStore = createConfigStore();
   return runtimeStore;
 }
-export function resetStoreForTests(s: KVStore): void {
+/** Inject a store explicitly — used by tests and by the self-hosted server entry point. */
+export function setStore(s: KVStore): void {
   runtimeStore = s;
 }
+/** @deprecated Use setStore. Kept for existing test imports. */
+export const resetStoreForTests = setStore;
