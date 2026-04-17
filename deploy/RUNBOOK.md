@@ -16,18 +16,17 @@ You need:
 - Ports 80 and 443 reachable from the internet
 - Two existing sites already on this box using nginx? Good — we plug into the existing nginx, we don't replace it.
 
-Quick health check before touching anything:
+**Pre-flight check — do this first, it's read-only:**
 
 ```bash
 ssh your-user@your-hetzner
-free -h
-df -h /
-nginx -v
-systemctl is-active nginx
+git clone https://github.com/xmzvk4fcbs-cyber/lessenza-web.git /tmp/lessenza-web
+bash /tmp/lessenza-web/deploy/preflight.sh
 ```
 
-If `nginx -v` says not found, **stop** and tell me — we'll switch strategy.
-If nginx is active and your other sites are running, continue.
+It prints what's already installed, what setup.sh will install, flags any
+port conflicts, and refuses to let you proceed if anything is broken.
+If you see all ✓/⚠ (no ✗), you're good to continue.
 
 ---
 
@@ -102,13 +101,16 @@ sudo systemctl enable --now lessenza
 sudo systemctl status lessenza
 journalctl -u lessenza -n 50 --no-pager
 
-# 3e. Open https://test.lessenza.me — verify:
+# 3e. Smoke test every endpoint at once:
+BASE_URL=https://test.lessenza.me bash /opt/lessenza/app/deploy/smoke-test.sh
+
+# 3f. Open https://test.lessenza.me — verify:
 #     - Public site renders (images, booking page)
 #     - /admin/ login works with the current password
 #     - Creating a test booking shows up in Google Calendar
 ```
 
-If something's off, come find me before continuing.
+If smoke-test.sh fails anything, come find me before continuing.
 
 ---
 
