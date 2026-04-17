@@ -288,6 +288,37 @@ export function bookingCancelledToClient(
   };
 }
 
+export function bookingRejectedToClient(b: Booking, ctx: ClientTemplateCtx): EmailMessage {
+  if (!b.email) throw new Error("rejected email requires booking.email");
+  const when = formatDateHuman(b.startISO);
+  const phoneLine = ctx.ownerPhone
+    ? `<p style="margin:0 0 12px;font-size:14px;line-height:1.7;color:${BRAND.sageSoft};">
+         Za dodatne informacije: <a href="tel:${esc(ctx.ownerPhone)}" style="color:${BRAND.gold};text-decoration:none;">${esc(ctx.ownerPhone)}</a>
+       </p>`
+    : "";
+  const inner = `
+    <p style="margin:0 0 16px;font-size:15px;line-height:1.7;">Draga ${esc(b.name)},</p>
+    <p style="margin:0 0 16px;font-size:15px;line-height:1.7;">
+      Hvala na interesovanju za <strong>L'Essenza</strong>.
+    </p>
+    <p style="margin:0 0 16px;font-size:15px;line-height:1.7;">
+      Nažalost, u narednom periodu ne mogu prihvatiti Vaš termin za <strong>${esc(b.serviceName)}</strong> (${esc(when)}).
+    </p>
+    ${phoneLine}
+    <p style="margin:24px 0 0;font-size:14px;color:${BRAND.sageSoft};">Srdačno ✿ L'Essenza</p>
+  `;
+  return {
+    to: b.email,
+    subject: `Termin — L'Essenza`,
+    html: renderShell({ heading: "Obavještenje o terminu", preheader: "Nažalost termin nije moguć.", inner }),
+    text:
+      `Draga ${b.name},\n\n` +
+      `Hvala na interesovanju za L'Essenza. Nažalost, u narednom periodu ne mogu prihvatiti Vaš termin za ${b.serviceName} (${when}).\n\n` +
+      (ctx.ownerPhone ? `Za dodatne informacije: ${ctx.ownerPhone}\n\n` : "") +
+      `Srdačno ✿ L'Essenza`,
+  };
+}
+
 export function bookingRescheduledToClient(
   original: Booking,
   updated: Booking,
