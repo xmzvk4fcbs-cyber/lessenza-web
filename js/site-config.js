@@ -23,6 +23,19 @@
     if (el && value) el.setAttribute("href", value);
   }
 
+  /** Hide the closest meaningful wrapper if a public setting is unset.
+   *  Priority: known wrapper classes → enclosing <a> → the element itself. */
+  function hideContext(el) {
+    if (!el) return;
+    const wrapper = el.closest(
+      ".contact-info-item, .hero-contact-row, .header-contact, .footer-contact"
+    );
+    if (wrapper) { wrapper.style.display = "none"; return; }
+    const anchor = el.closest("a");
+    if (anchor) { anchor.style.display = "none"; return; }
+    el.style.display = "none";
+  }
+
   function formatPhoneHref(phone) {
     if (!phone) return null;
     return "tel:" + phone.replace(/\s+/g, "");
@@ -80,9 +93,17 @@
         case "salonAddress":     return setText(el, settings.salonAddress);
         case "salonCity":        return setText(el, settings.salonCity);
         case "fullAddress":      return setText(el, fullAddress);
-        case "publicPhone":      return setText(el, settings.publicPhone);
-        case "publicEmail":      return setText(el, settings.publicEmail);
-        case "whatsappPhone":    return setText(el, settings.whatsappPhone || settings.publicPhone);
+        case "publicPhone":
+          if (settings.publicPhone) return setText(el, settings.publicPhone);
+          return hideContext(el);
+        case "publicEmail":
+          if (settings.publicEmail) return setText(el, settings.publicEmail);
+          return hideContext(el);
+        case "whatsappPhone": {
+          const wa = settings.whatsappPhone || settings.publicPhone;
+          if (wa) return setText(el, wa);
+          return hideContext(el);
+        }
         case "workingHours":     return renderWorkingHours(el, settings.workingHours, settings.displayHoursOverride);
         default:                 return;
       }
@@ -92,10 +113,20 @@
     document.querySelectorAll("[data-setting-href]").forEach((el) => {
       const key = el.getAttribute("data-setting-href");
       switch (key) {
-        case "publicPhone":   return setHref(el, formatPhoneHref(settings.publicPhone));
-        case "publicEmail":   return setHref(el, settings.publicEmail ? "mailto:" + settings.publicEmail : null);
-        case "whatsapp":      return setHref(el, formatWhatsappHref(settings.whatsappPhone || settings.publicPhone));
-        case "instagram":     return setHref(el, settings.instagramUrl);
+        case "publicPhone":
+          if (settings.publicPhone) return setHref(el, formatPhoneHref(settings.publicPhone));
+          return hideContext(el);
+        case "publicEmail":
+          if (settings.publicEmail) return setHref(el, "mailto:" + settings.publicEmail);
+          return hideContext(el);
+        case "whatsapp": {
+          const wa = formatWhatsappHref(settings.whatsappPhone || settings.publicPhone);
+          if (wa) return setHref(el, wa);
+          return hideContext(el);
+        }
+        case "instagram":
+          if (settings.instagramUrl) return setHref(el, settings.instagramUrl);
+          return hideContext(el);
         case "mapQuery": {
           const q = encodeURIComponent(settings.mapQuery || fullAddress);
           return setHref(el, "https://www.google.com/maps/search/?api=1&query=" + q);
