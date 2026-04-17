@@ -1,11 +1,59 @@
 import { registerTab, must, toast, openModal, closeModal, escapeHtml, getServices } from "../admin.js";
 
 const filter = document.getElementById("inq-filter");
+const dayFilter = document.getElementById("inq-day");
 const refresh = document.getElementById("inq-refresh");
 const list = document.getElementById("inquiries-list");
 
+const WINDOW_LABEL = { morning: "jutro", afternoon: "popodne", any: "bilo kad" };
+
 filter.addEventListener("change", () => render());
+if (dayFilter) dayFilter.addEventListener("change", () => render());
 refresh.addEventListener("click", () => render());
+
+function fmtDayLabel(dateKey) {
+  const d = new Date(dateKey + "T00:00:00");
+  return d.toLocaleDateString("sr-Latn", { weekday: "long", day: "numeric", month: "long" });
+}
+
+function renderInquiryCard(i, svcById) {
+  const svcName = svcById[i.serviceId] || i.serviceId;
+  const isAny = i.desiredTimeWindow === "any";
+  const winLabel = WINDOW_LABEL[i.desiredTimeWindow] || i.desiredTimeWindow;
+  return `
+    <article class="stack-card ${isAny ? "stack-card--flex" : ""}" data-id="${escapeHtml(i.id)}" data-service="${escapeHtml(i.serviceId)}" data-desired="${escapeHtml(i.desiredDateISO)}" data-name="${escapeHtml(i.name)}" data-phone="${escapeHtml(i.phone)}">
+      <div class="stack-card__head">
+        <div>
+          <div class="stack-card__title">${escapeHtml(svcName)} — ${escapeHtml(i.name)}</div>
+          <div class="stack-card__meta">
+            Želi: ${escapeHtml(i.desiredDateISO)}
+            <span class="inq-window ${isAny ? "inq-window--any" : ""}">${escapeHtml(winLabel)}</span>
+            · status: ${escapeHtml(i.status)}
+          </div>
+        </div>
+      </div>
+      <div class="stack-card__details">
+        <div>📞 ${escapeHtml(i.phone)}</div>
+        ${i.email ? `<div>📧 ${escapeHtml(i.email)}</div>` : ""}
+        ${i.note ? `<div>📝 ${escapeHtml(i.note)}</div>` : ""}
+      </div>
+      <div class="stack-card__actions">
+        ${i.status === "pending" ? `
+          <button class="btn btn-primary" type="button" data-accept>✓ Prihvati</button>
+          <button class="btn btn-danger" type="button" data-decline>✕ Odbij</button>
+        ` : ""}
+        <a class="btn btn-ghost" href="tel:${escapeHtml(i.phone)}">📞 Pozovi</a>
+        <button class="btn btn-ghost" type="button" data-wa>📱 WhatsApp</button>
+      </div>
+    </article>
+  `;
+}
+
+function wireActions() {
+  list.querySelectorAll("[data-accept]").forEach((b) => b.addEventListener("click", () => openAccept(b.closest(".stack-card"))));
+  list.querySelectorAll("[data-decline]").forEach((b) => b.addEventListener("click", () => openDecline(b.closest(".stack-card"))));
+  list.querySelectorAll("[data-wa]").forEach((b) => b.addEventListener("click", () => openWa(b.closest(".stack-card"))));
+}
 
 async function render() {
   const services = await getServices();
@@ -14,41 +62,68 @@ async function render() {
   try {
     const q = filter.value ? `?status=${encodeURIComponent(filter.value)}` : "";
     const { inquiries } = await must(`/api/admin/inquiries${q}`);
-    if (!inquiries.length) {
-      list.innerHTML = `<p class="muted">Nema upita u ovom filteru.</p>`;
+
+    const dayValue = dayFilter ? dayFilter.value : "";
+    const filtered = dayValue
+      ? inquiries.filter((i) => i.desiredDateISO === dayValue)
+      : inquiries;
+
+    if (!filtered.length) {
+      list.innerHTML = `<p class="muted">Nema upita za ${dayValue ? escapeHtml(fmtDayLabel(dayValue)) : "ovaj filter"}.</p>`;
       return;
     }
-    list.innerHTML = inquiries
-      .map((i) => {
-        const svcName = svcById[i.serviceId] || i.serviceId;
-        return `
-          <article class="stack-card" data-id="${escapeHtml(i.id)}" data-service="${escapeHtml(i.serviceId)}" data-desired="${escapeHtml(i.desiredDateISO)}" data-name="${escapeHtml(i.name)}" data-phone="${escapeHtml(i.phone)}">
-            <div class="stack-card__head">
-              <div>
-                <div class="stack-card__title">${escapeHtml(svcName)} — ${escapeHtml(i.name)}</div>
-                <div class="stack-card__meta">Želi: ${escapeHtml(i.desiredDateISO)} (${escapeHtml(i.desiredTimeWindow)}) · status: ${escapeHtml(i.status)}</div>
-              </div>
-            </div>
-            <div class="stack-card__details">
-              <div>📞 ${escapeHtml(i.phone)}</div>
-              ${i.email ? `<div>📧 ${escapeHtml(i.email)}</div>` : ""}
-              ${i.note ? `<div>📝 ${escapeHtml(i.note)}</div>` : ""}
-            </div>
-            <div class="stack-card__actions">
-              ${i.status === "pending" ? `
-                <button class="btn btn-primary" type="button" data-accept>✓ Prihvati</button>
-                <button class="btn btn-danger" type="button" data-decline>✕ Odbij</button>
-              ` : ""}
-              <a class="btn btn-ghost" href="tel:${escapeHtml(i.phone)}">📞 Pozovi</a>
-              <button class="btn btn-ghost" type="button" data-wa>📱 WhatsApp</button>
-            </div>
-          </article>
-        `;
-      })
-      .join("");
-    list.querySelectorAll("[data-accept]").forEach((b) => b.addEventListener("click", () => openAccept(b.closest(".stack-card"))));
-    list.querySelectorAll("[data-decline]").forEach((b) => b.addEventListener("click", () => openDecline(b.closest(".stack-card"))));
-    list.querySelectorAll("[data-wa]").forEach((b) => b.addEventListener("click", () => openWa(b.closest(".stack-card"))));
+
+    if (dayValue) {
+      // Single-day view: group "any" time-window inquiries above the rest.
+      const anyOnes = filtered.filter((i) => i.desiredTimeWindow === "any" && i.status === "pending");
+      const rest = filtered.filter((i) => !(i.desiredTimeWindow === "any" && i.status === "pending"));
+      const sections = [];
+      if (anyOnes.length) {
+        sections.push(`
+          <div class="inq-group-head">
+            <span class="inq-group-pill">Bilo kad &middot; ${anyOnes.length}</span>
+            <span class="muted">Ovi čekaju tvoju odluku — možeš ih prihvatiti ili odbiti.</span>
+          </div>
+          ${anyOnes.map((i) => renderInquiryCard(i, svcById)).join("")}
+        `);
+      }
+      if (rest.length) {
+        sections.push(`
+          <div class="inq-group-head" style="margin-top:1rem;">
+            <span class="inq-group-pill inq-group-pill--muted">Ostalo &middot; ${rest.length}</span>
+          </div>
+          ${rest.map((i) => renderInquiryCard(i, svcById)).join("")}
+        `);
+      }
+      list.innerHTML = `
+        <div class="inq-day-banner">Upiti za <strong>${escapeHtml(fmtDayLabel(dayValue))}</strong></div>
+        ${sections.join("")}
+      `;
+    } else {
+      // No day filter: group by desiredDateISO (chronological), within each group sort "any" first.
+      const byDate = new Map();
+      for (const i of filtered) {
+        const arr = byDate.get(i.desiredDateISO) || [];
+        arr.push(i);
+        byDate.set(i.desiredDateISO, arr);
+      }
+      const dates = Array.from(byDate.keys()).sort();
+      list.innerHTML = dates
+        .map((date) => {
+          const arr = byDate.get(date);
+          arr.sort((a, b) => {
+            const aa = (a.status === "pending" && a.desiredTimeWindow === "any") ? 0 : 1;
+            const bb = (b.status === "pending" && b.desiredTimeWindow === "any") ? 0 : 1;
+            return aa - bb;
+          });
+          return `
+            <div class="inq-group-head"><span class="inq-group-pill">${escapeHtml(fmtDayLabel(date))}</span><span class="muted">${arr.length}</span></div>
+            ${arr.map((i) => renderInquiryCard(i, svcById)).join("")}
+          `;
+        })
+        .join("");
+    }
+    wireActions();
   } catch (e) {
     list.innerHTML = `<p class="muted">${escapeHtml(e.message)}</p>`;
   }
@@ -56,21 +131,91 @@ async function render() {
 
 function openAccept(card) {
   const id = card.dataset.id;
+  const serviceId = card.dataset.service;
   const desired = card.dataset.desired;
   openModal("Prihvati upit", `
     <p>Zakaži termin za <strong>${escapeHtml(card.dataset.name)}</strong>.</p>
     <div class="field">
-      <label for="acc-start">Vrijeme termina</label>
-      <input id="acc-start" type="datetime-local" value="${desired}T10:00" required>
+      <label for="acc-date">Datum</label>
+      <input id="acc-date" type="date" value="${escapeHtml(desired)}" required>
     </div>
+    <div class="mb-slots-wrap">
+      <div class="mb-slots-label">Slobodni termini</div>
+      <div id="acc-slots" class="mb-slots"></div>
+      <div id="acc-slots-empty" class="muted" hidden style="padding:0.5rem 0;">Nema slobodnih termina za ovaj datum.</div>
+      <div style="margin-top:0.5rem;">
+        <a href="#" id="acc-manual-toggle" style="font-size:0.85rem;color:var(--gold);">Unesi tačno vrijeme ručno →</a>
+      </div>
+      <div id="acc-manual" hidden style="margin-top:0.5rem;">
+        <input id="acc-start" type="datetime-local" style="width:100%;">
+      </div>
+    </div>
+    <input type="hidden" id="acc-chosen-iso">
     <div class="stack-card__actions">
       <button class="btn btn-ghost" type="button" data-close="1">Nazad</button>
       <button class="btn btn-primary" type="button" id="acc-confirm">Prihvati</button>
     </div>
   `);
+
+  const dateEl = document.getElementById("acc-date");
+  const slotsEl = document.getElementById("acc-slots");
+  const emptyEl = document.getElementById("acc-slots-empty");
+  const manualToggle = document.getElementById("acc-manual-toggle");
+  const manualBox = document.getElementById("acc-manual");
+  const manualInput = document.getElementById("acc-start");
+  const chosenIso = document.getElementById("acc-chosen-iso");
+
+  function localToISO(dateKey, hhmm) {
+    const [y, m, d] = dateKey.split("-").map(Number);
+    const [h, min] = hhmm.split(":").map(Number);
+    return new Date(y, m - 1, d, h, min, 0).toISOString();
+  }
+
+  async function loadSlots() {
+    chosenIso.value = "";
+    slotsEl.innerHTML = `<div class="muted" style="padding:0.5rem 0;">Učitavanje…</div>`;
+    emptyEl.hidden = true;
+    if (!serviceId || !dateEl.value) return;
+    try {
+      const r = await must(`/api/admin/slots?serviceId=${encodeURIComponent(serviceId)}&date=${encodeURIComponent(dateEl.value)}`);
+      const slots = Array.isArray(r.slots) ? r.slots : [];
+      if (!slots.length) {
+        slotsEl.innerHTML = "";
+        emptyEl.hidden = false;
+        return;
+      }
+      slotsEl.innerHTML = slots
+        .map((s) => `<button type="button" class="mb-slot-btn" data-hhmm="${escapeHtml(s)}">${escapeHtml(s)}</button>`)
+        .join("");
+      slotsEl.querySelectorAll(".mb-slot-btn").forEach((btn) => btn.addEventListener("click", () => {
+        chosenIso.value = localToISO(dateEl.value, btn.dataset.hhmm);
+        manualInput.value = "";
+        slotsEl.querySelectorAll(".mb-slot-btn").forEach((b) => b.classList.toggle("is-selected", b === btn));
+      }));
+    } catch (e) {
+      slotsEl.innerHTML = `<div class="muted" style="padding:0.5rem 0;">Ne mogu da učitam termine: ${escapeHtml(e.message)}</div>`;
+    }
+  }
+
+  dateEl.addEventListener("change", loadSlots);
+  manualInput.addEventListener("input", () => {
+    if (!manualInput.value) return;
+    chosenIso.value = new Date(manualInput.value).toISOString();
+    slotsEl.querySelectorAll(".mb-slot-btn").forEach((b) => b.classList.remove("is-selected"));
+  });
+  manualToggle.addEventListener("click", (e) => {
+    e.preventDefault();
+    manualBox.hidden = !manualBox.hidden;
+  });
+
+  loadSlots();
+
   document.getElementById("acc-confirm").addEventListener("click", async () => {
-    const local = document.getElementById("acc-start").value;
-    const iso = new Date(local).toISOString();
+    const iso = chosenIso.value;
+    if (!iso) {
+      toast("Izaberi termin (ili unesi tačno vrijeme).", "error");
+      return;
+    }
     try {
       const r = await must("/api/admin/inquiry-accept", { method: "POST", body: { inquiryId: id, startISO: iso } });
       closeModal();

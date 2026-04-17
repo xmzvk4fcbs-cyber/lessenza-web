@@ -891,6 +891,150 @@
 .hidden { display: none !important; }
 .mt-xl { margin-top: 1.5rem; }
 
+/* === Manual booking modal — slot picker === */
+.mb-slots-wrap {
+  margin: 0.5rem 0 1rem;
+  padding: 0.9rem 1rem;
+  background: var(--cream-soft);
+  border: 1px solid var(--champagne-deep);
+  border-radius: 12px;
+}
+.mb-slots-label {
+  font-size: 0.75rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--gold);
+  font-weight: 600;
+  margin-bottom: 0.6rem;
+}
+.mb-slots {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(72px, 1fr));
+  gap: 0.4rem;
+}
+.mb-slot-btn {
+  min-height: 40px;
+  padding: 0.4rem 0.5rem;
+  border: 1px solid var(--champagne-deep);
+  background: #fff;
+  color: var(--text);
+  border-radius: 8px;
+  font: inherit;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s, color 0.15s, box-shadow 0.15s;
+}
+.mb-slot-btn:hover,
+.mb-slot-btn:focus-visible {
+  border-color: var(--gold);
+  outline: none;
+}
+.mb-slot-btn.is-selected {
+  background: var(--gold);
+  color: #fff;
+  border-color: var(--gold);
+  font-weight: 600;
+  box-shadow: 0 2px 6px rgba(201, 169, 97, 0.3);
+}
+
+/* === Inquiries — grouping / day pill === */
+.inq-day-banner {
+  padding: 0.6rem 0.9rem;
+  margin: 0 0 0.75rem;
+  background: var(--cream-soft);
+  border-left: 3px solid var(--gold);
+  border-radius: 8px;
+  font-size: 0.95rem;
+  color: var(--sage);
+  text-transform: capitalize;
+}
+.inq-group-head {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0.75rem 0 0.4rem;
+  flex-wrap: wrap;
+}
+.inq-group-pill {
+  display: inline-block;
+  padding: 0.25rem 0.7rem;
+  background: var(--gold);
+  color: #fff;
+  font-size: 0.75rem;
+  letter-spacing: 0.06em;
+  border-radius: 999px;
+  text-transform: capitalize;
+  font-weight: 600;
+}
+.inq-group-pill--muted { background: var(--champagne-deep); color: var(--sage); }
+.inq-window {
+  display: inline-block;
+  padding: 1px 8px;
+  background: var(--cream-soft);
+  border: 1px solid var(--champagne-deep);
+  border-radius: 999px;
+  font-size: 0.75rem;
+  color: var(--sage);
+  margin-left: 0.25rem;
+}
+.inq-window--any {
+  background: var(--gold);
+  color: #fff;
+  border-color: var(--gold);
+  font-weight: 600;
+}
+.stack-card--flex {
+  border-left: 3px solid var(--gold);
+}
+
+/* === Inquiries overlay on day view === */
+.inq-overlay {
+  background: var(--cream-soft);
+  border: 1px solid var(--champagne-deep);
+  border-radius: 12px;
+  padding: 0.8rem 1rem;
+  margin-top: 1rem;
+}
+.inq-overlay__head {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  margin-bottom: 0.5rem;
+  color: var(--sage);
+}
+.inq-overlay__link {
+  margin-left: auto;
+  color: var(--gold);
+  font-size: 0.85rem;
+  text-decoration: none;
+  font-weight: 600;
+}
+.inq-overlay__body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+.inq-overlay-card {
+  padding: 0.5rem 0.75rem;
+  background: #fff;
+  border: 1px solid var(--champagne-deep);
+  border-radius: 8px;
+  font-size: 0.9rem;
+}
+.inq-overlay-card--any {
+  border-left: 3px solid var(--gold);
+}
+.inq-overlay-card__row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+.inq-overlay-card__name { font-weight: 600; color: var(--sage); }
+.inq-overlay-card__svc { color: var(--text-light); font-size: 0.85rem; }
+.inq-overlay-card__meta { margin-top: 0.2rem; font-size: 0.85rem; color: var(--text-light); }
+
 /* === Link all sage/gold/cream tokens to public palette === */
 :root {
   --cream: #F4ECDB;

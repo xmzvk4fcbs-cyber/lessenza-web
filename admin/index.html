@@ -151,7 +151,7 @@
         <section id="screen-inquiries" class="admin-screen">
           <section class="tab-panel" id="tab-inquiries">
             <h2>Upiti</h2>
-            <div class="row-between">
+            <div class="row-between" style="flex-wrap:wrap;gap:0.5rem;">
               <div class="field field--inline">
                 <label for="inq-filter">Prikaži</label>
                 <select id="inq-filter">
@@ -160,6 +160,10 @@
                   <option value="accepted">Prihvaćene</option>
                   <option value="declined">Odbijene</option>
                 </select>
+              </div>
+              <div class="field field--inline">
+                <label for="inq-day">Datum</label>
+                <input id="inq-day" type="date" placeholder="Svi datumi">
               </div>
               <button id="inq-refresh" class="btn btn-ghost" type="button">Osvježi</button>
             </div>
