@@ -51,12 +51,16 @@ const inner: Handler = async (event) => {
 
   let blocked = false;
   if (block && booking?.phoneE164) {
-    await addBlockedPhone({
-      phoneE164: booking.phoneE164,
-      name: booking.name,
-      blockedAt: new Date().toISOString(),
-    });
-    blocked = true;
+    try {
+      await addBlockedPhone({
+        phoneE164: booking.phoneE164,
+        name: booking.name,
+        blockedAt: new Date().toISOString(),
+      });
+      blocked = true;
+    } catch {
+      blocked = false;
+    }
   }
 
   let emailSent = false;

@@ -291,9 +291,10 @@ export function bookingCancelledToClient(
 export function bookingRejectedToClient(b: Booking, ctx: ClientTemplateCtx): EmailMessage {
   if (!b.email) throw new Error("rejected email requires booking.email");
   const when = formatDateHuman(b.startISO);
+  const ownerPhoneDisplay = ctx.ownerPhone ? formatPhoneNational(ctx.ownerPhone) : "";
   const phoneLine = ctx.ownerPhone
     ? `<p style="margin:0 0 12px;font-size:14px;line-height:1.7;color:${BRAND.sageSoft};">
-         Za dodatne informacije: <a href="tel:${esc(ctx.ownerPhone)}" style="color:${BRAND.gold};text-decoration:none;">${esc(ctx.ownerPhone)}</a>
+         Za dodatne informacije: <a href="tel:${esc(ctx.ownerPhone)}" style="color:${BRAND.gold};text-decoration:none;">${esc(ownerPhoneDisplay)}</a>
        </p>`
     : "";
   const inner = `
@@ -314,7 +315,7 @@ export function bookingRejectedToClient(b: Booking, ctx: ClientTemplateCtx): Ema
     text:
       `Draga ${b.name},\n\n` +
       `Hvala na interesovanju za L'Essenza. Nažalost, u narednom periodu ne mogu prihvatiti Vaš termin za ${b.serviceName} (${when}).\n\n` +
-      (ctx.ownerPhone ? `Za dodatne informacije: ${ctx.ownerPhone}\n\n` : "") +
+      (ownerPhoneDisplay ? `Za dodatne informacije: ${ownerPhoneDisplay}\n\n` : "") +
       `Srdačno ✿ L'Essenza`,
   };
 }
