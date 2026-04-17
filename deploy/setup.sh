@@ -17,7 +17,7 @@ APP_USER=lessenza
 APP_DIR=/opt/lessenza/app
 DATA_DIR=/opt/lessenza/app/data
 NODE_MAJOR=22
-REPO_URL="${LESSENZA_REPO_URL:-git@github.com:xmzvk4fcbs-cyber/lessenza-web.git}"
+REPO_URL="${LESSENZA_REPO_URL:-https://github.com/xmzvk4fcbs-cyber/lessenza-web.git}"
 
 echo "==> 1/7  Installing base packages..."
 apt-get update
