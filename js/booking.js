@@ -114,6 +114,81 @@ async function apiPost(url, payload) {
   return body;
 }
 
+// --- Phone validation (client-side instant feedback) ---
+// Server-side libphonenumber remains authoritative; this is UX-only.
+const PHONE_RULES = {
+  "+382": { min: 8, max: 8, label: "MNE broj (8 cifara)" },
+  "+381": { min: 8, max: 9, label: "SRB broj (8–9 cifara)" },
+  "+385": { min: 8, max: 9, label: "HR broj (8–9 cifara)" },
+  "+387": { min: 8, max: 9, label: "BiH broj (8–9 cifara)" },
+  "+386": { min: 8, max: 9, label: "SLO broj (8–9 cifara)" },
+  "+389": { min: 8, max: 8, label: "MKD broj (8 cifara)" },
+  "+355": { min: 8, max: 9, label: "ALB broj" },
+  "+49":  { min: 6, max: 12, label: "DE broj" },
+  "+43":  { min: 6, max: 11, label: "AT broj" },
+  "+39":  { min: 6, max: 11, label: "IT broj" },
+  "+33":  { min: 9, max: 9, label: "FR broj" },
+  "+44":  { min: 7, max: 11, label: "UK broj" },
+  "+1":   { min: 10, max: 10, label: "US/CA broj" },
+};
+
+function validatePhoneLocal(raw, dial) {
+  const digits = (raw || "").replace(/\D+/g, "");
+  if (digits.length < 3) return { state: "empty" };
+  const rule = PHONE_RULES[dial] || { min: 7, max: 15, label: "E.164 broj" };
+  if (digits.length < rule.min) return { state: "too-short", label: rule.label };
+  if (digits.length > rule.max) return { state: "too-long", label: rule.label };
+  return { state: "ok" };
+}
+
+function attachPhoneValidation(inputId, statusId, dialValueId, submitBtnGetter) {
+  const input = document.getElementById(inputId);
+  const status = document.getElementById(statusId);
+  const dialEl = document.getElementById(dialValueId);
+  if (!input || !status) return;
+  const field = input.closest(".field");
+  let timer = null;
+
+  function applyResult(r) {
+    if (!field) return;
+    field.classList.toggle("has-error", r.state === "too-short" || r.state === "too-long");
+    field.classList.toggle("is-valid", r.state === "ok");
+    if (r.state === "ok") {
+      status.hidden = false;
+      status.textContent = "✓ Broj izgleda ispravno";
+      status.className = "field__status field__status--ok";
+    } else if (r.state === "too-short" || r.state === "too-long") {
+      status.hidden = false;
+      status.textContent = `Broj nije ispravan (${r.label}).`;
+      status.className = "field__status field__status--bad";
+    } else {
+      status.hidden = true;
+      status.textContent = "";
+      status.className = "field__status";
+    }
+    const btn = submitBtnGetter && submitBtnGetter();
+    if (btn) {
+      // Only disable when clearly invalid (not when empty / still typing short).
+      btn.disabled = r.state === "too-short" || r.state === "too-long";
+    }
+  }
+
+  function run() {
+    const dial = (dialEl && dialEl.value) || "+382";
+    applyResult(validatePhoneLocal(input.value, dial));
+  }
+
+  input.addEventListener("input", () => {
+    if (timer) clearTimeout(timer);
+    timer = setTimeout(run, 300);
+  });
+  input.addEventListener("blur", run);
+  if (dialEl) {
+    const obs = new MutationObserver(run);
+    obs.observe(dialEl, { attributes: true, attributeFilter: ["value"] });
+  }
+}
+
 // --- Step 1: services ---
 
 async function loadServices() {
@@ -433,3 +508,6 @@ ui.inquiryOpen.addEventListener("click", (e) => {
     showError(e.message);
   }
 })();
+
+attachPhoneValidation("f-phone", "f-phone-status", "f-dial", () => ui.navNext);
+attachPhoneValidation("i-phone", "i-phone-status", "i-dial", () => ui.navNext);

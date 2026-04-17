@@ -106,9 +106,10 @@
               <div class="phone-field phone-field--fixed">
                 <span class="phone-prefix" id="f-dial-prefix">+382</span>
                 <input type="hidden" id="f-dial" value="+382">
-                <input id="f-phone" name="phone" type="tel" required autocomplete="tel-national" inputmode="tel" placeholder="69 123 456">
+                <input id="f-phone" name="phone" type="tel" required autocomplete="tel-national" inputmode="tel" placeholder="69 123 456" aria-describedby="f-phone-hint f-phone-status">
               </div>
-              <p class="field__hint">Obavezno — za potvrdu ili izmjene termina.</p>
+              <p class="field__hint" id="f-phone-hint">Obavezno — za potvrdu ili izmjene termina. Primjer: 69 123 456.</p>
+              <p class="field__status" id="f-phone-status" aria-live="polite" hidden></p>
             </div>
             <div class="field">
               <label for="f-email">Email (opciono)</label>
@@ -157,8 +158,10 @@
               <div class="phone-field phone-field--fixed">
                 <span class="phone-prefix" id="i-dial-prefix">+382</span>
                 <input type="hidden" id="i-dial" value="+382">
-                <input id="i-phone" name="phone" type="tel" required inputmode="tel" placeholder="69 123 456">
+                <input id="i-phone" name="phone" type="tel" required inputmode="tel" placeholder="69 123 456" aria-describedby="i-phone-hint i-phone-status">
               </div>
+              <p class="field__hint" id="i-phone-hint">Obavezno — da mogu da te kontaktiram. Primjer: 69 123 456.</p>
+              <p class="field__status" id="i-phone-status" aria-live="polite" hidden></p>
             </div>
             <div class="field">
               <label for="i-email">Email (opciono)</label>
