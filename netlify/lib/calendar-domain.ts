@@ -13,7 +13,7 @@ export interface Booking {
   phoneE164: string;
   email?: string;
   note?: string;
-  source: "web" | "admin-manual" | "inquiry";
+  source: "web" | "admin-manual" | "admin-swap" | "inquiry";
 }
 
 export function bookingToEvent(b: Booking): calendar_v3.Schema$Event {
