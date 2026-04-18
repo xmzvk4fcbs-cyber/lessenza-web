@@ -169,6 +169,18 @@
       } catch { /* ignore malformed JSON-LD */ }
     });
 
+    // Generic: any element with `data-hide-if-no="key1,key2,..."` is hidden
+    // if every listed setting is empty/unset. Lets us hide entire CTA sections
+    // (e.g. WhatsApp CTA on kontakt) when there's no phone configured.
+    document.querySelectorAll("[data-hide-if-no]").forEach((el) => {
+      const keys = (el.getAttribute("data-hide-if-no") || "").split(",").map((k) => k.trim()).filter(Boolean);
+      const anyPresent = keys.some((k) => {
+        const v = settings[k];
+        return v != null && v !== "";
+      });
+      if (!anyPresent) el.style.display = "none";
+    });
+
     // Expose for other scripts (e.g. booking WhatsApp fallback)
     window.__siteSettings = settings;
   }
