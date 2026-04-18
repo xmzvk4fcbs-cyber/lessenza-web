@@ -18,5 +18,7 @@ export const handler: Handler = async (event) => {
     tagline: s.tagline,
     displayHoursOverride: s.displayHoursOverride,
     workingHours: hours,
+    showPrices: s.showPrices,
+    priceCurrency: s.priceCurrency,
   });
 };

@@ -25,7 +25,7 @@ const inner: Handler = async (event) => {
     return json({ service: parsed.data });
   }
   if (event.httpMethod === "PATCH") {
-    let body: { id?: string; name?: string; durationMinutes?: number; active?: boolean; notes?: string };
+    let body: { id?: string; name?: string; durationMinutes?: number; active?: boolean; notes?: string; price?: number };
     try {
       body = parseJson(event.body);
     } catch {

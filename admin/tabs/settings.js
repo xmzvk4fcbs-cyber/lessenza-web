@@ -16,6 +16,10 @@ const FIELDS = [
   ["tagline", "Tagline u hero sekciji", "text", {}],
   ["displayHoursOverride", "Radno vrijeme za prikaz na sajtu (opciono). Npr. 'Pon–Pet 09:00–20:00, Sub 09:00–15:00'. Ako ostaviš prazno, radno vrijeme se NE prikazuje klijentima.", "textarea", {}],
 
+  // --- Cijene (javno) ---
+  ["showPrices", "Prikazuj cijene usluga na sajtu (Usluge + Zakazivanje)", "checkbox", {}],
+  ["priceCurrency", "Oznaka valute (npr. €)", "text", { maxlength: 4 }],
+
   // --- Rezervacije ---
   ["bookingWindowDays", "Prozor rezervacije (dana unaprijed)", "number", { min: 1, max: 365 }],
   ["minLeadHours", "Minimalno vrijeme unaprijed (sati)", "number", { min: 0, max: 168, step: 0.5 }],

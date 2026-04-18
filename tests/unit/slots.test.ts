@@ -32,6 +32,8 @@ const settings: Settings = {
   mapQuery: "Bajova 22, Cetinje, Montenegro",
   tagline: "Beauty Salon · Bajova 22",
   mailer: "resend",
+  showPrices: false,
+  priceCurrency: "€",
 };
 
 function base(): ComputeSlotsInput {

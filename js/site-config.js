@@ -181,8 +181,36 @@
       if (!anyPresent) el.style.display = "none";
     });
 
+    // Price injection: fill `[data-service-price]` labels when showPrices is on.
+    if (settings.showPrices) injectPrices(settings.priceCurrency || "€");
+
     // Expose for other scripts (e.g. booking WhatsApp fallback)
     window.__siteSettings = settings;
+  }
+
+  async function injectPrices(currency) {
+    const slots = document.querySelectorAll("[data-service-price]");
+    if (!slots.length) return;
+    let services = [];
+    try {
+      const res = await fetch("/api/services", { cache: "no-store" });
+      const data = await res.json();
+      services = Array.isArray(data.services) ? data.services : [];
+    } catch { return; }
+    const priceById = {};
+    for (const s of services) if (typeof s.price === "number") priceById[s.id] = s.price;
+    slots.forEach((slot) => {
+      const container = slot.closest("[data-service-ids]");
+      const ids = (container?.getAttribute("data-service-ids") || slot.getAttribute("data-service-ids") || "")
+        .split(",").map((s) => s.trim()).filter(Boolean);
+      const prices = ids.map((id) => priceById[id]).filter((p) => typeof p === "number");
+      if (!prices.length) return;
+      const min = Math.min(...prices);
+      const max = Math.max(...prices);
+      slot.textContent = min === max
+        ? `· ${min} ${currency}`
+        : `· od ${min} ${currency}`;
+    });
   }
 
   // Fetch + apply as early as possible

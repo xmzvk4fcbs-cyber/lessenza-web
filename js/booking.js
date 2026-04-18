@@ -196,6 +196,10 @@ function attachPhoneValidation(inputId, statusId, dialValueId, submitBtnGetter) 
 async function loadServices() {
   const { services } = await apiGet("/api/services");
   state.services = services;
+  // Read the currency from window.__siteSettings if available (site-config.js
+  // populates this). Fallback is € because we're EU-first.
+  const settings = window.__siteSettings || {};
+  const currency = settings.priceCurrency || "€";
   ui.serviceGrid.innerHTML = "";
   for (const s of services) {
     const btn = document.createElement("button");
@@ -203,7 +207,8 @@ async function loadServices() {
     btn.className = "service-card";
     btn.setAttribute("role", "listitem");
     btn.dataset.id = s.id;
-    btn.innerHTML = `<span class="service-card__name">${escapeHtml(s.name)}</span><span class="service-card__duration">${s.durationMinutes} min</span>`;
+    const priceLabel = typeof s.price === "number" ? ` · ${s.price} ${currency}` : "";
+    btn.innerHTML = `<span class="service-card__name">${escapeHtml(s.name)}</span><span class="service-card__duration">${s.durationMinutes} min${escapeHtml(priceLabel)}</span>`;
     btn.addEventListener("click", () => {
       state.chosenService = s;
       document.querySelectorAll(".service-card").forEach((el) => el.classList.remove("is-selected"));

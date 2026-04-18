@@ -8,6 +8,8 @@ export const ServiceSchema = z.object({
   durationMinutes: z.number().int().positive().max(600),
   active: z.boolean(),
   notes: z.string().max(500).optional(),
+  /** Price in EUR. Shown publicly only when Settings.showPrices is true. */
+  price: z.number().min(0).max(100000).optional(),
 });
 export type Service = z.infer<typeof ServiceSchema>;
 export const ServicesSchema = z.array(ServiceSchema);
@@ -91,6 +93,10 @@ export const SettingsSchema = z.object({
   // when empty. Overrides operational hours purely for display.
   displayHoursOverride: z.string().max(500).optional(),
   mailer: z.enum(["resend", "gmail", "smtp"]).default("resend"),
+  /** When true, public usluge/zakazivanje show the `price` field next to each service. */
+  showPrices: z.boolean().default(false),
+  /** Currency label shown next to price. */
+  priceCurrency: z.string().max(4).default("€"),
 });
 export type Settings = z.infer<typeof SettingsSchema>;
 
