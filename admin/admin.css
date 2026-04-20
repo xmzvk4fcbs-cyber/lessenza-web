@@ -891,6 +891,101 @@
 .hidden { display: none !important; }
 .mt-xl { margin-top: 1.5rem; }
 
+/* === Raspored toolbar (search + stats) === */
+.rsp-toolbar {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin: 1rem 0 0.5rem;
+}
+.rsp-search-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+.rsp-search-icon {
+  position: absolute;
+  left: 12px;
+  font-size: 0.9rem;
+  pointer-events: none;
+  opacity: 0.6;
+}
+#rsp-search {
+  width: 100%;
+  padding: 0.6rem 2.2rem 0.6rem 2.2rem;
+  min-height: 42px;
+  border: 1px solid var(--champagne-deep);
+  border-radius: 10px;
+  background: #fff;
+  font: inherit;
+  font-size: 0.95rem;
+  color: var(--text);
+  -webkit-appearance: none;
+  appearance: none;
+}
+#rsp-search:focus {
+  border-color: var(--gold);
+  outline: 2px solid rgba(201, 169, 97, 0.18);
+  outline-offset: 0;
+}
+.rsp-clear {
+  position: absolute;
+  right: 8px;
+  background: transparent;
+  border: 0;
+  color: var(--text-light);
+  font-size: 1rem;
+  cursor: pointer;
+  padding: 6px 10px;
+  line-height: 1;
+}
+.rsp-clear:hover { color: var(--sage); }
+
+.rsp-stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  font-size: 0.8rem;
+  color: var(--text-light);
+}
+.rsp-stat {
+  background: var(--cream-soft);
+  padding: 4px 10px;
+  border-radius: 999px;
+  border: 1px solid var(--champagne-deep);
+}
+.rsp-stat strong {
+  color: var(--gold);
+  font-weight: 600;
+  margin-right: 3px;
+}
+
+/* === Day-grouped list (multi-day view) === */
+.day-group { margin-bottom: 1.2rem; }
+.day-group__head {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.4rem 0;
+  margin-bottom: 0.4rem;
+  border-bottom: 1px solid var(--champagne-deep);
+}
+.day-group__label {
+  font-family: var(--font-display, Georgia, serif);
+  font-size: 1rem;
+  color: var(--gold);
+  text-transform: capitalize;
+  letter-spacing: 0.04em;
+}
+.day-group__count {
+  margin-left: auto;
+  font-size: 0.75rem;
+  color: var(--text-light);
+  background: var(--cream-soft);
+  padding: 2px 10px;
+  border-radius: 999px;
+}
+
 /* === Manual booking modal — slot picker === */
 .mb-slots-wrap {
   margin: 0.5rem 0 1rem;

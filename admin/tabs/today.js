@@ -7,6 +7,45 @@ const refreshBtn = document.getElementById("today-refresh");
 const addBtn = document.getElementById("today-add");
 const list = document.getElementById("today-list");
 
+// Search + stats
+const searchInput = document.getElementById("rsp-search");
+const searchClear = document.getElementById("rsp-clear");
+const statsWrap = document.getElementById("rsp-stats");
+
+let cachedRows = []; // populated by renderList and filtered by search
+
+function applySearchFilter() {
+  const q = (searchInput?.value || "").trim().toLowerCase();
+  if (searchClear) searchClear.hidden = !q;
+  if (!q) return cachedRows;
+  const filtered = cachedRows.filter((a) => {
+    const haystack = [
+      a.kind === "raw" ? a.summary : a.name,
+      a.kind === "raw" ? "" : (a.phoneE164 || ""),
+      a.kind === "raw" ? "" : (a.serviceName || ""),
+      a.kind === "raw" ? "" : (a.email || ""),
+      a.kind === "raw" ? "" : (a.note || ""),
+    ].join(" ").toLowerCase();
+    return haystack.includes(q);
+  });
+  return filtered;
+}
+
+if (searchInput) {
+  let t = null;
+  searchInput.addEventListener("input", () => {
+    if (t) clearTimeout(t);
+    t = setTimeout(paintList, 120);
+  });
+}
+if (searchClear) {
+  searchClear.addEventListener("click", () => {
+    searchInput.value = "";
+    searchClear.hidden = true;
+    paintList();
+  });
+}
+
 fromInput.value = todayKey();
 toInput.value = todayKey();
 
@@ -120,19 +159,81 @@ async function renderList() {
     const { appointments, rawEvents } = await must(
       `/api/admin/appointments?from=${fromInput.value}&to=${toInput.value}`
     );
-    const all = [
+    cachedRows = [
       ...appointments.map((a) => ({ kind: "booking", ...a })),
       ...rawEvents.map((r) => ({ kind: "raw", ...r })),
     ].sort((a, b) => (a.startISO || "").localeCompare(b.startISO || ""));
-    if (!all.length) {
-      list.innerHTML = `<p class="muted">Nema termina u izabranom periodu.</p>`;
-      return;
-    }
-    list.innerHTML = all.map(renderCard).join("");
-    list.querySelectorAll("[data-action]").forEach((el) => el.addEventListener("click", onAction));
+    paintList();
   } catch (e) {
+    cachedRows = [];
     list.innerHTML = `<p class="muted">${escapeHtml(e.message)}</p>`;
+    if (statsWrap) statsWrap.hidden = true;
   }
+}
+
+function paintList() {
+  const rows = applySearchFilter();
+  const singleDay = fromInput.value && fromInput.value === toInput.value;
+
+  // Stats chip: only meaningful when ranging over multiple days.
+  if (statsWrap) {
+    if (singleDay || !rows.length) {
+      statsWrap.hidden = true;
+    } else {
+      const t = todayKey();
+      const tomorrow = plusDays(t, 1);
+      const bookings = rows.filter((r) => r.kind === "booking");
+      const today = bookings.filter((r) => (r.startISO || "").slice(0, 10) === t).length;
+      const tom = bookings.filter((r) => (r.startISO || "").slice(0, 10) === tomorrow).length;
+      statsWrap.hidden = false;
+      statsWrap.innerHTML = `
+        <span class="rsp-stat"><strong>${rows.length}</strong> ukupno</span>
+        <span class="rsp-stat"><strong>${today}</strong> danas</span>
+        <span class="rsp-stat"><strong>${tom}</strong> sjutra</span>
+      `;
+    }
+  }
+
+  if (!rows.length) {
+    const q = (searchInput?.value || "").trim();
+    list.innerHTML = q
+      ? `<p class="muted">Nema rezultata za "${escapeHtml(q)}".</p>`
+      : `<p class="muted">Nema termina u izabranom periodu.</p>`;
+    return;
+  }
+
+  // Group by day when range spans multiple days; flat list when single-day.
+  if (singleDay) {
+    list.innerHTML = rows.map(renderCard).join("");
+  } else {
+    const groups = new Map();
+    for (const r of rows) {
+      const key = (r.startISO || "").slice(0, 10);
+      if (!key) continue;
+      const arr = groups.get(key) || [];
+      arr.push(r);
+      groups.set(key, arr);
+    }
+    const t = todayKey();
+    const tomorrow = plusDays(t, 1);
+    const dayLabel = (k) => {
+      if (k === t) return "Danas";
+      if (k === tomorrow) return "Sjutra";
+      return new Date(k + "T00:00:00").toLocaleDateString("sr-Latn", { weekday: "long", day: "numeric", month: "long" });
+    };
+    const keys = Array.from(groups.keys()).sort();
+    list.innerHTML = keys.map((k) => `
+      <div class="day-group">
+        <div class="day-group__head">
+          <span class="day-group__label">${escapeHtml(dayLabel(k))}</span>
+          <span class="day-group__count">${groups.get(k).length}</span>
+        </div>
+        ${groups.get(k).map(renderCard).join("")}
+      </div>
+    `).join("");
+  }
+
+  list.querySelectorAll("[data-action]").forEach((el) => el.addEventListener("click", onAction));
 }
 
 async function renderDayInquiries(host, dateKey) {
