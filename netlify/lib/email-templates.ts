@@ -1,7 +1,6 @@
 import type { EmailMessage } from "./mailer";
 import type { Booking } from "./calendar-domain";
 import { formatSalon } from "./time";
-import { formatPhoneNational } from "./phone";
 
 export interface ClientTemplateCtx {
   salonAddress: string;
@@ -43,31 +42,37 @@ function renderShell(opts: { heading: string; preheader?: string; inner: string 
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>${esc(opts.heading)}</title>
 </head>
-<body style="margin:0;padding:0;background:#FBF8F2;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;color:${BRAND.sage};">
+<body style="margin:0;padding:0;background:#FDF9F0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;color:${BRAND.sage};">
 <span style="display:none!important;opacity:0;color:transparent;max-height:0;max-width:0;visibility:hidden;overflow:hidden;">${pre}</span>
-<table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="background:#FBF8F2;">
-<tr><td align="center" style="padding:32px 16px;">
-  <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="600" style="max-width:600px;width:100%;background:#ffffff;border:1px solid ${BRAND.champagne};border-radius:12px;overflow:hidden;">
+<table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="background:#FDF9F0;">
+<tr><td align="center" style="padding:36px 16px;">
+  <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="600" style="max-width:600px;width:100%;background:#ffffff;border:1px solid #EDE0C8;border-radius:14px;overflow:hidden;box-shadow:0 6px 20px rgba(201,169,97,0.08);">
     <tr>
-      <td style="background:${BRAND.creamSoft};padding:36px 32px 26px;text-align:center;border-bottom:1px solid ${BRAND.champagne};">
-        <img src="https://lessenza.me/img/logo-wordmark.png" alt="L'Essenza Beauty Salon" width="220" style="display:inline-block;max-width:65%;height:auto;border:0;outline:none;text-decoration:none;">
-        <div style="font-size:10px;letter-spacing:4px;color:${BRAND.sageSoft};text-transform:uppercase;margin-top:12px;">Beauty Salon &middot; Cetinje</div>
+      <td style="background:#FBF5E8;padding:38px 32px 22px;text-align:center;border-bottom:1px solid #EDE0C8;">
+        <div style="font-family:Georgia,serif;color:${BRAND.gold};font-size:22px;letter-spacing:6px;margin-bottom:14px;opacity:0.55;">&#10086; &middot; &#10086;</div>
+        <img src="https://lessenza.me/img/logo-wordmark.png" alt="L'Essenza Beauty Salon" width="230" style="display:inline-block;max-width:68%;height:auto;border:0;outline:none;text-decoration:none;">
+        <div style="font-size:10px;letter-spacing:5px;color:${BRAND.sageSoft};text-transform:uppercase;margin-top:14px;">Beauty Salon &middot; Cetinje</div>
       </td>
     </tr>
     <tr>
-      <td style="padding:40px 32px 8px;text-align:center;">
-        <h1 style="font-family:'Playfair Display',Georgia,'Times New Roman',serif;font-size:24px;color:${BRAND.sage};margin:0;font-weight:400;line-height:1.3;">${esc(opts.heading)}</h1>
-        <div style="width:40px;height:1px;background:${BRAND.gold};margin:18px auto 8px;"></div>
+      <td style="padding:42px 36px 10px;text-align:center;">
+        <h1 style="font-family:'Playfair Display',Georgia,'Times New Roman',serif;font-size:26px;color:${BRAND.sage};margin:0;font-weight:400;line-height:1.3;letter-spacing:0.02em;">${esc(opts.heading)}</h1>
+        <div style="margin:22px auto 4px;color:${BRAND.gold};font-family:Georgia,serif;font-size:14px;letter-spacing:8px;">&#10086;</div>
       </td>
     </tr>
     <tr>
-      <td style="padding:8px 32px 36px;color:${BRAND.sage};font-size:15px;line-height:1.65;">
+      <td style="padding:12px 36px 32px;color:${BRAND.sage};font-size:15px;line-height:1.7;">
         ${opts.inner}
       </td>
     </tr>
     <tr>
-      <td style="background:#FBF8F2;padding:22px 32px;text-align:center;border-top:1px solid ${BRAND.champagne};">
-        <div style="font-size:12px;color:${BRAND.sageSoft};line-height:1.7;">
+      <td style="padding:0 36px 28px;text-align:center;">
+        <div style="color:${BRAND.gold};font-family:Georgia,serif;font-size:14px;letter-spacing:8px;opacity:0.55;">&#10086;</div>
+      </td>
+    </tr>
+    <tr>
+      <td style="background:#FBF5E8;padding:24px 32px;text-align:center;border-top:1px solid #EDE0C8;">
+        <div style="font-size:12px;color:${BRAND.sageSoft};line-height:1.7;letter-spacing:0.02em;">
           L'Essenza Beauty Salon &middot; Bajova 22, Cetinje<br>
           <a href="https://lessenza.me" style="color:${BRAND.gold};text-decoration:none;">lessenza.me</a>
         </div>
@@ -113,14 +118,21 @@ function signOff(): string {
   return `<p style="margin:28px 0 0;color:${BRAND.sageSoft};font-family:'Playfair Display',Georgia,serif;font-size:16px;font-style:italic;text-align:center;">&mdash; L'Essenza</p>`;
 }
 
+/** Client-facing "reply to this email" CTA. Salon phone is intentionally
+ *  NOT mentioned here — if the owner wants a phone shown publicly, she sets
+ *  `publicPhone` in Settings and it surfaces on the website footer / contact
+ *  page, not in automated client emails. */
+function replyNote(): string {
+  return softNote(`Za izmjene ili dodatna pitanja — jednostavno odgovorite na ovaj email.`);
+}
+
 // ---------------------------------------------------------------------------
 // Templates
 // ---------------------------------------------------------------------------
 
-export function bookingConfirmedToClient(b: Booking, ctx: ClientTemplateCtx): EmailMessage {
+export function bookingConfirmedToClient(b: Booking, _ctx: ClientTemplateCtx): EmailMessage {
   if (!b.email) throw new Error("Booking has no client email");
   const dateLine = formatDateHuman(b.startISO);
-  const phone = ctx.ownerPhone ? formatPhoneNational(ctx.ownerPhone) : "";
   const text = [
     `Zdravo ${b.name},`,
     ``,
@@ -128,9 +140,9 @@ export function bookingConfirmedToClient(b: Booking, ctx: ClientTemplateCtx): Em
     ``,
     `Usluga: ${b.serviceName}`,
     `Kada: ${dateLine}`,
-    `Gdje: ${ctx.salonAddress}`,
+    `Gdje: ${_ctx.salonAddress}`,
     ``,
-    phone ? `Za izmjene pozovite ${phone}.` : "",
+    `Za izmjene — odgovorite na ovaj email.`,
     ``,
     `Vidimo se uskoro!`,
     `— L'Essenza`,
@@ -142,9 +154,9 @@ export function bookingConfirmedToClient(b: Booking, ctx: ClientTemplateCtx): Em
     detailsTable([
       ["Usluga", b.serviceName],
       ["Kada", dateLine],
-      ["Gdje", ctx.salonAddress],
+      ["Gdje", _ctx.salonAddress],
     ]),
-    phone ? softNote(`Za izmjene ili otkazivanje termina pozovite ${phone}.`) : "",
+    replyNote(),
     paragraph(`Radujemo se vašem dolasku.`),
     signOff(),
   ].filter(Boolean).join("\n");
@@ -247,11 +259,10 @@ export function inquiryCreatedToOwner(i: InquiryForEmail, ctx: OwnerTemplateCtx)
 export function bookingCancelledToClient(
   b: Booking,
   reason: string,
-  ctx: ClientTemplateCtx
+  _ctx: ClientTemplateCtx
 ): EmailMessage {
   if (!b.email) throw new Error("Booking has no client email");
   const dateLine = formatDateHuman(b.startISO);
-  const phone = ctx.ownerPhone ? formatPhoneNational(ctx.ownerPhone) : "";
   const text = [
     `Zdravo ${b.name},`,
     ``,
@@ -261,7 +272,7 @@ export function bookingCancelledToClient(
     `Kada: ${dateLine}`,
     reason ? `Razlog: ${reason}` : "",
     ``,
-    phone ? `Za novi termin pozovite ${phone}.` : "",
+    `Za novi termin — odgovorite na ovaj email.`,
     ``,
     `— L'Essenza`,
   ].filter(Boolean).join("\n");
@@ -276,7 +287,7 @@ export function bookingCancelledToClient(
     paragraph(`Draga ${b.name},`),
     paragraph(`Izvinjavamo se, ali moramo otkazati vaš termin.`),
     detailsTable(rows),
-    phone ? softNote(`Pozovite ${phone} da dogovorimo novi termin koji Vam odgovara — biće nam drago da Vas ugostimo.`) : "",
+    softNote(`Odgovorite na ovaj email da dogovorimo novi termin koji Vam odgovara — biće nam drago da Vas ugostimo.`),
     signOff(),
   ].filter(Boolean).join("\n");
 
@@ -288,15 +299,9 @@ export function bookingCancelledToClient(
   };
 }
 
-export function bookingRejectedToClient(b: Booking, ctx: ClientTemplateCtx): EmailMessage {
+export function bookingRejectedToClient(b: Booking, _ctx: ClientTemplateCtx): EmailMessage {
   if (!b.email) throw new Error("rejected email requires booking.email");
   const when = formatDateHuman(b.startISO);
-  const ownerPhoneDisplay = ctx.ownerPhone ? formatPhoneNational(ctx.ownerPhone) : "";
-  const phoneLine = ctx.ownerPhone
-    ? `<p style="margin:0 0 12px;font-size:14px;line-height:1.7;color:${BRAND.sageSoft};">
-         Za dodatne informacije: <a href="tel:${esc(ctx.ownerPhone)}" style="color:${BRAND.gold};text-decoration:none;">${esc(ownerPhoneDisplay)}</a>
-       </p>`
-    : "";
   const inner = `
     <p style="margin:0 0 16px;font-size:15px;line-height:1.7;">Draga ${esc(b.name)},</p>
     <p style="margin:0 0 16px;font-size:15px;line-height:1.7;">
@@ -305,7 +310,7 @@ export function bookingRejectedToClient(b: Booking, ctx: ClientTemplateCtx): Ema
     <p style="margin:0 0 16px;font-size:15px;line-height:1.7;">
       Nažalost, u narednom periodu ne mogu prihvatiti Vaš termin za <strong>${esc(b.serviceName)}</strong> (${esc(when)}).
     </p>
-    ${phoneLine}
+    ${replyNote()}
     <p style="margin:24px 0 0;font-size:14px;color:${BRAND.sageSoft};">Srdačno ✿ L'Essenza</p>
   `;
   return {
@@ -315,7 +320,7 @@ export function bookingRejectedToClient(b: Booking, ctx: ClientTemplateCtx): Ema
     text:
       `Draga ${b.name},\n\n` +
       `Hvala na interesovanju za L'Essenza. Nažalost, u narednom periodu ne mogu prihvatiti Vaš termin za ${b.serviceName} (${when}).\n\n` +
-      (ownerPhoneDisplay ? `Za dodatne informacije: ${ownerPhoneDisplay}\n\n` : "") +
+      `Ako imate pitanja, slobodno odgovorite na ovaj email.\n\n` +
       `Srdačno ✿ L'Essenza`,
   };
 }
@@ -328,7 +333,6 @@ export function bookingRescheduledToClient(
   if (!updated.email) throw new Error("Booking has no client email");
   const oldLine = formatDateHuman(original.startISO);
   const newLine = formatDateHuman(updated.startISO);
-  const phone = ctx.ownerPhone ? formatPhoneNational(ctx.ownerPhone) : "";
   const text = [
     `Zdravo ${updated.name},`,
     ``,
@@ -339,7 +343,7 @@ export function bookingRescheduledToClient(
     `Novi termin: ${newLine}`,
     `Gdje: ${ctx.salonAddress}`,
     ``,
-    phone ? `Za izmjene pozovite ${phone}.` : "",
+    `Za izmjene — odgovorite na ovaj email.`,
     ``,
     `— L'Essenza`,
   ].filter(Boolean).join("\n");
@@ -353,7 +357,7 @@ export function bookingRescheduledToClient(
       ["Novi termin", newLine],
       ["Gdje", ctx.salonAddress],
     ]),
-    phone ? softNote(`Ako Vam novi termin ne odgovara, pozovite ${phone} pa ćemo naći drugi.`) : "",
+    softNote(`Ako Vam novi termin ne odgovara, odgovorite na ovaj email pa ćemo naći drugi.`),
     signOff(),
   ].filter(Boolean).join("\n");
 
@@ -372,7 +376,6 @@ export function inquiryAcceptedToClient(
 ): EmailMessage {
   if (!i.email) throw new Error("Inquiry has no client email");
   const dateLine = formatDateHuman(startISO);
-  const phone = ctx.ownerPhone ? formatPhoneNational(ctx.ownerPhone) : "";
   const text = [
     `Zdravo ${i.name},`,
     ``,
@@ -382,7 +385,7 @@ export function inquiryAcceptedToClient(
     `Kada: ${dateLine}`,
     `Gdje: ${ctx.salonAddress}`,
     ``,
-    phone ? `Za izmjene pozovite ${phone}.` : "",
+    `Za izmjene — odgovorite na ovaj email.`,
     ``,
     `— L'Essenza`,
   ].filter(Boolean).join("\n");
@@ -395,7 +398,7 @@ export function inquiryAcceptedToClient(
       ["Kada", dateLine],
       ["Gdje", ctx.salonAddress],
     ]),
-    phone ? softNote(`Za izmjene pozovite ${phone}.`) : "",
+    replyNote(),
     signOff(),
   ].filter(Boolean).join("\n");
 
@@ -410,17 +413,16 @@ export function inquiryAcceptedToClient(
 export function inquiryDeclinedToClient(
   i: InquiryForEmail,
   reason: string,
-  ctx: ClientTemplateCtx
+  _ctx: ClientTemplateCtx
 ): EmailMessage {
   if (!i.email) throw new Error("Inquiry has no client email");
-  const phone = ctx.ownerPhone ? formatPhoneNational(ctx.ownerPhone) : "";
   const text = [
     `Zdravo ${i.name},`,
     ``,
     `Nažalost za ${i.desiredDateISO} nemamo slobodan termin.`,
     reason ? `Napomena: ${reason}` : "",
     ``,
-    phone ? `Za drugi datum pozovite ${phone}.` : "",
+    `Za drugi datum — odgovorite na ovaj email.`,
     ``,
     `— L'Essenza`,
   ].filter(Boolean).join("\n");
@@ -429,7 +431,7 @@ export function inquiryDeclinedToClient(
     paragraph(`Draga ${i.name},`),
     paragraph(`Nažalost za datum ${i.desiredDateISO} nemamo slobodan termin.`),
     reason ? softNote(reason) : "",
-    phone ? paragraph(`Rado ćemo naći drugi datum — pozovite ${phone} pa ćemo dogovoriti.`) : "",
+    paragraph(`Rado ćemo naći drugi datum — odgovorite na ovaj email pa ćemo dogovoriti.`),
     signOff(),
   ].filter(Boolean).join("\n");
 
@@ -490,7 +492,6 @@ export function dailyDigestToOwner(
 export function reminderToClient(b: Booking, ctx: ClientTemplateCtx): EmailMessage {
   if (!b.email) throw new Error("Booking has no client email");
   const when = formatDateHuman(b.startISO);
-  const phone = ctx.ownerPhone ? formatPhoneNational(ctx.ownerPhone) : "";
   const text = [
     `Zdravo ${b.name},`,
     ``,
@@ -500,7 +501,7 @@ export function reminderToClient(b: Booking, ctx: ClientTemplateCtx): EmailMessa
     `Kada: ${when}`,
     `Gdje: ${ctx.salonAddress}`,
     ``,
-    phone ? `Za izmjene pozovite ${phone}.` : "",
+    `Ako nešto iskrsne — odgovorite na ovaj email.`,
     ``,
     `— L'Essenza`,
   ].filter(Boolean).join("\n");
@@ -513,7 +514,7 @@ export function reminderToClient(b: Booking, ctx: ClientTemplateCtx): EmailMessa
       ["Kada", when],
       ["Gdje", ctx.salonAddress],
     ]),
-    phone ? softNote(`Ako nešto iskrsne, pozovite ${phone} — dogovorićemo novi termin.`) : "",
+    softNote(`Ako nešto iskrsne, odgovorite na ovaj email i dogovorićemo novi termin.`),
     paragraph(`Vidimo se sutra!`),
     signOff(),
   ].filter(Boolean).join("\n");

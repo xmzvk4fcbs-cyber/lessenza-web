@@ -23,14 +23,16 @@ const booking: Booking = {
 };
 
 describe("email templates", () => {
-  it("bookingConfirmedToClient includes service, date, time, address", () => {
+  it("bookingConfirmedToClient includes service, date, time, address + reply CTA", () => {
     const m = bookingConfirmedToClient(booking, { salonAddress: "Bajova 22", ownerPhone: "+38269000000" });
     expect(m.to).toBe("ana@example.com");
     expect(m.subject).toMatch(/L'Essenza/);
     expect(m.text).toContain("Manikir - Gel");
     expect(m.text).toContain("10:00");
     expect(m.text).toContain("Bajova 22");
-    expect(m.text).toContain("069 000 000");
+    // Phone is intentionally NOT in client emails — clients reply to the email instead.
+    expect(m.text).not.toContain("069 000 000");
+    expect(m.text.toLowerCase()).toContain("odgovorite na ovaj email");
   });
 
   it("bookingCreatedToOwner summarizes booking and links to admin", () => {
@@ -68,7 +70,7 @@ describe("email templates", () => {
 });
 
 describe("cancellation + reschedule + inquiry templates", () => {
-  it("bookingCancelledToClient includes reason and contact phone", () => {
+  it("bookingCancelledToClient includes reason + reply CTA (no phone)", () => {
     const m = bookingCancelledToClient(booking, "bolest", {
       salonAddress: "Bajova 22",
       ownerPhone: "+38269000000",
@@ -76,7 +78,8 @@ describe("cancellation + reschedule + inquiry templates", () => {
     expect(m.to).toBe("ana@example.com");
     expect(m.subject).toMatch(/otkazan/i);
     expect(m.text).toContain("bolest");
-    expect(m.text).toContain("069 000 000");
+    expect(m.text).not.toContain("069 000 000");
+    expect(m.text.toLowerCase()).toContain("odgovorite na ovaj email");
   });
 
   it("bookingRescheduledToClient shows old and new date", () => {
