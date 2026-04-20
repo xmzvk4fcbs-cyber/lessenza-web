@@ -43,20 +43,20 @@ function renderShell(opts: { heading: string; preheader?: string; inner: string 
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>${esc(opts.heading)}</title>
 </head>
-<body style="margin:0;padding:0;background:${BRAND.cream};font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;color:${BRAND.sage};">
+<body style="margin:0;padding:0;background:#FBF8F2;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;color:${BRAND.sage};">
 <span style="display:none!important;opacity:0;color:transparent;max-height:0;max-width:0;visibility:hidden;overflow:hidden;">${pre}</span>
-<table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="background:${BRAND.cream};">
+<table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="background:#FBF8F2;">
 <tr><td align="center" style="padding:32px 16px;">
-  <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="600" style="max-width:600px;width:100%;background:${BRAND.creamSoft};border:1px solid ${BRAND.champagne};border-radius:8px;overflow:hidden;">
+  <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="600" style="max-width:600px;width:100%;background:#ffffff;border:1px solid ${BRAND.champagne};border-radius:12px;overflow:hidden;">
     <tr>
-      <td style="background:${BRAND.gold};padding:28px 32px;text-align:center;">
-        <div style="font-family:'Playfair Display',Georgia,'Times New Roman',serif;font-size:30px;letter-spacing:3px;color:#ffffff;font-weight:400;line-height:1;">L'ESSENZA</div>
-        <div style="font-size:10px;letter-spacing:4px;color:rgba(255,255,255,0.85);text-transform:uppercase;margin-top:6px;">Beauty Salon</div>
+      <td style="background:${BRAND.creamSoft};padding:36px 32px 26px;text-align:center;border-bottom:1px solid ${BRAND.champagne};">
+        <img src="https://lessenza.me/img/logo-wordmark.png" alt="L'Essenza Beauty Salon" width="220" style="display:inline-block;max-width:65%;height:auto;border:0;outline:none;text-decoration:none;">
+        <div style="font-size:10px;letter-spacing:4px;color:${BRAND.sageSoft};text-transform:uppercase;margin-top:12px;">Beauty Salon &middot; Cetinje</div>
       </td>
     </tr>
     <tr>
       <td style="padding:40px 32px 8px;text-align:center;">
-        <h1 style="font-family:'Playfair Display',Georgia,'Times New Roman',serif;font-size:22px;color:${BRAND.sage};margin:0;font-weight:400;line-height:1.3;">${esc(opts.heading)}</h1>
+        <h1 style="font-family:'Playfair Display',Georgia,'Times New Roman',serif;font-size:24px;color:${BRAND.sage};margin:0;font-weight:400;line-height:1.3;">${esc(opts.heading)}</h1>
         <div style="width:40px;height:1px;background:${BRAND.gold};margin:18px auto 8px;"></div>
       </td>
     </tr>
@@ -66,7 +66,7 @@ function renderShell(opts: { heading: string; preheader?: string; inner: string 
       </td>
     </tr>
     <tr>
-      <td style="background:${BRAND.cream};padding:22px 32px;text-align:center;border-top:1px solid ${BRAND.champagne};">
+      <td style="background:#FBF8F2;padding:22px 32px;text-align:center;border-top:1px solid ${BRAND.champagne};">
         <div style="font-size:12px;color:${BRAND.sageSoft};line-height:1.7;">
           L'Essenza Beauty Salon &middot; Bajova 22, Cetinje<br>
           <a href="https://lessenza.me" style="color:${BRAND.gold};text-decoration:none;">lessenza.me</a>
