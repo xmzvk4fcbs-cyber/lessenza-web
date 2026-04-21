@@ -100,8 +100,26 @@
         <!-- ============== RASPORED ============== -->
         <section id="screen-schedule" class="admin-screen">
 
-          <section class="tab-panel" id="tab-today">
-            <h2>Raspored po danu</h2>
+          <!-- View switcher: Dan / Sedmica / Mjesec -->
+          <div class="view-switcher" role="tablist" aria-label="Pregled rasporeda">
+            <button type="button" class="view-btn is-active" data-view="day" role="tab" aria-selected="true">Dan</button>
+            <button type="button" class="view-btn" data-view="week" role="tab" aria-selected="false">Sedmica</button>
+            <button type="button" class="view-btn" data-view="month" role="tab" aria-selected="false">Mjesec</button>
+          </div>
+
+          <!-- Period navigation -->
+          <div class="view-nav" id="view-nav">
+            <button class="view-nav__arrow" type="button" data-nav="prev" aria-label="Prethodno">‹</button>
+            <div class="view-nav__label" id="view-nav-label">—</div>
+            <button class="view-nav__arrow" type="button" data-nav="next" aria-label="Sljedeće">›</button>
+            <button class="view-nav__today" type="button" data-nav="today">Danas</button>
+          </div>
+
+          <!-- DAY VIEW (existing tab-today) -->
+          <section class="tab-panel" id="tab-today" data-view-body="day">
+
+            <!-- Briefing card (rendered by JS) -->
+            <div id="briefing-host"></div>
 
             <div class="field">
               <label for="today-day">Izaberi dan</label>
@@ -149,6 +167,16 @@
             </div>
 
             <div id="today-list" class="stack"></div>
+          </section>
+
+          <!-- WEEK VIEW -->
+          <section class="tab-panel" id="tab-week" data-view-body="week" hidden>
+            <div id="week-body"></div>
+          </section>
+
+          <!-- MONTH VIEW -->
+          <section class="tab-panel" id="tab-month" data-view-body="month" hidden>
+            <div id="month-body"></div>
           </section>
 
         </section>

@@ -1,5 +1,7 @@
-import { registerTab, must, api, toast, openModal, closeModal, escapeHtml, fmtDateTime, todayKey, plusDays, getServices } from "../admin.js";
+import { registerTab, must, api, toast, openModal, closeModal, escapeHtml, fmtDateTime, fmtTime, todayKey, localDateKey, plusDays, getServices } from "../admin.js";
 import { renderTimeline } from "./timeline.js";
+import { renderWeekView, shiftWeek, mondayOf, weekLabel } from "./schedule-week.js";
+import { renderMonthView, shiftMonth, monthLabel } from "./schedule-month.js";
 
 const fromInput = document.getElementById("today-from");
 const toInput = document.getElementById("today-to");
@@ -128,6 +130,7 @@ async function renderList() {
 
   // Single-day mode → show inquiries-for-day + visual timeline above the list.
   const singleDay = fromInput.value && fromInput.value === toInput.value;
+  const briefingHost = document.getElementById("briefing-host");
   if (singleDay) {
     let inqHost = document.getElementById("inq-day-host");
     if (!inqHost) {
@@ -153,6 +156,7 @@ async function renderList() {
     if (host) host.remove();
     const inqHost = document.getElementById("inq-day-host");
     if (inqHost) inqHost.remove();
+    if (briefingHost) briefingHost.innerHTML = "";
   }
 
   try {
@@ -163,12 +167,72 @@ async function renderList() {
       ...appointments.map((a) => ({ kind: "booking", ...a })),
       ...rawEvents.map((r) => ({ kind: "raw", ...r })),
     ].sort((a, b) => (a.startISO || "").localeCompare(b.startISO || ""));
+    // Render briefing card in single-day mode.
+    if (singleDay && briefingHost) {
+      renderBriefing(briefingHost, fromInput.value, appointments || []);
+    }
     paintList();
   } catch (e) {
     cachedRows = [];
     list.innerHTML = `<p class="muted">${escapeHtml(e.message)}</p>`;
     if (statsWrap) statsWrap.hidden = true;
   }
+}
+
+/** Briefing card for Day view: counts, first/last time, dense-day chip. */
+function renderBriefing(host, dateKey, bookings) {
+  if (!host) return;
+  const n = bookings.length;
+  const isToday = dateKey === todayKey();
+  const [y, m, d] = dateKey.split("-").map(Number);
+  const dt = new Date(y, m - 1, d);
+  const dowLabel = dt.toLocaleDateString("sr-Latn", { weekday: "long" });
+  const dateLabel = dt.toLocaleDateString("sr-Latn", { day: "numeric", month: "long" });
+  const eyebrow = isToday ? "Danas" : dowLabel.charAt(0).toUpperCase() + dowLabel.slice(1);
+  const title = `${eyebrow} · ${dateLabel}`;
+
+  if (n === 0) {
+    host.innerHTML = `
+      <div class="briefing">
+        <div class="briefing__eyebrow">Pregled dana</div>
+        <h3 class="briefing__title">${escapeHtml(title)}</h3>
+        <div class="briefing__row">
+          <span class="briefing__stat"><strong>0</strong> termina</span>
+          <span class="briefing__chip briefing__chip--closed">slobodan dan</span>
+        </div>
+      </div>`;
+    return;
+  }
+
+  const sorted = [...bookings].sort((a, b) => (a.startISO || "").localeCompare(b.startISO || ""));
+  const first = sorted[0];
+  const last = sorted[sorted.length - 1];
+  const firstT = first?.startISO ? fmtTime(first.startISO) : "";
+  const lastT = last?.endISO ? fmtTime(last.endISO) : "";
+
+  // Dense = 3+ appointments back-to-back with ≤15min gaps between end→next start.
+  let back = 1;
+  let maxBack = 1;
+  for (let i = 1; i < sorted.length; i++) {
+    const prevEnd = new Date(sorted[i - 1].endISO || sorted[i - 1].startISO).getTime();
+    const curStart = new Date(sorted[i].startISO).getTime();
+    const gapMin = (curStart - prevEnd) / 60000;
+    if (gapMin <= 15 && gapMin >= -1) { back++; maxBack = Math.max(maxBack, back); }
+    else { back = 1; }
+  }
+  const isDense = maxBack >= 3;
+
+  host.innerHTML = `
+    <div class="briefing">
+      <div class="briefing__eyebrow">Pregled dana</div>
+      <h3 class="briefing__title">${escapeHtml(title)}</h3>
+      <div class="briefing__row">
+        <span class="briefing__stat"><strong>${n}</strong> ${n === 1 ? "termin" : (n >= 2 && n <= 4 ? "termina" : "termina")}</span>
+        <span class="briefing__dot"></span>
+        <span class="briefing__stat">${escapeHtml(firstT)} – ${escapeHtml(lastT)}</span>
+        ${isDense ? `<span class="briefing__chip briefing__chip--warn">⚠ gust dan — razmisli o pauzi</span>` : ""}
+      </div>
+    </div>`;
 }
 
 function paintList() {
@@ -785,4 +849,185 @@ function openCopyMessageToast(msg) {
   );
 }
 
-registerTab("today", renderList);
+// --- View switcher (Dan / Sedmica / Mjesec) ---
+
+const DAY_PANEL = document.querySelector('[data-view-body="day"]');
+const WEEK_PANEL = document.querySelector('[data-view-body="week"]');
+const MONTH_PANEL = document.querySelector('[data-view-body="month"]');
+const WEEK_BODY = document.getElementById("week-body");
+const MONTH_BODY = document.getElementById("month-body");
+const NAV_LABEL = document.getElementById("view-nav-label");
+const NAV_ROW = document.getElementById("view-nav");
+
+const viewState = {
+  view: "day",       // "day" | "week" | "month"
+  anchor: todayKey() // YYYY-MM-DD
+};
+
+function readStateFromURL() {
+  const q = new URLSearchParams(location.search);
+  const v = q.get("view");
+  const a = q.get("anchor");
+  if (v === "day" || v === "week" || v === "month") viewState.view = v;
+  if (a && /^\d{4}-\d{2}-\d{2}$/.test(a)) viewState.anchor = a;
+}
+
+function writeStateToURL() {
+  const q = new URLSearchParams(location.search);
+  q.set("view", viewState.view);
+  q.set("anchor", viewState.anchor);
+  const newUrl = location.pathname + "?" + q.toString() + location.hash;
+  history.replaceState(null, "", newUrl);
+}
+
+function updateSwitcherUI() {
+  document.querySelectorAll(".view-btn").forEach((b) => {
+    const on = b.dataset.view === viewState.view;
+    b.classList.toggle("is-active", on);
+    b.setAttribute("aria-selected", on ? "true" : "false");
+  });
+  if (DAY_PANEL) DAY_PANEL.hidden = viewState.view !== "day";
+  if (WEEK_PANEL) WEEK_PANEL.hidden = viewState.view !== "week";
+  if (MONTH_PANEL) MONTH_PANEL.hidden = viewState.view !== "month";
+}
+
+function updateNavLabel() {
+  if (!NAV_LABEL) return;
+  if (viewState.view === "day") {
+    const [y, m, d] = viewState.anchor.split("-").map(Number);
+    const dt = new Date(y, m - 1, d);
+    const dow = dt.toLocaleDateString("sr-Latn", { weekday: "long" });
+    const MONTHS = ["jan","feb","mart","april","maj","jun","jul","avg","sep","okt","nov","dec"];
+    NAV_LABEL.innerHTML = `${dow.charAt(0).toUpperCase() + dow.slice(1)} ${d}. <em>${MONTHS[m - 1]}</em>`;
+  } else if (viewState.view === "week") {
+    NAV_LABEL.innerHTML = weekLabel(mondayOf(viewState.anchor));
+  } else {
+    NAV_LABEL.innerHTML = monthLabel(viewState.anchor);
+  }
+}
+
+async function renderCurrentView() {
+  updateSwitcherUI();
+  updateNavLabel();
+  writeStateToURL();
+
+  if (viewState.view === "day") {
+    // Use existing renderList path (reads from today-day/today-from/today-to inputs).
+    const anchor = viewState.anchor;
+    if (dayInput) dayInput.value = anchor;
+    fromInput.value = anchor;
+    toInput.value = anchor;
+    if (noteWrap) { loadDayNote(anchor); }
+    await renderList();
+  } else if (viewState.view === "week") {
+    await renderWeekView(WEEK_BODY, viewState.anchor, (item) => {
+      // Dispatch to existing onAction by building a fake card + action=reschedule? No — we want a menu.
+      // Simplest: offer a small modal with the same actions as timeline click.
+      openItemMenu(item);
+    });
+  } else if (viewState.view === "month") {
+    await renderMonthView(MONTH_BODY, viewState.anchor, (dateKey) => {
+      // Jump to Day view for the clicked date.
+      viewState.view = "day";
+      viewState.anchor = dateKey;
+      renderCurrentView();
+    });
+  }
+}
+
+/** Shared menu for a clicked week-item — reuses existing onAction flow. */
+function openItemMenu(item) {
+  const start = item.start;
+  const name = item.name || "";
+  const service = item.service || "";
+  const phone = item.phone || "";
+  const eventId = item.eventId || "";
+  const when = start ? fmtDateTime(start) : "";
+  openModal(`${escapeHtml(service)} — ${escapeHtml(name)}`, `
+    <p class="muted">${escapeHtml(when)}</p>
+    ${phone ? `<p>📞 ${escapeHtml(phone)}</p>` : ""}
+    <div class="stack-card__actions">
+      ${phone ? `<a class="btn btn-ghost" href="tel:${escapeHtml(phone)}">Pozovi</a>` : ""}
+      ${phone ? `<a class="btn btn-ghost" href="https://wa.me/${escapeHtml(phone).replace(/[^\d]/g, "")}" target="_blank" rel="noopener">WhatsApp</a>` : ""}
+      <button class="btn btn-ghost" type="button" id="wk-reschedule">Pomjeri</button>
+      <button class="btn btn-ghost" type="button" id="wk-reject">Odbij</button>
+      <button class="btn btn-danger" type="button" id="wk-cancel">Otkaži</button>
+    </div>
+  `);
+  const dispatch = (action) => {
+    closeModal();
+    const fakeCard = document.createElement("div");
+    fakeCard.className = "stack-card";
+    fakeCard.dataset.eventId = eventId;
+    fakeCard.dataset.name = name;
+    fakeCard.dataset.phone = phone;
+    fakeCard.dataset.service = service;
+    fakeCard.dataset.start = start;
+    const btn = document.createElement("button");
+    btn.dataset.action = action;
+    fakeCard.appendChild(btn);
+    onAction({ currentTarget: btn });
+  };
+  const r = document.getElementById("wk-reschedule");
+  const rj = document.getElementById("wk-reject");
+  const c = document.getElementById("wk-cancel");
+  if (r) r.onclick = () => dispatch("reschedule");
+  if (rj) rj.onclick = () => dispatch("reject");
+  if (c) c.onclick = () => dispatch("cancel");
+}
+
+// Wire switcher buttons
+document.querySelectorAll(".view-btn").forEach((btn) => {
+  btn.addEventListener("click", () => {
+    const v = btn.dataset.view;
+    if (!v || v === viewState.view) return;
+    viewState.view = v;
+    // When switching into week/month, keep anchor; when switching to day, anchor stays.
+    renderCurrentView();
+  });
+});
+
+// Wire nav arrows + today
+if (NAV_ROW) {
+  NAV_ROW.addEventListener("click", (e) => {
+    const btn = e.target.closest("[data-nav]");
+    if (!btn) return;
+    const nav = btn.dataset.nav;
+    if (nav === "today") {
+      viewState.anchor = todayKey();
+    } else if (nav === "prev" || nav === "next") {
+      const delta = nav === "prev" ? -1 : 1;
+      if (viewState.view === "day") viewState.anchor = plusDays(viewState.anchor, delta);
+      else if (viewState.view === "week") viewState.anchor = shiftWeek(viewState.anchor, delta);
+      else viewState.anchor = shiftMonth(viewState.anchor, delta);
+    }
+    renderCurrentView();
+  });
+}
+
+// Swipe support on touch devices (week/month only — day has its own interactions).
+let touchStartX = null;
+const scheduleScreen = document.getElementById("screen-schedule");
+if (scheduleScreen) {
+  scheduleScreen.addEventListener("touchstart", (e) => {
+    if (viewState.view === "day") return;
+    touchStartX = e.touches[0]?.clientX ?? null;
+  }, { passive: true });
+  scheduleScreen.addEventListener("touchend", (e) => {
+    if (touchStartX == null) return;
+    const endX = e.changedTouches[0]?.clientX;
+    if (typeof endX !== "number") { touchStartX = null; return; }
+    const dx = endX - touchStartX;
+    touchStartX = null;
+    if (Math.abs(dx) < 60) return; // threshold
+    const delta = dx < 0 ? 1 : -1;
+    if (viewState.view === "week") viewState.anchor = shiftWeek(viewState.anchor, delta);
+    else if (viewState.view === "month") viewState.anchor = shiftMonth(viewState.anchor, delta);
+    renderCurrentView();
+  }, { passive: true });
+}
+
+// Entry point: read URL state, render active view.
+readStateFromURL();
+
+registerTab("today", () => renderCurrentView());
