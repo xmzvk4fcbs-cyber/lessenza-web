@@ -1,5 +1,14 @@
 // Booking wizard for zakazivanje.html — mobile-first, no framework.
 
+// Format a Date as YYYY-MM-DD in LOCAL time, not UTC. Using toISOString()
+// silently shifted every picked date one day back in Europe/Podgorica.
+function localDateKey(d) {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+}
+
 const state = {
   step: 1,
   mode: "booking", // "booking" | "inquiry"
@@ -83,11 +92,12 @@ function showInquiry() {
   ui.navBack.hidden = false;
   ui.navNext.hidden = false;
   ui.navNext.textContent = "Pošalji upit";
-  // Default desired date: today + bookingWindowDays + 1
+  // Default desired date: today + bookingWindowDays + 1 (LOCAL time)
   const d = new Date();
   d.setDate(d.getDate() + state.bookingWindowDays + 1);
-  document.getElementById("i-date").value = d.toISOString().slice(0, 10);
-  document.getElementById("i-date").min = d.toISOString().slice(0, 10);
+  const key = localDateKey(d);
+  document.getElementById("i-date").value = key;
+  document.getElementById("i-date").min = key;
   ui.navNext.disabled = false;
 }
 
@@ -234,12 +244,12 @@ function renderDatePicker() {
     "Jul", "Avgust", "Septembar", "Oktobar", "Novembar", "Decembar",
   ];
 
-  // Build the set of selectable ISO dates.
+  // Build the set of selectable ISO dates (LOCAL — must match localDateKey used below).
   const available = new Set();
   for (let i = 0; i < state.bookingWindowDays; i++) {
     const d = new Date(today);
     d.setDate(today.getDate() + i);
-    available.add(d.toISOString().slice(0, 10));
+    available.add(localDateKey(d));
   }
 
   // Group available dates by year-month so we can render labeled sections.
@@ -284,7 +294,7 @@ function renderDatePicker() {
     const daysInMonth = new Date(y, mIdx + 1, 0).getDate();
     for (let day = 1; day <= daysInMonth; day++) {
       const d = new Date(y, mIdx, day);
-      const iso = d.toISOString().slice(0, 10);
+      const iso = localDateKey(d);
       const isAvailable = available.has(iso);
       const cell = isAvailable
         ? document.createElement("button")

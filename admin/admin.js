@@ -77,14 +77,29 @@ export function fmtTime(iso) {
   return new Date(iso).toLocaleTimeString("sr-Latn", { hour: "2-digit", minute: "2-digit" });
 }
 
-export function todayKey() {
-  const d = new Date();
-  return d.toISOString().slice(0, 10);
+// Format a Date as YYYY-MM-DD in LOCAL time, not UTC. Critical — using
+// toISOString().slice(0,10) produces the previous calendar day whenever the
+// local timezone is east of UTC (Europe/Podgorica = UTC+1/UTC+2), which is
+// exactly our case, so every picked date was off by one. Always go through
+// this helper for any YYYY-MM-DD string the user sees.
+export function localDateKey(d = new Date()) {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
 }
+
+export function todayKey() {
+  return localDateKey(new Date());
+}
+
 export function plusDays(iso, n) {
-  const d = new Date(iso);
-  d.setDate(d.getDate() + n);
-  return d.toISOString().slice(0, 10);
+  // Parse YYYY-MM-DD as a LOCAL midnight so adding days doesn't cross DST
+  // boundaries into neighbouring dates.
+  const [y, m, d] = iso.split("-").map(Number);
+  const dt = new Date(y, m - 1, d);
+  dt.setDate(dt.getDate() + n);
+  return localDateKey(dt);
 }
 
 // Shared across tabs

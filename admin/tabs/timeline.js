@@ -109,10 +109,12 @@ export async function renderTimeline(container, dateKey) {
       </div>`;
     }).join("");
 
-  // Current time marker (if today).
+  // Current time marker (if today). Build the key from LOCAL time —
+  // toISOString().slice(0,10) is UTC, which is the previous day in our TZ.
   const now = new Date();
   let nowMarker = "";
-  const todayKey = now.toISOString().slice(0, 10);
+  const pad = (n) => String(n).padStart(2, "0");
+  const todayKey = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
   if (dateKey === todayKey) {
     const nowMin = now.getHours() * 60 + now.getMinutes();
     if (nowMin >= rangeStart && nowMin <= rangeEnd) {

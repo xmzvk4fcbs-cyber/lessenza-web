@@ -177,10 +177,12 @@ document.addEventListener('DOMContentLoaded', () => {
     }, 4000);
   }
 
-  // --- Set min date for booking ---
+  // --- Set min date for booking (LOCAL time, not UTC — else it's yesterday) ---
   const dateInput = document.querySelector('input[name="date"]');
   if (dateInput) {
-    const today = new Date().toISOString().split('T')[0];
+    const now = new Date();
+    const pad = (n) => String(n).padStart(2, "0");
+    const today = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
     dateInput.setAttribute('min', today);
   }
 
