@@ -1151,7 +1151,10 @@
 /* --- View switcher (segment control) --- */
 .view-switcher {
   position: sticky;
-  top: 56px; /* under admin-topbar */
+  /* Sits under admin-topbar. Topbar has padding-top: max(14px, safe-area-top),
+     plus its own content ~34px — so we offset by safe-area + 48 to guarantee
+     no overlap on notched iPhones. */
+  top: calc(env(safe-area-inset-top, 0px) + 48px);
   z-index: 20;
   display: grid;
   grid-template-columns: repeat(3, 1fr);
