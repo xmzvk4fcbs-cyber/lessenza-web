@@ -191,7 +191,7 @@ export function registerTab(name, renderFn) {
 }
 
 // Screens (top-level tabs shown in the bottom nav).
-const screens = ["dashboard", "schedule", "inquiries", "settings"];
+const screens = ["dashboard", "schedule", "inquiries", "clients", "settings"];
 const screenEls = Object.fromEntries(screens.map((s) => [s, document.getElementById(`screen-${s}`)]));
 const navBtns = Array.from(document.querySelectorAll(".bottom-nav__btn"));
 
@@ -200,7 +200,8 @@ const screenTabs = {
   dashboard: ["dashboard"],
   schedule: ["today"],
   inquiries: ["inquiries"],
-  settings: ["hours", "services", "blocks", "pairs", "settings", "google"],
+  clients: ["clients"],
+  settings: ["hours", "services", "blocks", "pairs", "settings", "google", "gallery-items", "gallery-results"],
 };
 
 async function activateScreen(name) {

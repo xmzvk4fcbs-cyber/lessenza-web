@@ -6,6 +6,10 @@ const refreshBtn = document.getElementById("cli-refresh");
 const listEl = document.getElementById("cli-list");
 const statsEl = document.getElementById("cli-stats");
 
+if (!listEl) {
+  // Defensive: element not in DOM yet
+}
+
 let cached = [];
 
 function fmtDate(iso) {
@@ -59,36 +63,46 @@ function paint() {
     return;
   }
 
-  listEl.innerHTML = filtered.map((c) => {
-    const future = new Date(c.lastVisitISO).getTime() > Date.now();
-    const visitLabel = future ? "Sljedeći termin" : "Zadnji termin";
-    const relative = relativeDays(c.lastVisitISO);
-    const phoneClean = (c.phoneE164 || "").replace(/[^\d+]/g, "");
-    const digits = phoneClean.replace(/[^\d]/g, "");
-    const topServices = c.services.slice(0, 3).map((s) => `${escapeHtml(s.name)} · ${s.count}×`).join(" · ");
-    const more = c.services.length > 3 ? ` <span class="muted" style="font-size:0.8rem;">(+${c.services.length - 3})</span>` : "";
-    return `<article class="stack-card">
-      <div class="stack-card__head">
-        <div style="flex:1;">
-          <div class="stack-card__title">${escapeHtml(c.name)} <span class="cli-badge">${c.count}×</span></div>
-          <div class="stack-card__meta">
-            📞 ${escapeHtml(c.phoneE164)}
-            ${c.email ? `· 📧 ${escapeHtml(c.email)}` : ""}
-          </div>
-        </div>
-      </div>
-      <div class="stack-card__details">
-        <div><strong>${visitLabel}:</strong> ${escapeHtml(fmtDate(c.lastVisitISO))} <span class="muted">(${escapeHtml(relative)})</span></div>
-        ${c.count >= 2 ? `<div class="muted" style="font-size:0.85rem;">Prvi dolazak: ${escapeHtml(fmtDate(c.firstVisitISO))}</div>` : ""}
-        <div class="muted" style="font-size:0.85rem;">${topServices}${more}</div>
-      </div>
-      <div class="stack-card__actions">
-        ${phoneClean ? `<a class="btn btn-ghost" href="tel:${escapeHtml(phoneClean)}">📞 Pozovi</a>` : ""}
-        ${digits ? `<a class="btn btn-ghost" href="https://wa.me/${digits}" target="_blank" rel="noopener">📱 WA</a>` : ""}
-        ${c.email ? `<a class="btn btn-ghost" href="mailto:${escapeHtml(c.email)}">✉️ Email</a>` : ""}
-      </div>
-    </article>`;
-  }).join("");
+  listEl.innerHTML = filtered.map(renderCard).join("");
+}
+
+function renderCard(c) {
+  const future = new Date(c.lastVisitISO).getTime() > Date.now();
+  const relative = relativeDays(c.lastVisitISO);
+  const phoneClean = (c.phoneE164 || "").replace(/[^\d+]/g, "");
+  const digits = phoneClean.replace(/[^\d]/g, "");
+  const initials = c.name
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((p) => p[0] || "")
+    .join("")
+    .toUpperCase() || "?";
+  const svcTags = c.services.slice(0, 3)
+    .map((s) => `<span class="cli-svc-tag"><strong>${s.count}×</strong>${escapeHtml(s.name)}</span>`)
+    .join("");
+  const moreSvcs = c.services.length > 3
+    ? `<span class="cli-svc-tag" title="Još ${c.services.length - 3}">+${c.services.length - 3}</span>`
+    : "";
+  const isRegular = c.count >= 2;
+  return `<article class="cli-card ${isRegular ? "cli-card--regular" : ""}">
+    <div class="cli-avatar" aria-hidden="true">${escapeHtml(initials)}</div>
+    <div class="cli-main">
+      <h3 class="cli-name">${escapeHtml(c.name)}</h3>
+      <p class="cli-meta">📞 ${escapeHtml(c.phoneE164)}${c.email ? ` · ${escapeHtml(c.email)}` : ""}</p>
+      <div class="cli-svcs">${svcTags}${moreSvcs}</div>
+    </div>
+    <div class="cli-right">
+      <div class="cli-count">${c.count}</div>
+      <div class="cli-count-label">${c.count === 1 ? "termin" : "termina"}</div>
+      <div class="cli-when ${future ? "cli-when--future" : ""}">${escapeHtml(relative)}</div>
+    </div>
+    <div class="cli-actions">
+      ${phoneClean ? `<a class="btn btn-ghost" href="tel:${escapeHtml(phoneClean)}">📞 Pozovi</a>` : ""}
+      ${digits ? `<a class="btn btn-ghost" href="https://wa.me/${digits}" target="_blank" rel="noopener">📱 WhatsApp</a>` : ""}
+      ${c.email ? `<a class="btn btn-ghost" href="mailto:${escapeHtml(c.email)}">✉️ Email</a>` : ""}
+    </div>
+  </article>`;
 }
 
 async function render() {

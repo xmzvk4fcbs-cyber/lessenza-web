@@ -134,12 +134,17 @@ export const handler: Handler = async (event) => {
   booking.calendarEventId = inserted.id ?? undefined;
 
   const mailer = deps?.makeMailer ? deps.makeMailer() : await getMailerAsync(settings);
-  const sends: Promise<string>[] = [];
+  console.log("[book]", JSON.stringify({
+    bookingId, startISO: booking.startISO, service: booking.serviceName,
+    clientEmail: booking.email ?? "-", ownerEmail: settings.ownerEmail ?? "-",
+  }));
+  const sends: Array<Promise<unknown>> = [];
   if (booking.email) {
     sends.push(
       mailer
         .send(bookingConfirmedToClient(booking, { salonAddress: settings.salonAddress, ownerPhone: settings.ownerPhone }))
-        .catch(() => "")
+        .then((id) => console.log(`[book][client-confirm] sent → ${booking.email} id=${id}`))
+        .catch((e) => console.error(`[book][client-confirm] FAILED → ${booking.email}:`, e.message))
     );
   }
   if (settings.ownerEmail) {
@@ -151,7 +156,8 @@ export const handler: Handler = async (event) => {
             siteUrl: process.env.SITE_URL ?? "",
           })
         )
-        .catch(() => "")
+        .then((id) => console.log(`[book][owner-notify] sent → ${settings.ownerEmail} id=${id}`))
+        .catch((e) => console.error(`[book][owner-notify] FAILED → ${settings.ownerEmail}:`, e.message))
     );
   }
   await Promise.all(sends);
