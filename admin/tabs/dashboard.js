@@ -33,24 +33,68 @@ function renderGreeting() {
   greetDate.textContent = fmtLongDate(now);
 }
 
-function minutesUntil(iso) {
-  return Math.round((new Date(iso).getTime() - Date.now()) / 60000);
+function secondsUntil(iso) {
+  return Math.round((new Date(iso).getTime() - Date.now()) / 1000);
 }
 
-function humanUntil(mins) {
-  if (mins < 0) return "u toku — ili tek prošao";
-  if (mins < 1) return "počinje odmah";
-  if (mins < 60) return `za ${mins} minuta`;
+function humanUntil(secs) {
+  if (secs < -3600) return "u toku — ili tek prošao";
+  if (secs < 0) return "u toku";
+  if (secs < 60) return `počinje za ${secs}s`;
+  const mins = Math.round(secs / 60);
+  if (mins < 60) return `za ${mins} ${declMin(mins)}`;
   const h = Math.floor(mins / 60);
   const m = mins % 60;
-  if (h < 24) return m ? `za ${h}h ${m}min` : `za ${h} sata`;
+  if (h < 24) return m ? `za ${h}h ${m}min` : `za ${h} ${declSati(h)}`;
   const d = Math.floor(h / 24);
   if (d === 1) return "sjutra";
+  if (d < 5) return `za ${d} dana`;
   return `za ${d} dana`;
+}
+function declMin(n) {
+  const r = n % 10;
+  if (n >= 10 && n <= 20) return "minuta";
+  if (r === 1) return "minut";
+  if (r >= 2 && r <= 4) return "minuta";
+  return "minuta";
+}
+function declSati(n) {
+  if (n === 1) return "sat";
+  if (n >= 2 && n <= 4) return "sata";
+  return "sati";
+}
+
+// Live countdown: keep one interval per page lifetime.
+let countdownTimer = null;
+let currentNextISO = null;
+
+function updateCountdown() {
+  if (!currentNextISO) return;
+  const el = nextCard.querySelector("[data-countdown]");
+  if (!el) return;
+  const secs = secondsUntil(currentNextISO);
+  el.textContent = humanUntil(secs);
+  // Red-alert pulse when < 10 min: swap a class on the hero card
+  nextCard.classList.toggle("is-imminent", secs > 0 && secs < 600);
+  nextCard.classList.toggle("is-live", secs <= 0 && secs > -3600);
+}
+
+function startCountdown(iso) {
+  currentNextISO = iso;
+  if (countdownTimer) clearInterval(countdownTimer);
+  updateCountdown();
+  // Tick every 10 s — low cost, feels alive without distracting.
+  countdownTimer = setInterval(updateCountdown, 10_000);
+}
+
+function stopCountdown() {
+  if (countdownTimer) { clearInterval(countdownTimer); countdownTimer = null; }
+  currentNextISO = null;
 }
 
 function renderNextCard(appointment) {
   if (!appointment) {
+    stopCountdown();
     nextCard.innerHTML = `
       <span class="hero-card__eyebrow">Sljedeći termin</span>
       <p class="hero-card__empty">Nema više zakazanih <em>danas</em></p>
@@ -58,7 +102,7 @@ function renderNextCard(appointment) {
     `;
     return;
   }
-  const untilMin = minutesUntil(appointment.startISO);
+  const secs = secondsUntil(appointment.startISO);
   const name = escapeHtml(appointment.name || "");
   const service = escapeHtml(appointment.serviceName || "");
   const phone = escapeHtml(appointment.phoneE164 || "");
@@ -66,7 +110,7 @@ function renderNextCard(appointment) {
   nextCard.innerHTML = `
     <span class="hero-card__eyebrow">Sljedeći termin</span>
     <h3 class="hero-card__title"><em>${service}</em> — ${name}</h3>
-    <p class="hero-card__time"><strong>${fmtTime(appointment.startISO)}</strong>${humanUntil(untilMin)}</p>
+    <p class="hero-card__time"><strong>${fmtTime(appointment.startISO)}</strong><span data-countdown>${humanUntil(secs)}</span></p>
     ${phone ? `<p class="hero-card__meta">📞 ${phone}</p>` : ""}
     ${note}
     <div class="hero-card__actions">
@@ -74,6 +118,7 @@ function renderNextCard(appointment) {
       ${phone ? `<a class="btn btn-ghost" href="https://wa.me/${phone.replace(/[^\d]/g, "")}" target="_blank" rel="noopener">WhatsApp</a>` : ""}
     </div>
   `;
+  startCountdown(appointment.startISO);
 }
 
 function renderAppointmentCard(a) {

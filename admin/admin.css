@@ -224,6 +224,44 @@
   color: var(--text, #4A4238);
   margin: 0 0 0.5rem;
 }
+.hero-card__time [data-countdown] {
+  font-style: normal;
+  font-family: 'Outfit', sans-serif;
+  font-size: 0.95rem;
+  color: var(--gold, #C9A961);
+  margin-left: 6px;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+}
+/* When appt is < 10 min away: subtle gold pulse around the card. */
+.hero-card.is-imminent {
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.5) inset,
+    0 22px 44px -20px rgba(201, 169, 97, 0.28),
+    0 0 0 2px rgba(201, 169, 97, 0.45);
+  animation: heroPulse 2.2s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+}
+.hero-card.is-imminent .hero-card__time [data-countdown] {
+  color: #b8860b;
+  font-weight: 600;
+}
+@keyframes heroPulse {
+  0%, 100% { box-shadow: 0 1px 0 rgba(255,255,255,0.5) inset, 0 22px 44px -20px rgba(201,169,97,0.28), 0 0 0 2px rgba(201,169,97,0.35); }
+  50%      { box-shadow: 0 1px 0 rgba(255,255,255,0.5) inset, 0 22px 44px -20px rgba(201,169,97,0.32), 0 0 0 3px rgba(201,169,97,0.60); }
+}
+.hero-card.is-live {
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.5) inset,
+    0 22px 44px -20px rgba(201, 169, 97, 0.30),
+    0 0 0 2px var(--gold, #C9A961);
+}
+.hero-card.is-live .hero-card__time [data-countdown] {
+  color: #2E6B3B;
+  font-weight: 600;
+}
+@media (prefers-reduced-motion: reduce) {
+  .hero-card.is-imminent { animation: none; }
+}
 .hero-card__time strong {
   font-style: normal;
   font-family: 'Outfit', sans-serif;
