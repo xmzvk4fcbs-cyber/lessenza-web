@@ -420,11 +420,13 @@
                   <div id="gr-form" style="margin-top:0.75rem;">
                     <div class="field">
                       <label for="gr-before">Slika — Prije</label>
-                      <input id="gr-before" type="file" accept="image/jpeg,image/png,image/webp">
+                      <input id="gr-before" type="file" accept="image/*">
+                      <img id="gr-before-preview" class="gr-preview" hidden alt="Preview — prije">
                     </div>
                     <div class="field">
                       <label for="gr-after">Slika — Poslije</label>
-                      <input id="gr-after" type="file" accept="image/jpeg,image/png,image/webp">
+                      <input id="gr-after" type="file" accept="image/*">
+                      <img id="gr-after-preview" class="gr-preview" hidden alt="Preview — poslije">
                     </div>
                     <div class="field">
                       <label for="gr-service">Usluga (opciono)</label>

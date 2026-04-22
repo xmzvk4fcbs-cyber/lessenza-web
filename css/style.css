@@ -1706,10 +1706,33 @@ h2 em {
   overflow: hidden;
 }
 .ba-item__pair {
+  position: relative;
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 2px;
   background: var(--champagne);
+}
+/* Gold arrow connector between Prije and Poslije — visually anchors the pair. */
+.ba-item__pair::after {
+  content: "→";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: var(--gold);
+  color: #fff;
+  font-size: 1.4rem;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 12px rgba(201, 169, 97, 0.4), 0 0 0 4px rgba(255, 255, 255, 0.9);
+  font-weight: 300;
+  pointer-events: none;
+  z-index: 2;
 }
 .ba-item__cell {
   position: relative;

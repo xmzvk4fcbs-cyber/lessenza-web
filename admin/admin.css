@@ -929,6 +929,18 @@
 .hidden { display: none !important; }
 .mt-xl { margin-top: 1.5rem; }
 
+/* Gallery upload — live thumbnail preview after file picker. */
+.gr-preview {
+  display: block;
+  margin-top: 0.5rem;
+  max-width: 240px;
+  width: 100%;
+  aspect-ratio: 4 / 5;
+  object-fit: cover;
+  border-radius: 10px;
+  border: 1px solid var(--champagne-deep);
+}
+
 /* === Skeleton loaders === */
 .skel {
   background: linear-gradient(

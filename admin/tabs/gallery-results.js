@@ -12,20 +12,56 @@ const listEl = document.getElementById("gr-list");
 if (uploadBtn && listEl) {
   renderList();
   uploadBtn.addEventListener("click", () => handleUpload());
+  // Live thumbnail preview so owner sees the chosen photo before uploading.
+  [["gr-before", "gr-before-preview"], ["gr-after", "gr-after-preview"]].forEach(([inputId, previewId]) => {
+    const inp = document.getElementById(inputId);
+    const img = document.getElementById(previewId);
+    if (!inp || !img) return;
+    inp.addEventListener("change", () => {
+      const f = inp.files?.[0];
+      if (!f) { img.hidden = true; img.removeAttribute("src"); return; }
+      if (img.src && img.src.startsWith("blob:")) URL.revokeObjectURL(img.src);
+      img.src = URL.createObjectURL(f);
+      img.hidden = false;
+    });
+  });
 }
 
-/** Read a File into a base64 data URL, resizing if > MAX_DIM. */
+/** Read a File into a base64 data URL, resizing if > MAX_DIM.
+ *  Tries createImageBitmap first (works on modern iOS/Android + desktop);
+ *  falls back to <img> load if needed. HEIC coming from iPhone usually
+ *  auto-converts to JPEG in the iOS file picker, so we get a normal image. */
 async function fileToCompressedDataUrl(file, maxDim = 1600, quality = 0.85) {
-  const bitmap = await createImageBitmap(file);
-  const scale = Math.min(1, maxDim / Math.max(bitmap.width, bitmap.height));
-  const w = Math.round(bitmap.width * scale);
-  const h = Math.round(bitmap.height * scale);
+  // Primary path: createImageBitmap (fast, handles EXIF orientation on iOS 16+)
+  try {
+    const bitmap = await createImageBitmap(file, { imageOrientation: "from-image" });
+    return drawToDataUrl(bitmap, bitmap.width, bitmap.height, maxDim, quality);
+  } catch {
+    // Fallback: HTMLImageElement load
+    const url = URL.createObjectURL(file);
+    try {
+      const img = await new Promise((resolve, reject) => {
+        const el = new Image();
+        el.onload = () => resolve(el);
+        el.onerror = () => reject(new Error("Ne mogu učitati sliku"));
+        el.src = url;
+      });
+      return drawToDataUrl(img, img.naturalWidth, img.naturalHeight, maxDim, quality);
+    } finally {
+      URL.revokeObjectURL(url);
+    }
+  }
+}
+
+function drawToDataUrl(source, srcW, srcH, maxDim, quality) {
+  const scale = Math.min(1, maxDim / Math.max(srcW, srcH));
+  const w = Math.max(1, Math.round(srcW * scale));
+  const h = Math.max(1, Math.round(srcH * scale));
   const canvas = document.createElement("canvas");
   canvas.width = w;
   canvas.height = h;
   const ctx = canvas.getContext("2d");
-  ctx.drawImage(bitmap, 0, 0, w, h);
-  // JPEG for photos — smaller; use PNG only if source had transparency (we don't need it here).
+  ctx.drawImage(source, 0, 0, w, h);
   return canvas.toDataURL("image/jpeg", quality);
 }
 
