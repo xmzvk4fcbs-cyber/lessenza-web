@@ -128,7 +128,7 @@ describe("/api/admin/suggestions", () => {
     const id = firstList[0].id;
 
     // Dismiss it.
-    r = await dismissHandler(ev("/api/admin/suggestions/dismiss", "POST", { id }, tok), {} as never);
+    r = await dismissHandler(ev("/api/admin/suggestions-dismiss", "POST", { id }, tok), {} as never);
     expect(r?.statusCode).toBe(200);
 
     // Re-fetch: that id must be filtered out.
@@ -140,13 +140,13 @@ describe("/api/admin/suggestions", () => {
 
   it("dismiss: 400 on missing id", async () => {
     const tok = await auth();
-    const r = await dismissHandler(ev("/api/admin/suggestions/dismiss", "POST", {}, tok), {} as never);
+    const r = await dismissHandler(ev("/api/admin/suggestions-dismiss", "POST", {}, tok), {} as never);
     expect(r?.statusCode).toBe(400);
   });
 
   it("dismiss: 400 on bad id chars", async () => {
     const tok = await auth();
-    const r = await dismissHandler(ev("/api/admin/suggestions/dismiss", "POST", { id: "has space / slash" }, tok), {} as never);
+    const r = await dismissHandler(ev("/api/admin/suggestions-dismiss", "POST", { id: "has space / slash" }, tok), {} as never);
     expect(r?.statusCode).toBe(400);
   });
 });

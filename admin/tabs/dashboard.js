@@ -310,7 +310,7 @@ async function renderSuggestions() {
       if (!id) return;
       card.style.opacity = "0.5";
       try {
-        await must("/api/admin/suggestions/dismiss", { method: "POST", body: { id } });
+        await must("/api/admin/suggestions-dismiss", { method: "POST", body: { id } });
         card.style.transition = "all 200ms";
         card.style.maxHeight = card.offsetHeight + "px";
         requestAnimationFrame(() => {
