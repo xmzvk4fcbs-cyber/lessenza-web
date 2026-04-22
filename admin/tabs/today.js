@@ -976,23 +976,23 @@ function openItemMenu(item) {
   if (c) c.onclick = () => dispatch("cancel");
 }
 
-// Wire switcher buttons
-document.querySelectorAll(".view-btn").forEach((btn) => {
-  btn.addEventListener("click", () => {
-    const v = btn.dataset.view;
-    if (!v || v === viewState.view) return;
+// Wire switcher + nav via a single document-level delegated listener. This
+// is robust against DOM shuffling, screen activation order, and ensures
+// clicks work even if individual buttons are re-rendered.
+document.addEventListener("click", (e) => {
+  const viewBtn = e.target.closest(".view-btn");
+  if (viewBtn && viewBtn.dataset.view) {
+    e.preventDefault();
+    const v = viewBtn.dataset.view;
+    if (v === viewState.view) return;
     viewState.view = v;
-    // When switching into week/month, keep anchor; when switching to day, anchor stays.
     renderCurrentView();
-  });
-});
-
-// Wire nav arrows + today
-if (NAV_ROW) {
-  NAV_ROW.addEventListener("click", (e) => {
-    const btn = e.target.closest("[data-nav]");
-    if (!btn) return;
-    const nav = btn.dataset.nav;
+    return;
+  }
+  const navBtn = e.target.closest("#view-nav [data-nav]");
+  if (navBtn) {
+    e.preventDefault();
+    const nav = navBtn.dataset.nav;
     if (nav === "today") {
       viewState.anchor = todayKey();
     } else if (nav === "prev" || nav === "next") {
@@ -1002,8 +1002,8 @@ if (NAV_ROW) {
       else viewState.anchor = shiftMonth(viewState.anchor, delta);
     }
     renderCurrentView();
-  });
-}
+  }
+});
 
 // Swipe support on touch devices (week/month only — day has its own interactions).
 let touchStartX = null;
