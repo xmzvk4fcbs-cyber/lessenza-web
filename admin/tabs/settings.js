@@ -20,6 +20,9 @@ const FIELDS = [
   ["showPrices", "Prikazuj cijene usluga na sajtu (Usluge + Zakazivanje)", "checkbox", {}],
   ["priceCurrency", "Oznaka valute (npr. €)", "text", { maxlength: 4 }],
 
+  // --- Galerija ---
+  ["showBeforeAfter", "Prikazuj tab 'Prije / Poslije' na galeriji", "checkbox", {}],
+
   // --- Rezervacije ---
   ["bookingWindowDays", "Prozor rezervacije (dana unaprijed)", "number", { min: 1, max: 365 }],
   ["minLeadHours", "Minimalno vrijeme unaprijed (sati)", "number", { min: 0, max: 168, step: 0.5 }],

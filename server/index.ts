@@ -37,7 +37,7 @@ app.use(compression());
 
 // Parse JSON + urlencoded bodies but hand the Netlify handler a RAW string
 // (that's what Lambda passes). We restore `req.body` as a string below.
-app.use(express.raw({ type: "*/*", limit: "1mb" }));
+app.use(express.raw({ type: "*/*", limit: "10mb" })); // 10 MB accommodates base64 image-pair uploads
 app.use((req, _res, next) => {
   if (Buffer.isBuffer(req.body) && req.body.length > 0) {
     req.body = req.body.toString("utf8");

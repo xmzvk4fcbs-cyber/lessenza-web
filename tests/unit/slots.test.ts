@@ -34,6 +34,7 @@ const settings: Settings = {
   mailer: "resend",
   showPrices: false,
   priceCurrency: "€",
+  showBeforeAfter: false,
 };
 
 function base(): ComputeSlotsInput {

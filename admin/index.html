@@ -6,7 +6,9 @@
   <meta name="theme-color" content="#F9F2E5">
   <title>Admin — L'Essenza</title>
   <link rel="stylesheet" href="admin.css">
-  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>✨</text></svg>">
+  <link rel="icon" href="/img/favicon-32.png" type="image/png" sizes="32x32">
+  <link rel="apple-touch-icon" sizes="180x180" href="/img/apple-touch-icon.png">
+  <link rel="manifest" href="/manifest.webmanifest">
 </head>
 <body class="admin-body">
 
@@ -406,6 +408,36 @@
                     </div>
                   </div>
                   <div id="bp-list" style="margin-top:1rem;"></div>
+                </section>
+              </div>
+            </details>
+
+            <details class="accordion__item">
+              <summary class="accordion__summary">Prije / Poslije galerija</summary>
+              <div class="accordion__body">
+                <section class="tab-panel" id="tab-gallery-results">
+                  <p class="muted" style="font-size:0.88rem;">Dodaj par fotografija (<em>prije</em> i <em>poslije</em>). Obje se javno prikazuju na <code>/galerija.html</code> ako je tab "Prije / Poslije" uključen u Podešavanjima.</p>
+                  <div id="gr-form" style="margin-top:0.75rem;">
+                    <div class="field">
+                      <label for="gr-before">Slika — Prije</label>
+                      <input id="gr-before" type="file" accept="image/jpeg,image/png,image/webp">
+                    </div>
+                    <div class="field">
+                      <label for="gr-after">Slika — Poslije</label>
+                      <input id="gr-after" type="file" accept="image/jpeg,image/png,image/webp">
+                    </div>
+                    <div class="field">
+                      <label for="gr-service">Usluga (opciono)</label>
+                      <input id="gr-service" type="text" placeholder="npr. Body Sculpt" maxlength="80">
+                    </div>
+                    <div class="field">
+                      <label for="gr-caption">Opis (opciono)</label>
+                      <input id="gr-caption" type="text" placeholder="npr. Nakon 4 tretmana" maxlength="200">
+                    </div>
+                    <button id="gr-upload" class="btn btn-primary" type="button">Dodaj par</button>
+                    <p id="gr-status" class="muted" style="margin-top:0.5rem;"></p>
+                  </div>
+                  <div id="gr-list" style="margin-top:1.25rem;"></div>
                 </section>
               </div>
             </details>

@@ -20,5 +20,6 @@ export const handler: Handler = async (event) => {
     workingHours: hours,
     showPrices: s.showPrices,
     priceCurrency: s.priceCurrency,
+    showBeforeAfter: s.showBeforeAfter,
   });
 };

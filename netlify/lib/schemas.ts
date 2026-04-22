@@ -97,8 +97,22 @@ export const SettingsSchema = z.object({
   showPrices: z.boolean().default(false),
   /** Currency label shown next to price. */
   priceCurrency: z.string().max(4).default("€"),
+  /** When true, the /galerija.html "Prije / Poslije" tab is visible. */
+  showBeforeAfter: z.boolean().default(false),
 });
 export type Settings = z.infer<typeof SettingsSchema>;
+
+// ----- Gallery results (Prije / Poslije) -----
+export const GalleryResultSchema = z.object({
+  id: z.string().min(1).max(64),
+  beforeUrl: z.string().min(1).max(300),
+  afterUrl: z.string().min(1).max(300),
+  caption: z.string().max(200).optional(),
+  service: z.string().max(80).optional(),
+  createdAt: z.string().datetime(),
+});
+export type GalleryResult = z.infer<typeof GalleryResultSchema>;
+export const GalleryResultsSchema = z.array(GalleryResultSchema);
 
 export const InquirySchema = z.object({
   id: z.string().min(1),

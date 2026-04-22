@@ -1,0 +1,29 @@
+{
+  "name": "L'Essenza Beauty Salon",
+  "short_name": "L'Essenza",
+  "description": "L'Essenza Beauty Salon — Cetinje. Body Sculpt, laser, manikir, pedikir.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "theme_color": "#C9A961",
+  "background_color": "#FDF9F0",
+  "lang": "sr-Latn",
+  "icons": [
+    { "src": "/img/icon-192.png", "type": "image/png", "sizes": "192x192", "purpose": "any" },
+    { "src": "/img/icon-512.png", "type": "image/png", "sizes": "512x512", "purpose": "any" },
+    { "src": "/img/icon-512.png", "type": "image/png", "sizes": "512x512", "purpose": "maskable" }
+  ],
+  "shortcuts": [
+    {
+      "name": "Zakaži termin",
+      "url": "/zakazivanje.html",
+      "icons": [{ "src": "/img/icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Admin",
+      "url": "/admin/",
+      "icons": [{ "src": "/img/icon-192.png", "sizes": "192x192" }]
+    }
+  ]
+}

@@ -9,6 +9,7 @@ import {
   InquirySchema,
   BlockedPhoneSchema,
   BlockedPhonesSchema,
+  GalleryResultsSchema,
   type Service,
   type WorkingHours,
   type Settings,
@@ -16,6 +17,7 @@ import {
   type Block,
   type Inquiry,
   type BlockedPhone,
+  type GalleryResult,
 } from "./schemas";
 import { DEFAULT_SERVICES, DEFAULT_WORKING_HOURS, DEFAULT_PARALLEL_PAIRS } from "./defaults";
 
@@ -25,6 +27,7 @@ const KEY_SETTINGS = "config/settings.json";
 const KEY_PAIRS = "config/parallel-pairs.json";
 const KEY_BLOCKS = "config/blocks.json";
 const KEY_BLOCKED_PHONES = "config/blocked-phones.json";
+const KEY_GALLERY_RESULTS = "config/gallery-results.json";
 
 export async function getServices(): Promise<Service[]> {
   const raw = await store().getJSON<unknown>(KEY_SERVICES);
@@ -165,4 +168,18 @@ export async function removeBlockedPhone(phoneE164: string): Promise<BlockedPhon
   const next = current.filter((e) => e.phoneE164 !== phoneE164);
   await store().setJSON(KEY_BLOCKED_PHONES, BlockedPhonesSchema.parse(next));
   return next;
+}
+
+// ---------- Gallery results (Prije / Poslije) ----------
+
+export async function getGalleryResults(): Promise<GalleryResult[]> {
+  const raw = await store().getJSON<unknown>(KEY_GALLERY_RESULTS);
+  if (!raw) return [];
+  return GalleryResultsSchema.parse(raw);
+}
+
+export async function saveGalleryResults(list: GalleryResult[]): Promise<GalleryResult[]> {
+  const validated = GalleryResultsSchema.parse(list);
+  await store().setJSON(KEY_GALLERY_RESULTS, validated);
+  return validated;
 }

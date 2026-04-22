@@ -12,6 +12,7 @@
   <link rel="icon" type="image/png" sizes="16x16" href="/img/favicon-16.png">
   <link rel="shortcut icon" href="/img/favicon.ico">
   <link rel="apple-touch-icon" sizes="180x180" href="/img/apple-touch-icon.png">
+  <link rel="manifest" href="/manifest.webmanifest">
   <meta property="og:type" content="website">
   <meta property="og:site_name" content="L'Essenza Beauty Salon">
   <meta property="og:locale" content="sr_Latn">
@@ -65,8 +66,8 @@
 
   <section class="section">
     <div class="section__inner">
-      <div class="gallery-tabs reveal" role="tablist" aria-label="Tipovi sadržaja">
-        <button type="button" class="gallery-tab is-active" data-tab="all" role="tab" aria-selected="true">Svi radovi</button>
+      <div class="gallery-tabs reveal" role="tablist" aria-label="Tipovi sadržaja" data-hide-if-no="showBeforeAfter">
+        <button type="button" class="gallery-tab is-active" data-tab="all" role="tab" aria-selected="true">Sve slike</button>
         <button type="button" class="gallery-tab" data-tab="results" role="tab" aria-selected="false">Prije / Poslije</button>
       </div>
 
@@ -104,17 +105,13 @@
       </div>
 
       <div id="gallery-results" class="gallery-results" hidden>
-        <div class="results-placeholder reveal">
+        <div id="gallery-results-list" class="ba-list"></div>
+        <div id="gallery-results-empty" class="results-placeholder reveal" hidden>
           <div class="results-placeholder__mark">✦</div>
           <h3 class="results-placeholder__title">Uskoro — pravi rezultati</h3>
           <p class="results-placeholder__text">
-            Na ovom mjestu će biti objavljivane fotografije <em>prije i poslije</em> tretmana —
-            Body Sculpt, laserska epilacija, manikir i ostalo — <strong>isključivo uz pismenu saglasnost</strong>
-            klijentkinja. Poštujem privatnost svake osobe koja dođe u moj salon.
-          </p>
-          <p class="results-placeholder__text">
-            Ako ste moja klijentkinja i želite da vaš napredak pomogne drugima — javite mi se,
-            razgovaraćemo o tome.
+            Ovdje će biti <em>prije / poslije</em> fotografije tretmana, objavljene isključivo uz
+            pismenu saglasnost klijentkinja.
           </p>
           <a href="https://www.instagram.com/l_essenza_beauty_salon/" target="_blank" rel="noopener" class="btn btn-outline" style="margin-top: 1rem;">
             Pratite Instagram za najnovije radove

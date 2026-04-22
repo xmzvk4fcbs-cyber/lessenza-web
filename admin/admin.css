@@ -929,6 +929,42 @@
 .hidden { display: none !important; }
 .mt-xl { margin-top: 1.5rem; }
 
+/* === Skeleton loaders === */
+.skel {
+  background: linear-gradient(
+    90deg,
+    rgba(217, 192, 154, 0.22) 0%,
+    rgba(217, 192, 154, 0.38) 50%,
+    rgba(217, 192, 154, 0.22) 100%
+  );
+  background-size: 200% 100%;
+  animation: skelShimmer 1.4s ease-in-out infinite;
+  border-radius: 6px;
+  display: inline-block;
+  line-height: 1;
+}
+@keyframes skelShimmer {
+  0%   { background-position: 100% 0; }
+  100% { background-position: -100% 0; }
+}
+.skel-stack { display: flex; flex-direction: column; gap: 12px; }
+.skel-card {
+  padding: 1rem 1.1rem;
+  background: var(--white-warm, #FBF8F2);
+  border: 1px solid rgba(217, 192, 154, 0.35);
+  border-radius: 12px;
+}
+.skel-card__title { height: 14px; width: 65%; margin-bottom: 10px; }
+.skel-card__meta  { height: 10px; width: 45%; margin-bottom: 14px; }
+.skel-card__line  { height: 10px; width: 80%; margin-bottom: 8px; }
+.skel-card__line--short { width: 55%; }
+.skel-card__actions { display: flex; gap: 8px; margin-top: 14px; }
+.skel-card__btn { height: 32px; width: 80px; border-radius: 6px; }
+
+@media (prefers-reduced-motion: reduce) {
+  .skel { animation: none; background: rgba(217, 192, 154, 0.28); }
+}
+
 /* === Raspored toolbar (search + stats) === */
 .rsp-toolbar {
   display: flex;

@@ -56,7 +56,7 @@ document.addEventListener('DOMContentLoaded', () => {
     reveals.forEach(el => observer.observe(el));
   }
 
-  // --- Gallery tabs (Svi radovi / Prije-Poslije) ---
+  // --- Gallery tabs (Sve slike / Prije-Poslije) ---
   const galleryTabs = document.querySelectorAll(".gallery-tab");
   const galleryAll = document.getElementById("gallery-all");
   const galleryResults = document.getElementById("gallery-results");
@@ -71,8 +71,45 @@ document.addEventListener('DOMContentLoaded', () => {
         });
         galleryAll.hidden = which !== "all";
         galleryResults.hidden = which !== "results";
+        if (which === "results") loadGalleryResults();
       });
     });
+
+    let resultsLoaded = false;
+    async function loadGalleryResults() {
+      if (resultsLoaded) return;
+      resultsLoaded = true;
+      const list = document.getElementById("gallery-results-list");
+      const empty = document.getElementById("gallery-results-empty");
+      if (!list || !empty) return;
+      try {
+        const res = await fetch("/api/gallery-results", { cache: "no-store" });
+        const data = await res.json();
+        const items = Array.isArray(data.results) ? data.results : [];
+        if (!items.length) {
+          list.innerHTML = "";
+          empty.hidden = false;
+          return;
+        }
+        empty.hidden = true;
+        list.innerHTML = items.map((r) => {
+          const svc = r.service ? `<span class="ba-item__svc">${esc(r.service)}</span>` : "";
+          const cap = r.caption ? `<p class="ba-item__caption">${esc(r.caption)}</p>` : "";
+          return `<figure class="ba-item reveal">
+            <div class="ba-item__pair">
+              <div class="ba-item__cell"><span class="ba-item__label">Prije</span><img loading="lazy" decoding="async" src="${esc(r.beforeUrl)}" alt="Prije"></div>
+              <div class="ba-item__cell"><span class="ba-item__label is-after">Poslije</span><img loading="lazy" decoding="async" src="${esc(r.afterUrl)}" alt="Poslije"></div>
+            </div>
+            ${(svc || cap) ? `<figcaption class="ba-item__meta">${svc}${cap}</figcaption>` : ""}
+          </figure>`;
+        }).join("");
+      } catch {
+        empty.hidden = false;
+      }
+    }
+    function esc(s) {
+      return String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
+    }
   }
 
   // --- Gallery lightbox ---

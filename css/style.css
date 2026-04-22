@@ -1690,6 +1690,72 @@ h2 em {
 }
 .gallery-tab:not(.is-active):hover { color: var(--sage); }
 
+/* --- Before/After list (rendered from /api/gallery-results) --- */
+.ba-list {
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
+  max-width: 1000px;
+  margin: 0 auto;
+}
+.ba-item {
+  margin: 0;
+  background: #fff;
+  border: 1px solid var(--champagne);
+  border-radius: 14px;
+  overflow: hidden;
+}
+.ba-item__pair {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 2px;
+  background: var(--champagne);
+}
+.ba-item__cell {
+  position: relative;
+  background: #fff;
+}
+.ba-item__cell img {
+  display: block;
+  width: 100%;
+  aspect-ratio: 4 / 5;
+  object-fit: cover;
+}
+.ba-item__label {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  padding: 4px 10px;
+  background: rgba(107, 111, 79, 0.85);
+  color: #fff;
+  font-size: 0.7rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  font-weight: 600;
+  border-radius: 999px;
+}
+.ba-item__label.is-after { background: var(--gold); }
+.ba-item__meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+  align-items: baseline;
+  padding: 14px 20px 16px;
+}
+.ba-item__svc {
+  font-size: 0.78rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--gold);
+  font-weight: 600;
+}
+.ba-item__caption {
+  margin: 0;
+  color: var(--sage);
+  font-size: 0.95rem;
+  line-height: 1.55;
+}
+
 .results-placeholder {
   max-width: 640px;
   margin: 0 auto;
