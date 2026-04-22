@@ -265,6 +265,8 @@ async function initAdmin() {
   await import("./tabs/dashboard.js");
   await import("./tabs/google.js");
   await import("./tabs/gallery-results.js");
+  await import("./tabs/gallery-items.js");
+  await import("./tabs/clients.js");
 
   const name = location.hash.replace(/^#/, "") || "dashboard";
   await activateScreen(name);

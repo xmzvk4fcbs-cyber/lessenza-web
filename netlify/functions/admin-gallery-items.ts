@@ -4,14 +4,14 @@ import * as path from "node:path";
 import type { Handler } from "@netlify/functions";
 import { json, badRequest, notFound, methodNotAllowed, parseJson } from "../lib/http";
 import { adminGuard } from "../lib/admin-guard";
-import { getGalleryResults, saveGalleryResults, GALLERY_TRASH_DAYS } from "../lib/config";
-import type { GalleryResult } from "../lib/schemas";
+import { getGalleryItems, saveGalleryItems, GALLERY_TRASH_DAYS } from "../lib/config";
+import type { GalleryItem } from "../lib/schemas";
 
 const UPLOAD_DIR = path.resolve(process.cwd(), "uploads", "gallery");
 const PUBLIC_PREFIX = "/uploads/gallery/";
 
 const MAX_IMAGE_BYTES = 3 * 1024 * 1024;
-const MAX_PAIRS = 60;
+const MAX_ITEMS = 120;
 
 function decodeImage(input: string): { buf: Buffer; ext: string } | null {
   const m = /^data:(image\/(jpeg|jpg|png|webp));base64,(.+)$/i.exec(input.trim());
@@ -31,12 +31,8 @@ function decodeImage(input: string): { buf: Buffer; ext: string } | null {
   } catch { return null; }
 }
 
-function ensureUploadDir(): void {
-  fs.mkdirSync(UPLOAD_DIR, { recursive: true });
-}
-
 function writeImage(buf: Buffer, ext: string): string {
-  ensureUploadDir();
+  fs.mkdirSync(UPLOAD_DIR, { recursive: true });
   const name = `${randomUUID()}.${ext}`;
   fs.writeFileSync(path.join(UPLOAD_DIR, name), buf);
   return PUBLIC_PREFIX + name;
@@ -49,75 +45,68 @@ function unlinkIfLocal(url: string): void {
   try { fs.unlinkSync(path.join(UPLOAD_DIR, fname)); } catch { /* already gone */ }
 }
 
-/** Purge trashed entries older than GALLERY_TRASH_DAYS; return the kept list. */
-async function purgeExpired(list: GalleryResult[]): Promise<GalleryResult[]> {
+async function purgeExpired(list: GalleryItem[]): Promise<GalleryItem[]> {
   const cutoffMs = Date.now() - GALLERY_TRASH_DAYS * 24 * 60 * 60 * 1000;
-  const kept: GalleryResult[] = [];
+  const kept: GalleryItem[] = [];
   let dirty = false;
-  for (const r of list) {
-    if (r.deletedAt && new Date(r.deletedAt).getTime() < cutoffMs) {
-      unlinkIfLocal(r.beforeUrl);
-      unlinkIfLocal(r.afterUrl);
+  for (const it of list) {
+    if (it.deletedAt && new Date(it.deletedAt).getTime() < cutoffMs) {
+      unlinkIfLocal(it.url);
       dirty = true;
       continue;
     }
-    kept.push(r);
+    kept.push(it);
   }
-  if (dirty) await saveGalleryResults(kept);
+  if (dirty) await saveGalleryItems(kept);
   return kept;
 }
 
 const inner: Handler = async (event) => {
-  const all = await purgeExpired(await getGalleryResults());
+  const all = await purgeExpired(await getGalleryItems());
 
   if (event.httpMethod === "GET") {
-    // Split active vs trashed so the admin UI can render them separately.
     const active = all.filter((r) => !r.deletedAt);
-    const trash = all.filter((r) => !!r.deletedAt)
-      .map((r) => ({ ...r, daysLeft: Math.max(0, GALLERY_TRASH_DAYS - Math.floor((Date.now() - new Date(r.deletedAt!).getTime()) / 86_400_000)) }));
-    return json({ results: active, trash, trashDays: GALLERY_TRASH_DAYS });
+    const trash = all.filter((r) => !!r.deletedAt).map((r) => ({
+      ...r,
+      daysLeft: Math.max(0, GALLERY_TRASH_DAYS - Math.floor((Date.now() - new Date(r.deletedAt!).getTime()) / 86_400_000)),
+    }));
+    return json({ items: active, trash, trashDays: GALLERY_TRASH_DAYS });
   }
 
   if (event.httpMethod === "POST") {
-    // Special: `?restore=ID` flips deletedAt → undefined.
     const restoreId = event.queryStringParameters?.restore;
     if (restoreId) {
       const current = [...all];
       const idx = current.findIndex((r) => r.id === restoreId);
-      if (idx < 0) return notFound("Rezultat nije pronađen");
+      if (idx < 0) return notFound("Slika nije pronađena");
       const { deletedAt: _d, ...rest } = current[idx]!;
       current[idx] = rest;
-      await saveGalleryResults(current);
-      return json({ ok: true, result: current[idx] });
+      await saveGalleryItems(current);
+      return json({ ok: true, item: current[idx] });
     }
 
-    let body: { before?: unknown; after?: unknown; caption?: unknown; service?: unknown };
+    let body: { image?: unknown; alt?: unknown };
     try { body = parseJson(event.body); } catch { return badRequest("invalid-json", "Body must be JSON"); }
-    if (typeof body.before !== "string" || typeof body.after !== "string") {
-      return badRequest("missing-images", "Need both before+after as base64 image data URL");
+    if (typeof body.image !== "string") {
+      return badRequest("missing-image", "Need `image` as base64 data URL");
     }
-    const before = decodeImage(body.before);
-    const after = decodeImage(body.after);
-    if (!before) return badRequest("bad-before", "Pre image invalid or > 3 MB");
-    if (!after)  return badRequest("bad-after", "Post image invalid or > 3 MB");
+    const img = decodeImage(body.image);
+    if (!img) return badRequest("bad-image", "Slika nevažeća ili > 3 MB");
 
     const activeCount = all.filter((r) => !r.deletedAt).length;
-    if (activeCount >= MAX_PAIRS) {
-      return badRequest("limit-reached", `Maksimalno ${MAX_PAIRS} aktivnih rezultata`);
+    if (activeCount >= MAX_ITEMS) {
+      return badRequest("limit-reached", `Maksimalno ${MAX_ITEMS} aktivnih slika`);
     }
 
-    const beforeUrl = writeImage(before.buf, before.ext);
-    const afterUrl  = writeImage(after.buf, after.ext);
-    const entry: GalleryResult = {
+    const url = writeImage(img.buf, img.ext);
+    const entry: GalleryItem = {
       id: randomUUID(),
-      beforeUrl,
-      afterUrl,
-      caption: typeof body.caption === "string" ? body.caption.trim().slice(0, 200) || undefined : undefined,
-      service: typeof body.service === "string" ? body.service.trim().slice(0, 80) || undefined : undefined,
+      url,
+      alt: typeof body.alt === "string" ? body.alt.trim().slice(0, 200) || undefined : undefined,
       createdAt: new Date().toISOString(),
     };
-    await saveGalleryResults([entry, ...all]);
-    return json({ result: entry });
+    await saveGalleryItems([entry, ...all]);
+    return json({ item: entry });
   }
 
   if (event.httpMethod === "DELETE") {
@@ -126,16 +115,14 @@ const inner: Handler = async (event) => {
     if (!id) return badRequest("missing-id", "id query parameter required");
     const current = [...all];
     const idx = current.findIndex((r) => r.id === id);
-    if (idx < 0) return notFound(`Rezultat "${id}" nije pronađen`);
+    if (idx < 0) return notFound(`Slika "${id}" nije pronađena`);
     if (hard) {
-      unlinkIfLocal(current[idx]!.beforeUrl);
-      unlinkIfLocal(current[idx]!.afterUrl);
+      unlinkIfLocal(current[idx]!.url);
       current.splice(idx, 1);
     } else {
-      // Soft delete — keep file + row, set deletedAt. User can restore for 15 days.
       current[idx] = { ...current[idx]!, deletedAt: new Date().toISOString() };
     }
-    await saveGalleryResults(current);
+    await saveGalleryItems(current);
     return json({ ok: true, soft: !hard });
   }
 

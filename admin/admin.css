@@ -929,6 +929,26 @@
 .hidden { display: none !important; }
 .mt-xl { margin-top: 1.5rem; }
 
+/* Klijenti — visit-count pill next to the client name. */
+.cli-badge {
+  display: inline-block;
+  margin-left: 6px;
+  padding: 2px 10px;
+  background: var(--gold);
+  color: #fff;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  border-radius: 999px;
+  vertical-align: 2px;
+}
+.sr-only {
+  position: absolute !important;
+  width: 1px; height: 1px;
+  padding: 0; margin: -1px;
+  overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0;
+}
+
 /* Gallery upload — live thumbnail preview after file picker. */
 .gr-preview {
   display: block;
@@ -940,6 +960,84 @@
   border-radius: 10px;
   border: 1px solid var(--champagne-deep);
 }
+
+/* Warning banner when pairs exist but public toggle is off */
+.gr-banner {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  background: #FBEDEC;
+  border: 1px solid #E8B0AB;
+  border-radius: 10px;
+  padding: 0.75rem 1rem;
+  margin-bottom: 1rem;
+}
+.gr-banner__text { flex: 1; min-width: 200px; color: #7B2B2F; font-size: 0.92rem; }
+.gr-banner .btn { white-space: nowrap; }
+
+/* Trash header between active + trashed sections */
+.gr-trash-hd {
+  margin: 1.5rem 0 0.75rem;
+  padding-top: 1rem;
+  border-top: 1px dashed var(--champagne-deep);
+  color: var(--text-light);
+  font-size: 0.85rem;
+  letter-spacing: 0.06em;
+  font-weight: 600;
+}
+.stack-card.is-trashed { opacity: 0.7; background: var(--cream-soft); }
+
+/* Trash chip */
+.gr-chip {
+  display: inline-block;
+  padding: 2px 8px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  border-radius: 999px;
+  color: #fff;
+  margin-right: 6px;
+}
+.gr-chip--trash { background: #B5585E; }
+
+/* Regular-gallery admin grid */
+.gi-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+  gap: 10px;
+}
+.gi-card {
+  background: #fff;
+  border: 1px solid var(--champagne-deep);
+  border-radius: 10px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+.gi-card__img-wrap { position: relative; }
+.gi-card img {
+  display: block;
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  object-fit: cover;
+}
+.gi-card__alt {
+  padding: 6px 10px 4px;
+  font-size: 0.8rem;
+  color: var(--text-light);
+  border-top: 1px solid var(--champagne-deep);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.gi-card__actions {
+  display: flex;
+  gap: 4px;
+  padding: 6px 8px;
+  border-top: 1px solid var(--champagne-deep);
+}
+.gi-card__actions .btn { flex: 1; }
 
 /* === Skeleton loaders === */
 .skel {

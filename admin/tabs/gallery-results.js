@@ -8,11 +8,11 @@ const captionInput = document.getElementById("gr-caption");
 const uploadBtn = document.getElementById("gr-upload");
 const statusEl = document.getElementById("gr-status");
 const listEl = document.getElementById("gr-list");
+const bannerEl = document.getElementById("gr-banner");
 
 if (uploadBtn && listEl) {
   renderList();
   uploadBtn.addEventListener("click", () => handleUpload());
-  // Live thumbnail preview so owner sees the chosen photo before uploading.
   [["gr-before", "gr-before-preview"], ["gr-after", "gr-after-preview"]].forEach(([inputId, previewId]) => {
     const inp = document.getElementById(inputId);
     const img = document.getElementById(previewId);
@@ -27,17 +27,11 @@ if (uploadBtn && listEl) {
   });
 }
 
-/** Read a File into a base64 data URL, resizing if > MAX_DIM.
- *  Tries createImageBitmap first (works on modern iOS/Android + desktop);
- *  falls back to <img> load if needed. HEIC coming from iPhone usually
- *  auto-converts to JPEG in the iOS file picker, so we get a normal image. */
 async function fileToCompressedDataUrl(file, maxDim = 1600, quality = 0.85) {
-  // Primary path: createImageBitmap (fast, handles EXIF orientation on iOS 16+)
   try {
     const bitmap = await createImageBitmap(file, { imageOrientation: "from-image" });
     return drawToDataUrl(bitmap, bitmap.width, bitmap.height, maxDim, quality);
   } catch {
-    // Fallback: HTMLImageElement load
     const url = URL.createObjectURL(file);
     try {
       const img = await new Promise((resolve, reject) => {
@@ -60,9 +54,37 @@ function drawToDataUrl(source, srcW, srcH, maxDim, quality) {
   const canvas = document.createElement("canvas");
   canvas.width = w;
   canvas.height = h;
-  const ctx = canvas.getContext("2d");
-  ctx.drawImage(source, 0, 0, w, h);
+  canvas.getContext("2d").drawImage(source, 0, 0, w, h);
   return canvas.toDataURL("image/jpeg", quality);
+}
+
+async function refreshBanner(pairCount) {
+  if (!bannerEl) return;
+  try {
+    const { settings } = await must("/api/admin/settings");
+    const on = !!settings.showBeforeAfter;
+    if (on || pairCount === 0) {
+      bannerEl.hidden = true;
+      bannerEl.innerHTML = "";
+      return;
+    }
+    bannerEl.hidden = false;
+    bannerEl.innerHTML = `
+      <div class="gr-banner">
+        <div class="gr-banner__text">
+          ⚠️ Imaš <strong>${pairCount}</strong> ${pairCount === 1 ? "par" : "parova"} ali je tab "Prije / Poslije" trenutno <strong>sakriven</strong> od klijenata.
+        </div>
+        <button id="gr-enable" type="button" class="btn btn-primary">Uključi prikaz</button>
+      </div>`;
+    document.getElementById("gr-enable")?.addEventListener("click", async () => {
+      try {
+        await must("/api/admin/settings", { method: "PATCH", body: { showBeforeAfter: true } });
+        toast("Tab je sada vidljiv na sajtu.", "success");
+        bannerEl.hidden = true;
+        bannerEl.innerHTML = "";
+      } catch (e) { toast(e.message, "error"); }
+    });
+  } catch { /* ignore — non-critical */ }
 }
 
 async function handleUpload() {
@@ -87,6 +109,8 @@ async function handleUpload() {
     });
     beforeInput.value = ""; afterInput.value = "";
     serviceInput.value = ""; captionInput.value = "";
+    document.getElementById("gr-before-preview")?.setAttribute("hidden", "");
+    document.getElementById("gr-after-preview")?.setAttribute("hidden", "");
     statusEl.textContent = "";
     toast("Par dodat.", "success");
     await renderList();
@@ -101,40 +125,81 @@ async function handleUpload() {
 async function renderList() {
   listEl.innerHTML = `<p class="muted">Učitavanje…</p>`;
   try {
-    const { results } = await must("/api/admin/gallery-results");
-    if (!results.length) {
-      listEl.innerHTML = `<p class="muted">Još nema dodanih parova.</p>`;
-      return;
+    const { results, trash, trashDays } = await must("/api/admin/gallery-results");
+    await refreshBanner(results.length);
+    let html = "";
+
+    if (results.length === 0) {
+      html += `<p class="muted">Još nema dodanih parova.</p>`;
+    } else {
+      html += results.map((r) => renderCard(r, false, trashDays)).join("");
     }
-    listEl.innerHTML = results.map((r) => `
-      <article class="stack-card" data-id="${escapeHtml(r.id)}" style="padding-bottom:1rem;">
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:8px;">
-          <img src="${escapeHtml(r.beforeUrl)}" alt="Prije" style="width:100%;aspect-ratio:4/5;object-fit:cover;border-radius:8px;">
-          <img src="${escapeHtml(r.afterUrl)}" alt="Poslije" style="width:100%;aspect-ratio:4/5;object-fit:cover;border-radius:8px;">
-        </div>
-        <div class="stack-card__meta">
-          ${r.service ? `<strong>${escapeHtml(r.service)}</strong> · ` : ""}
-          ${r.caption ? escapeHtml(r.caption) + " · " : ""}
-          ${new Date(r.createdAt).toLocaleDateString("sr-Latn", { day: "numeric", month: "short", year: "numeric" })}
-        </div>
-        <div class="stack-card__actions" style="margin-top:0.5rem;">
-          <button class="btn btn-danger" type="button" data-del="${escapeHtml(r.id)}">Obriši</button>
-        </div>
-      </article>
-    `).join("");
-    listEl.querySelectorAll("[data-del]").forEach((btn) => {
-      btn.addEventListener("click", async () => {
-        if (!confirm("Obrisati ovaj par? Fotografije se brišu sa servera.")) return;
-        try {
-          await must(`/api/admin/gallery-results?id=${encodeURIComponent(btn.dataset.del)}`, { method: "DELETE" });
-          toast("Obrisano.", "success");
-          await renderList();
-        } catch (e) {
-          toast(e.message, "error");
-        }
-      });
-    });
+
+    if (trash && trash.length) {
+      html += `<div class="gr-trash-hd">🗑 U koš (vraća se za ${trashDays} dana)</div>`;
+      html += trash.map((r) => renderCard(r, true, trashDays)).join("");
+    }
+
+    listEl.innerHTML = html;
+    wire();
   } catch (e) {
     listEl.innerHTML = `<p class="muted">${escapeHtml(e.message)}</p>`;
   }
+}
+
+function renderCard(r, trashed, trashDays) {
+  const soft = trashed
+    ? `<span class="gr-chip gr-chip--trash">U košu · ${r.daysLeft ?? trashDays} dana do brisanja</span>`
+    : "";
+  const actions = trashed
+    ? `<button class="btn btn-primary" type="button" data-restore="${escapeHtml(r.id)}">↩ Vrati</button>
+       <button class="btn btn-danger" type="button" data-hard="${escapeHtml(r.id)}">Obriši trajno</button>`
+    : `<button class="btn btn-danger" type="button" data-soft="${escapeHtml(r.id)}">Obriši</button>`;
+  return `
+    <article class="stack-card ${trashed ? "is-trashed" : ""}" data-id="${escapeHtml(r.id)}">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:8px;">
+        <img src="${escapeHtml(r.beforeUrl)}" alt="Prije" style="width:100%;aspect-ratio:4/5;object-fit:cover;border-radius:8px;">
+        <img src="${escapeHtml(r.afterUrl)}" alt="Poslije" style="width:100%;aspect-ratio:4/5;object-fit:cover;border-radius:8px;">
+      </div>
+      <div class="stack-card__meta">
+        ${soft}
+        ${r.service ? `<strong>${escapeHtml(r.service)}</strong> · ` : ""}
+        ${r.caption ? escapeHtml(r.caption) + " · " : ""}
+        ${new Date(r.createdAt).toLocaleDateString("sr-Latn", { day: "numeric", month: "short", year: "numeric" })}
+      </div>
+      <div class="stack-card__actions" style="margin-top:0.5rem;">${actions}</div>
+    </article>
+  `;
+}
+
+function wire() {
+  listEl.querySelectorAll("[data-soft]").forEach((btn) => btn.addEventListener("click", () => softDelete(btn.dataset.soft)));
+  listEl.querySelectorAll("[data-restore]").forEach((btn) => btn.addEventListener("click", () => restore(btn.dataset.restore)));
+  listEl.querySelectorAll("[data-hard]").forEach((btn) => btn.addEventListener("click", () => hardDelete(btn.dataset.hard)));
+}
+
+async function softDelete(id) {
+  if (!confirm("Staviti par u koš? Imaš 15 dana da ga vratiš.")) return;
+  try {
+    await must(`/api/admin/gallery-results?id=${encodeURIComponent(id)}`, { method: "DELETE" });
+    toast("Premješteno u koš.", "success");
+    await renderList();
+  } catch (e) { toast(e.message, "error"); }
+}
+
+async function restore(id) {
+  try {
+    await must(`/api/admin/gallery-results?restore=${encodeURIComponent(id)}`, { method: "POST" });
+    toast("Vraćeno.", "success");
+    await renderList();
+  } catch (e) { toast(e.message, "error"); }
+}
+
+async function hardDelete(id) {
+  if (!confirm("OBRISAĆE SE TRAJNO — sa fajlovima. Sigurno?")) return;
+  try {
+    await must(`/api/admin/gallery-results?id=${encodeURIComponent(id)}&hard=1`, { method: "DELETE" });
+    toast("Obrisano trajno.", "success");
+    await renderList();
+  } catch (e) { toast(e.message, "error"); }
 }

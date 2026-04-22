@@ -56,6 +56,32 @@ document.addEventListener('DOMContentLoaded', () => {
     reveals.forEach(el => observer.observe(el));
   }
 
+  // --- Append user-uploaded gallery items (if /api/gallery-items returns any) ---
+  const galleryAllEarly = document.getElementById("gallery-all");
+  if (galleryAllEarly) {
+    fetch("/api/gallery-items", { cache: "no-store" })
+      .then((r) => r.json())
+      .then((data) => {
+        const items = Array.isArray(data.items) ? data.items : [];
+        if (!items.length) return;
+        const frag = document.createDocumentFragment();
+        for (const it of items) {
+          const wrap = document.createElement("div");
+          wrap.className = "gallery-item reveal";
+          const img = document.createElement("img");
+          img.loading = "lazy";
+          img.decoding = "async";
+          img.src = it.url;
+          img.alt = it.alt || "";
+          wrap.appendChild(img);
+          frag.appendChild(wrap);
+        }
+        // Prepend newer uploads so the owner sees fresh additions first.
+        galleryAllEarly.insertBefore(frag, galleryAllEarly.firstChild);
+      })
+      .catch(() => { /* non-critical */ });
+  }
+
   // --- Gallery tabs (Sve slike / Prije-Poslije) ---
   const galleryTabs = document.querySelectorAll(".gallery-tab");
   const galleryAll = document.getElementById("gallery-all");

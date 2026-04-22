@@ -10,6 +10,7 @@ import {
   BlockedPhoneSchema,
   BlockedPhonesSchema,
   GalleryResultsSchema,
+  GalleryItemsSchema,
   DismissedSuggestionsSchema,
   type Service,
   type WorkingHours,
@@ -19,6 +20,7 @@ import {
   type Inquiry,
   type BlockedPhone,
   type GalleryResult,
+  type GalleryItem,
   type DismissedSuggestion,
 } from "./schemas";
 import { DEFAULT_SERVICES, DEFAULT_WORKING_HOURS, DEFAULT_PARALLEL_PAIRS } from "./defaults";
@@ -30,6 +32,9 @@ const KEY_PAIRS = "config/parallel-pairs.json";
 const KEY_BLOCKS = "config/blocks.json";
 const KEY_BLOCKED_PHONES = "config/blocked-phones.json";
 const KEY_GALLERY_RESULTS = "config/gallery-results.json";
+const KEY_GALLERY_ITEMS = "config/gallery-items.json";
+/** How many days we keep soft-deleted gallery entries before purging. */
+export const GALLERY_TRASH_DAYS = 15;
 const KEY_DISMISSED_SUGGESTIONS = "admin/dismissed-suggestions.json";
 
 export async function getServices(): Promise<Service[]> {
@@ -226,4 +231,18 @@ export async function getActiveDismissedIds(windowDays = 14): Promise<Set<string
     if (nowMs - ms < windowMs) out.add(d.id);
   }
   return out;
+}
+
+// ---------- Gallery items (obične slike) ----------
+
+export async function getGalleryItems(): Promise<GalleryItem[]> {
+  const raw = await store().getJSON<unknown>(KEY_GALLERY_ITEMS);
+  if (!raw) return [];
+  return GalleryItemsSchema.parse(raw);
+}
+
+export async function saveGalleryItems(list: GalleryItem[]): Promise<GalleryItem[]> {
+  const validated = GalleryItemsSchema.parse(list);
+  await store().setJSON(KEY_GALLERY_ITEMS, validated);
+  return validated;
 }

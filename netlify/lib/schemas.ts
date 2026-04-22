@@ -124,9 +124,22 @@ export const GalleryResultSchema = z.object({
   caption: z.string().max(200).optional(),
   service: z.string().max(80).optional(),
   createdAt: z.string().datetime(),
+  /** When set, item is in the trash. After 15 days it's purged from disk + DB. */
+  deletedAt: z.string().datetime().optional(),
 });
 export type GalleryResult = z.infer<typeof GalleryResultSchema>;
 export const GalleryResultsSchema = z.array(GalleryResultSchema);
+
+// ----- Gallery items (obične slike u galeriji) -----
+export const GalleryItemSchema = z.object({
+  id: z.string().min(1).max(64),
+  url: z.string().min(1).max(300),
+  alt: z.string().max(200).optional(),
+  createdAt: z.string().datetime(),
+  deletedAt: z.string().datetime().optional(),
+});
+export type GalleryItem = z.infer<typeof GalleryItemSchema>;
+export const GalleryItemsSchema = z.array(GalleryItemSchema);
 
 export const InquirySchema = z.object({
   id: z.string().min(1),
