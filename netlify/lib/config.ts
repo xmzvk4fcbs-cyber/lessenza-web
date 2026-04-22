@@ -10,6 +10,7 @@ import {
   BlockedPhoneSchema,
   BlockedPhonesSchema,
   GalleryResultsSchema,
+  DismissedSuggestionsSchema,
   type Service,
   type WorkingHours,
   type Settings,
@@ -18,6 +19,7 @@ import {
   type Inquiry,
   type BlockedPhone,
   type GalleryResult,
+  type DismissedSuggestion,
 } from "./schemas";
 import { DEFAULT_SERVICES, DEFAULT_WORKING_HOURS, DEFAULT_PARALLEL_PAIRS } from "./defaults";
 
@@ -28,6 +30,7 @@ const KEY_PAIRS = "config/parallel-pairs.json";
 const KEY_BLOCKS = "config/blocks.json";
 const KEY_BLOCKED_PHONES = "config/blocked-phones.json";
 const KEY_GALLERY_RESULTS = "config/gallery-results.json";
+const KEY_DISMISSED_SUGGESTIONS = "admin/dismissed-suggestions.json";
 
 export async function getServices(): Promise<Service[]> {
   const raw = await store().getJSON<unknown>(KEY_SERVICES);
@@ -182,4 +185,45 @@ export async function saveGalleryResults(list: GalleryResult[]): Promise<Gallery
   const validated = GalleryResultsSchema.parse(list);
   await store().setJSON(KEY_GALLERY_RESULTS, validated);
   return validated;
+}
+
+// ---------- Dismissed suggestions (admin) ----------
+// Key-value map of `{ id: dismissedAtISO }`. Entries auto-prune after 30 days.
+
+export async function getDismissedSuggestions(): Promise<DismissedSuggestion[]> {
+  const raw = await store().getJSON<unknown>(KEY_DISMISSED_SUGGESTIONS);
+  if (!raw) return [];
+  return DismissedSuggestionsSchema.parse(raw);
+}
+
+export async function dismissSuggestion(id: string): Promise<DismissedSuggestion[]> {
+  const now = new Date();
+  const nowMs = now.getTime();
+  const PRUNE_MS = 30 * 24 * 60 * 60 * 1000;
+  const current = await getDismissedSuggestions();
+  // Prune anything older than 30 days, dedupe by id, then prepend the new one.
+  const kept = current.filter((d) => {
+    if (d.id === id) return false;
+    const dMs = new Date(d.dismissedAt).getTime();
+    return nowMs - dMs < PRUNE_MS;
+  });
+  const next: DismissedSuggestion[] = [
+    { id, dismissedAt: now.toISOString() },
+    ...kept,
+  ];
+  await store().setJSON(KEY_DISMISSED_SUGGESTIONS, DismissedSuggestionsSchema.parse(next));
+  return next;
+}
+
+/** Returns the set of IDs dismissed within the last N days (default 14). */
+export async function getActiveDismissedIds(windowDays = 14): Promise<Set<string>> {
+  const list = await getDismissedSuggestions();
+  const nowMs = Date.now();
+  const windowMs = windowDays * 24 * 60 * 60 * 1000;
+  const out = new Set<string>();
+  for (const d of list) {
+    const ms = new Date(d.dismissedAt).getTime();
+    if (nowMs - ms < windowMs) out.add(d.id);
+  }
+  return out;
 }

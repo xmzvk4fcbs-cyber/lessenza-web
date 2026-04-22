@@ -35,6 +35,10 @@ const settings: Settings = {
   showPrices: false,
   priceCurrency: "€",
   showBeforeAfter: false,
+  suggestLapsedRegulars: true,
+  suggestSparseDays: true,
+  suggestFutureGaps: true,
+  suggestInquiryMatches: true,
 };
 
 function base(): ComputeSlotsInput {

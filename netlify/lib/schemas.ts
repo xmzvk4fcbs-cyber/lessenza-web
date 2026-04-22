@@ -99,7 +99,21 @@ export const SettingsSchema = z.object({
   priceCurrency: z.string().max(4).default("€"),
   /** When true, the /galerija.html "Prije / Poslije" tab is visible. */
   showBeforeAfter: z.boolean().default(false),
+
+  /** Pametni predlozi — per-category toggles on the admin dashboard. */
+  suggestLapsedRegulars: z.boolean().default(true),
+  suggestSparseDays: z.boolean().default(true),
+  suggestFutureGaps: z.boolean().default(true),
+  suggestInquiryMatches: z.boolean().default(true),
 });
+
+/** A single dismissed suggestion entry (kind:id → when dismissed). */
+export const DismissedSuggestionSchema = z.object({
+  id: z.string().min(1).max(200),
+  dismissedAt: z.string().datetime(),
+});
+export type DismissedSuggestion = z.infer<typeof DismissedSuggestionSchema>;
+export const DismissedSuggestionsSchema = z.array(DismissedSuggestionSchema);
 export type Settings = z.infer<typeof SettingsSchema>;
 
 // ----- Gallery results (Prije / Poslije) -----
