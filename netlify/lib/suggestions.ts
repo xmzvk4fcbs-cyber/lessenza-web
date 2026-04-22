@@ -76,7 +76,10 @@ function dateKey(d: Date): string {
 }
 
 function parseDateKey(key: string): Date {
-  const [y, m, d] = key.split("-").map(Number);
+  const parts = key.split("-").map(Number);
+  const y = parts[0] ?? 1970;
+  const m = parts[1] ?? 1;
+  const d = parts[2] ?? 1;
   return new Date(y, m - 1, d);
 }
 
@@ -85,7 +88,7 @@ function dowIndex(d: Date): number {
 }
 
 function dowLabel(d: Date): string {
-  return DOW_LABEL_SR[dowIndex(d)];
+  return DOW_LABEL_SR[dowIndex(d)] ?? "";
 }
 
 function hhmm(d: Date): string {
@@ -94,17 +97,21 @@ function hhmm(d: Date): string {
 
 function humanDateLabel(dateISO: string): string {
   const d = parseDateKey(dateISO);
-  return `${dowLabel(d)} ${d.getDate()}. ${MONTH_LABEL_SR[d.getMonth()]}`;
+  return `${dowLabel(d)} ${d.getDate()}. ${MONTH_LABEL_SR[d.getMonth()] ?? ""}`;
 }
 
 interface WorkingWindow { fromMin: number; toMin: number }
 
 function workingWindowsForDay(hours: WorkingHours, d: Date): WorkingWindow[] {
-  const h = hours[DOW_KEYS[dowIndex(d)]] as unknown;
+  const key = DOW_KEYS[dowIndex(d)];
+  if (!key) return [];
+  const h = hours[key] as unknown;
   const r = h as { open: boolean; from?: string; to?: string; windows?: { from: string; to: string }[] };
   if (!r || !r.open) return [];
   const parse = (s: string): number => {
-    const [hh, mm] = s.split(":").map(Number);
+    const parts = s.split(":").map(Number);
+    const hh = parts[0] ?? 0;
+    const mm = parts[1] ?? 0;
     return hh * 60 + mm;
   };
   if (Array.isArray(r.windows) && r.windows.length) {
@@ -185,7 +192,9 @@ export function findLapsedRegulars(
     if (visits.length < minVisits) continue;
 
     visits.sort((a, b) => a.startISO.localeCompare(b.startISO));
-    const lastVisitISO = visits[visits.length - 1].startISO;
+    const last = visits[visits.length - 1];
+    if (!last) continue;
+    const lastVisitISO = last.startISO;
     const lastVisitMs = new Date(lastVisitISO).getTime();
     const weeksAgo = Math.floor((now.getTime() - lastVisitMs) / (7 * 24 * 60 * 60 * 1000));
     if (weeksAgo < minWeeksSinceLast) continue;
@@ -195,14 +204,17 @@ export function findLapsedRegulars(
     if (visits.length >= 2) {
       const deltas: number[] = [];
       for (let i = 1; i < visits.length; i++) {
-        const ms = new Date(visits[i].startISO).getTime() - new Date(visits[i - 1].startISO).getTime();
+        const cur = visits[i];
+        const prev = visits[i - 1];
+        if (!cur || !prev) continue;
+        const ms = new Date(cur.startISO).getTime() - new Date(prev.startISO).getTime();
         deltas.push(ms / (7 * 24 * 60 * 60 * 1000));
       }
       avgInterval = deltas.reduce((a, b) => a + b, 0) / deltas.length;
       if (avgInterval > maxAvgIntervalWeeks) continue; // not really a regular
     }
 
-    const name = visits[visits.length - 1].name || "klijentkinja";
+    const name = last.name || "klijentkinja";
     candidates.push({
       kind: "lapsed-regular",
       id: `lapsed:${phone}`,
@@ -329,8 +341,11 @@ export function findFutureGaps(
     if (isBlockedDay(k, blocks)) continue;
 
     for (let j = 1; j < bookings.length; j++) {
-      const prevEnd = new Date(bookings[j - 1].endISO);
-      const curStart = new Date(bookings[j].startISO);
+      const prev = bookings[j - 1];
+      const cur = bookings[j];
+      if (!prev || !cur) continue;
+      const prevEnd = new Date(prev.endISO);
+      const curStart = new Date(cur.startISO);
       const gapMin = (curStart.getTime() - prevEnd.getTime()) / 60000;
       if (gapMin >= minGap) {
         out.push({

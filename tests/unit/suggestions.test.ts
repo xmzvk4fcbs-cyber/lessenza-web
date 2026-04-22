@@ -31,7 +31,7 @@ describe("findLapsedRegulars", () => {
     ];
     const out = findLapsedRegulars(past, [], { now });
     expect(out).toHaveLength(1);
-    const o = out[0];
+    const o = out[0]!;
     if (o.kind !== "lapsed-regular") throw new Error("wrong kind");
     expect(o.phoneE164).toBe("+38269111111");
     expect(o.weeksAgo).toBe(10);
@@ -89,7 +89,7 @@ describe("findSparseDays", () => {
   it("flags a working day with no bookings in window", () => {
     const out = findSparseDays([], openAllWeek, [], { now, limit: 2 });
     expect(out.length).toBeGreaterThan(0);
-    expect(out[0].kind).toBe("sparse-day");
+    expect(out[0]!.kind).toBe("sparse-day");
   });
 
   it("skips non-working days (weekend)", () => {
@@ -124,10 +124,11 @@ describe("findFutureGaps", () => {
     ];
     const out = findFutureGaps(future, openAllWeek, [], { now, skipDays: 2, windowDays: 7 });
     expect(out).toHaveLength(1);
-    if (out[0].kind !== "future-gap") throw new Error("wrong kind");
-    expect(out[0].fromHHMM).toBe("10:00");
-    expect(out[0].toHHMM).toBe("13:30");
-    expect(out[0].durationMinutes).toBe(210);
+    const g = out[0]!;
+    if (g.kind !== "future-gap") throw new Error("wrong kind");
+    expect(g.fromHHMM).toBe("10:00");
+    expect(g.toHHMM).toBe("13:30");
+    expect(g.durationMinutes).toBe(210);
   });
 
   it("skips gaps smaller than 90 minutes", () => {
@@ -167,8 +168,9 @@ describe("findPendingInquiries", () => {
     };
     const out = findPendingInquiries([i], { now });
     expect(out).toHaveLength(1);
-    if (out[0].kind !== "pending-inquiry") throw new Error("wrong kind");
-    expect(out[0].ageHours).toBe(36);
+    const p = out[0]!;
+    if (p.kind !== "pending-inquiry") throw new Error("wrong kind");
+    expect(p.ageHours).toBe(36);
   });
 
   it("skips too-fresh (<24h) and too-old (>7d)", () => {

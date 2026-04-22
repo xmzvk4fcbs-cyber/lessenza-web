@@ -36,6 +36,12 @@ const FIELDS = [
   ["mailer", "Provajder za email", "select", { options: [["resend", "Resend"], ["gmail", "Gmail"]] }],
   ["reminderEmailEnabled", "Slati podsjetnik klijentu dan prije", "checkbox", {}],
   ["dailyDigestEnabled", "Slati dnevni pregled vlasnici u 20h", "checkbox", {}],
+
+  // --- Pametni predlozi (dashboard) ---
+  ["suggestLapsedRegulars", "Predlozi: klijentkinje koje dugo nisu bile", "checkbox", {}],
+  ["suggestSparseDays", "Predlozi: slabo popunjeni predstojeći dani", "checkbox", {}],
+  ["suggestFutureGaps", "Predlozi: rupe u narednim danima", "checkbox", {}],
+  ["suggestInquiryMatches", "Predlozi: upiti koji čekaju odgovor", "checkbox", {}],
 ];
 
 async function render() {

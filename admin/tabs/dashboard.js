@@ -213,6 +213,138 @@ async function render() {
   }
 
   await loadTodayNote();
+  renderSuggestions(); // fire-and-forget — not critical to dashboard
+}
+
+// --- Pametni predlozi ---
+
+const MONTH_SR = ["januar", "februar", "mart", "april", "maj", "jun", "jul", "avgust", "septembar", "oktobar", "novembar", "decembar"];
+const DOW_SR = ["Ned", "Pon", "Uto", "Sri", "Čet", "Pet", "Sub"];
+
+function waLink(phoneE164, text) {
+  const digits = String(phoneE164 || "").replace(/[^\d]/g, "");
+  return `https://wa.me/${digits}${text ? `?text=${encodeURIComponent(text)}` : ""}`;
+}
+
+function viberLink(phoneE164) {
+  return `viber://chat?number=${encodeURIComponent(phoneE164 || "")}`;
+}
+
+function fmtShortDate(iso) {
+  const d = new Date(iso);
+  return `${DOW_SR[d.getDay()]} ${d.getDate()}. ${MONTH_SR[d.getMonth()]}`;
+}
+
+function renderSuggestionRow(s) {
+  let eyebrow = "", title = "", subtitle = "", action = "";
+  if (s.kind === "lapsed-regular") {
+    eyebrow = "Klijentkinja";
+    title = escapeHtml(s.name);
+    const detail = s.usualIntervalWeeks
+      ? `${s.weeksAgo} sedmica · obično svake ${s.usualIntervalWeeks}`
+      : `${s.weeksAgo} sedmica od zadnjeg termina`;
+    subtitle = detail;
+    action = `<a class="sugg__action" href="${waLink(s.phoneE164, s.suggestedMessage)}" target="_blank" rel="noopener">📱 Pošalji podsjetnik</a>
+              <a class="sugg__action sugg__action--ghost" href="${viberLink(s.phoneE164)}" target="_blank" rel="noopener">💜 Viber</a>`;
+  } else if (s.kind === "sparse-day") {
+    eyebrow = "Slab dan";
+    title = escapeHtml(s.dowLabel);
+    subtitle = s.bookingCount === 0 ? "nijedan termin" : "samo 1 termin";
+    action = `<button type="button" class="sugg__action sugg__action--ghost" data-goto-day="${escapeHtml(s.dateISO)}">🗓️ Otvori dan</button>`;
+  } else if (s.kind === "future-gap") {
+    eyebrow = "Rupa u danu";
+    title = escapeHtml(s.dowLabel);
+    const hrs = s.durationMinutes >= 60 ? `${Math.floor(s.durationMinutes / 60)}h${s.durationMinutes % 60 ? ` ${s.durationMinutes % 60}min` : ""}` : `${s.durationMinutes}min`;
+    subtitle = `${s.fromHHMM}–${s.toHHMM} · ${hrs} slobodno`;
+    action = `<button type="button" class="sugg__action sugg__action--ghost" data-goto-day="${escapeHtml(s.dateISO)}">🗓️ Otvori dan</button>`;
+  } else if (s.kind === "pending-inquiry") {
+    eyebrow = "Upit";
+    title = escapeHtml(s.inquiryName);
+    subtitle = `${fmtShortDate(s.desiredDateISO + "T12:00:00")} · ${escapeHtml(s.desiredWindow)} · ${s.ageHours}h od upita`;
+    action = `<a class="sugg__action" href="${waLink(s.inquiryPhoneE164, s.suggestedMessage)}" target="_blank" rel="noopener">📱 Pošalji WhatsApp</a>
+              <button type="button" class="sugg__action sugg__action--ghost" data-goto-inquiries="1">📬 Otvori Upite</button>`;
+  } else {
+    return "";
+  }
+  return `
+    <article class="sugg" data-id="${escapeHtml(s.id)}">
+      <div class="sugg__main">
+        <div class="sugg__eyebrow">${eyebrow}</div>
+        <div class="sugg__title">${title}</div>
+        <div class="sugg__sub">${escapeHtml(subtitle)}</div>
+        <div class="sugg__actions">${action}</div>
+      </div>
+      <button type="button" class="sugg__dismiss" title="Skloni na 14 dana" aria-label="Skloni predlog">×</button>
+    </article>`;
+}
+
+async function renderSuggestions() {
+  const host = document.getElementById("suggestions-host");
+  if (!host) return;
+  let data;
+  try {
+    data = await must("/api/admin/suggestions");
+  } catch {
+    host.innerHTML = "";
+    return;
+  }
+  const list = Array.isArray(data?.suggestions) ? data.suggestions : [];
+  if (!list.length) {
+    host.innerHTML = ""; // quiet — hide section entirely when nothing to show
+    return;
+  }
+  host.innerHTML = `
+    <section class="sugg-panel" aria-label="Pametni predlozi">
+      <header class="sugg-panel__head">
+        <span class="sugg-panel__eyebrow">Pametni predlozi</span>
+        <span class="sugg-panel__hint">${list.length} ${list.length === 1 ? "prilika" : list.length >= 2 && list.length <= 4 ? "prilike" : "prilika"} danas</span>
+      </header>
+      <div class="sugg-panel__body">${list.map(renderSuggestionRow).join("")}</div>
+    </section>`;
+
+  // Dismiss handlers
+  host.querySelectorAll(".sugg__dismiss").forEach((btn) => {
+    btn.addEventListener("click", async () => {
+      const card = btn.closest(".sugg");
+      const id = card?.dataset.id;
+      if (!id) return;
+      card.style.opacity = "0.5";
+      try {
+        await must("/api/admin/suggestions/dismiss", { method: "POST", body: { id } });
+        card.style.transition = "all 200ms";
+        card.style.maxHeight = card.offsetHeight + "px";
+        requestAnimationFrame(() => {
+          card.style.maxHeight = "0";
+          card.style.padding = "0";
+          card.style.opacity = "0";
+        });
+        setTimeout(() => {
+          card.remove();
+          // If nothing left, remove the whole panel.
+          if (!host.querySelector(".sugg")) host.innerHTML = "";
+        }, 230);
+      } catch {
+        card.style.opacity = "1";
+      }
+    });
+  });
+
+  // Navigate handlers
+  host.querySelectorAll("[data-goto-day]").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const day = btn.dataset.gotoDay;
+      if (!day) return;
+      // Switch to schedule screen in Day view for that date.
+      const url = new URL(location.href);
+      url.searchParams.set("view", "day");
+      url.searchParams.set("anchor", day);
+      url.hash = "#schedule";
+      location.href = url.toString();
+    });
+  });
+  host.querySelectorAll("[data-goto-inquiries]").forEach((btn) => {
+    btn.addEventListener("click", () => { location.hash = "#inquiries"; });
+  });
 }
 
 registerTab("dashboard", render);
