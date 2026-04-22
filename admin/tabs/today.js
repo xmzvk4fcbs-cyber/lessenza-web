@@ -48,6 +48,42 @@ if (searchClear) {
   });
 }
 
+// CSV export — uses whatever is currently in cachedRows (post-search filter).
+const exportBtn = document.getElementById("rsp-export");
+if (exportBtn) {
+  exportBtn.addEventListener("click", () => {
+    const rows = applySearchFilter().filter((r) => r.kind === "booking");
+    if (!rows.length) {
+      toast("Nema termina za export u ovom rasponu.", "error");
+      return;
+    }
+    const headers = ["Datum", "Vrijeme", "Usluga", "Klijent", "Telefon", "Email", "Napomena"];
+    const lines = [headers.join(",")];
+    for (const r of rows) {
+      const d = new Date(r.startISO);
+      const dateStr = d.toLocaleDateString("sr-Latn", { day: "2-digit", month: "2-digit", year: "numeric" });
+      const timeStr = d.toLocaleTimeString("sr-Latn", { hour: "2-digit", minute: "2-digit" });
+      const cells = [
+        dateStr, timeStr, r.serviceName || "", r.name || "", r.phoneE164 || "", r.email || "", r.note || "",
+      ].map((c) => {
+        const s = String(c).replace(/"/g, '""');
+        return /[",\n]/.test(s) ? `"${s}"` : s;
+      });
+      lines.push(cells.join(","));
+    }
+    const csv = "\uFEFF" + lines.join("\n"); // BOM — Excel reads UTF-8 correctly
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `lessenza-termini-${fromInput.value}-do-${toInput.value}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(() => { document.body.removeChild(a); URL.revokeObjectURL(url); }, 100);
+    toast(`Skinuto ${rows.length} termin${rows.length === 1 ? "" : "a"}.`, "success");
+  });
+}
+
 fromInput.value = todayKey();
 toInput.value = todayKey();
 

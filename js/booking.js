@@ -201,6 +201,54 @@ function attachPhoneValidation(inputId, statusId, dialValueId, submitBtnGetter) 
   }
 }
 
+// --- Email pre-submit validation (UX only; server still authoritative) ---
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
+function validateEmailLocal(raw) {
+  const v = (raw || "").trim();
+  if (!v) return { state: "empty" }; // optional field — empty is OK
+  if (v.length > 200) return { state: "bad", label: "predugačak" };
+  if (!EMAIL_RE.test(v)) return { state: "bad", label: "fali @ ili domen" };
+  return { state: "ok" };
+}
+function attachEmailValidation(inputId) {
+  const input = document.getElementById(inputId);
+  if (!input) return;
+  const field = input.closest(".field");
+  // Make a status slot if one isn't already there.
+  let status = field?.querySelector(".field__status");
+  if (field && !status) {
+    status = document.createElement("p");
+    status.className = "field__status";
+    status.hidden = true;
+    field.appendChild(status);
+  }
+  let timer = null;
+  function run() {
+    const r = validateEmailLocal(input.value);
+    if (!field || !status) return;
+    field.classList.toggle("has-error", r.state === "bad");
+    field.classList.toggle("is-valid", r.state === "ok");
+    if (r.state === "ok") {
+      status.hidden = false;
+      status.textContent = "✓ Email izgleda ispravno";
+      status.className = "field__status field__status--ok";
+    } else if (r.state === "bad") {
+      status.hidden = false;
+      status.textContent = `Email nije ispravan (${r.label}).`;
+      status.className = "field__status field__status--bad";
+    } else {
+      status.hidden = true;
+      status.textContent = "";
+      status.className = "field__status";
+    }
+  }
+  input.addEventListener("input", () => {
+    if (timer) clearTimeout(timer);
+    timer = setTimeout(run, 300);
+  });
+  input.addEventListener("blur", run);
+}
+
 // --- Step 1: services ---
 
 async function loadServices() {
@@ -535,3 +583,5 @@ ui.inquiryOpen.addEventListener("click", (e) => {
 
 attachPhoneValidation("f-phone", "f-phone-status", "f-dial", () => ui.navNext);
 attachPhoneValidation("i-phone", "i-phone-status", "i-dial", () => ui.navNext);
+attachEmailValidation("f-email");
+attachEmailValidation("i-email");

@@ -1658,6 +1658,154 @@ h2 em {
   .hero::after { display: none; }
 }
 
+/* --- Gallery tabs + pre/after placeholder --- */
+.gallery-tabs {
+  display: flex;
+  gap: 2px;
+  margin: 0 auto 32px;
+  padding: 4px;
+  max-width: 420px;
+  background: var(--cream-soft);
+  border: 1px solid var(--champagne-deep);
+  border-radius: 999px;
+}
+.gallery-tab {
+  flex: 1;
+  padding: 10px 16px;
+  background: transparent;
+  border: 0;
+  font: inherit;
+  font-size: 0.85rem;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  color: var(--text-light);
+  cursor: pointer;
+  border-radius: 999px;
+  transition: color 0.2s, background 0.2s;
+}
+.gallery-tab.is-active {
+  background: var(--gold);
+  color: #fff;
+  box-shadow: 0 2px 8px rgba(201, 169, 97, 0.25);
+}
+.gallery-tab:not(.is-active):hover { color: var(--sage); }
+
+.results-placeholder {
+  max-width: 640px;
+  margin: 0 auto;
+  text-align: center;
+  padding: 60px 32px;
+  background: var(--cream-soft);
+  border: 1px dashed var(--champagne-deep);
+  border-radius: 16px;
+}
+.results-placeholder__mark {
+  font-size: 2.5rem;
+  color: var(--gold);
+  line-height: 1;
+  margin-bottom: 20px;
+}
+.results-placeholder__title {
+  font-family: var(--font-display, Georgia, serif);
+  font-size: 1.6rem;
+  color: var(--sage);
+  margin: 0 0 16px;
+  font-weight: 400;
+}
+.results-placeholder__text {
+  color: var(--text);
+  font-size: 0.96rem;
+  line-height: 1.7;
+  margin: 0 auto 12px;
+  max-width: 520px;
+}
+
+/* --- Legal docs (uslovi, privatnost) --- */
+.legal-doc h2 {
+  font-family: var(--font-display, Georgia, serif);
+  font-weight: 400;
+  color: var(--sage);
+  font-size: 1.4rem;
+  margin: 2rem 0 0.8rem;
+  letter-spacing: 0.01em;
+}
+.legal-doc h2:first-child { margin-top: 0; }
+.legal-doc p,
+.legal-doc ul {
+  color: var(--text);
+  font-size: 0.96rem;
+  line-height: 1.75;
+  margin: 0 0 1rem;
+}
+.legal-doc ul { padding-left: 1.5rem; }
+.legal-doc li { margin-bottom: 0.35rem; }
+.legal-doc a { color: var(--gold); text-decoration: underline; }
+.legal-doc code {
+  font-family: ui-monospace, monospace;
+  font-size: 0.85em;
+  background: var(--cream-soft);
+  padding: 1px 6px;
+  border-radius: 3px;
+}
+
+/* --- Testimonials (homepage) --- */
+.testimonials {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 24px;
+  max-width: 1100px;
+  margin: 0 auto;
+}
+.testimonial {
+  position: relative;
+  margin: 0;
+  padding: 32px 28px 28px;
+  background: var(--cream-soft);
+  border: 1px solid var(--champagne);
+  border-radius: 16px;
+  transition: transform 0.25s ease, box-shadow 0.25s ease;
+}
+.testimonial:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 8px 24px rgba(201, 169, 97, 0.15);
+}
+.testimonial::before {
+  content: "„";
+  position: absolute;
+  top: 4px;
+  left: 16px;
+  font-family: var(--font-display, Georgia, serif);
+  font-size: 4rem;
+  color: var(--gold);
+  opacity: 0.35;
+  line-height: 1;
+}
+.testimonial__quote {
+  margin: 0 0 18px;
+  font-style: italic;
+  color: var(--sage);
+  font-size: 1rem;
+  line-height: 1.65;
+  position: relative;
+}
+.testimonial__author {
+  display: flex;
+  flex-direction: column;
+  font-family: var(--font-body);
+  font-weight: 600;
+  font-size: 0.9rem;
+  color: var(--gold);
+  letter-spacing: 0.04em;
+}
+.testimonial__author span {
+  font-size: 0.75rem;
+  color: var(--text-light);
+  font-weight: 400;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  margin-top: 3px;
+}
+
 /* --- FAQ accordion (O Nama stranica) --- */
 .faq {
   max-width: 760px;

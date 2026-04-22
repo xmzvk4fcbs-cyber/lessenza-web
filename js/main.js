@@ -56,6 +56,25 @@ document.addEventListener('DOMContentLoaded', () => {
     reveals.forEach(el => observer.observe(el));
   }
 
+  // --- Gallery tabs (Svi radovi / Prije-Poslije) ---
+  const galleryTabs = document.querySelectorAll(".gallery-tab");
+  const galleryAll = document.getElementById("gallery-all");
+  const galleryResults = document.getElementById("gallery-results");
+  if (galleryTabs.length && galleryAll && galleryResults) {
+    galleryTabs.forEach((tab) => {
+      tab.addEventListener("click", () => {
+        const which = tab.dataset.tab;
+        galleryTabs.forEach((t) => {
+          const on = t === tab;
+          t.classList.toggle("is-active", on);
+          t.setAttribute("aria-selected", on ? "true" : "false");
+        });
+        galleryAll.hidden = which !== "all";
+        galleryResults.hidden = which !== "results";
+      });
+    });
+  }
+
   // --- Gallery lightbox ---
   const lightbox = document.querySelector('.lightbox');
   const lightboxImg = lightbox?.querySelector('img');

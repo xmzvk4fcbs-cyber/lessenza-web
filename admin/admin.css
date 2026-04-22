@@ -979,12 +979,26 @@
 }
 .rsp-clear:hover { color: var(--sage); }
 
+.rsp-toolbar__row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
 .rsp-stats {
   display: flex;
   flex-wrap: wrap;
   gap: 0.5rem;
   font-size: 0.8rem;
   color: var(--text-light);
+  flex: 1;
+}
+.rsp-export {
+  min-height: 36px;
+  padding: 6px 14px;
+  font-size: 0.85rem;
+  white-space: nowrap;
 }
 .rsp-stat {
   background: var(--cream-soft);
