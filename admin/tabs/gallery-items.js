@@ -7,6 +7,13 @@ const altInput = document.getElementById("gi-alt");
 const uploadBtn = document.getElementById("gi-upload");
 const statusEl = document.getElementById("gi-status");
 const listEl = document.getElementById("gi-list");
+const badgeEl = document.getElementById("gi-badge");
+
+function updateBadge(count) {
+  if (!badgeEl) return;
+  if (count > 0) { badgeEl.textContent = String(count); badgeEl.hidden = false; }
+  else { badgeEl.hidden = true; }
+}
 
 if (uploadBtn && listEl) {
   renderList();
@@ -82,6 +89,7 @@ async function renderList() {
   listEl.innerHTML = `<p class="muted">Učitavanje…</p>`;
   try {
     const { items, trash, trashDays } = await must("/api/admin/gallery-items");
+    updateBadge(items.length);
     let html = "";
     if (!items.length) {
       html += `<p class="muted">Još nema dodanih slika.</p>`;
@@ -101,9 +109,15 @@ async function renderList() {
 
 function renderCard(it, trashed, trashDays) {
   const alt = it.alt ? `<div class="gi-card__alt">${escapeHtml(it.alt)}</div>` : "";
+  const isSeed = typeof it.id === "string" && it.id.startsWith("seed-");
+  const seedTag = (!trashed && isSeed)
+    ? `<span class="gi-tag gi-tag--seed" style="position:absolute;top:6px;left:6px;" title="Postojeća slika">postojeća</span>`
+    : (!trashed
+        ? `<span class="gi-tag gi-tag--new" style="position:absolute;top:6px;left:6px;" title="Uploadovana iz admina">nova</span>`
+        : "");
   const badge = trashed
     ? `<span class="gr-chip gr-chip--trash" style="position:absolute;top:6px;left:6px;">${it.daysLeft ?? trashDays} dana</span>`
-    : "";
+    : seedTag;
   const actions = trashed
     ? `<button class="btn btn-ghost" type="button" data-restore="${escapeHtml(it.id)}" style="padding:4px 10px;font-size:0.8rem;">↩ Vrati</button>
        <button class="btn btn-danger" type="button" data-hard="${escapeHtml(it.id)}" style="padding:4px 10px;font-size:0.8rem;">Trajno</button>`

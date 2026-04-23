@@ -5,6 +5,7 @@ import type { Handler } from "@netlify/functions";
 import { json, badRequest, notFound, methodNotAllowed, parseJson } from "../lib/http";
 import { adminGuard } from "../lib/admin-guard";
 import { getGalleryItems, saveGalleryItems, GALLERY_TRASH_DAYS } from "../lib/config";
+import { ensureGallerySeeded } from "../lib/gallery-seed";
 import type { GalleryItem } from "../lib/schemas";
 
 const UPLOAD_DIR = path.resolve(process.cwd(), "uploads", "gallery");
@@ -62,6 +63,7 @@ async function purgeExpired(list: GalleryItem[]): Promise<GalleryItem[]> {
 }
 
 const inner: Handler = async (event) => {
+  await ensureGallerySeeded();
   const all = await purgeExpired(await getGalleryItems());
 
   if (event.httpMethod === "GET") {

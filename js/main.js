@@ -41,29 +41,34 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // --- Reveal on scroll ---
-  const reveals = document.querySelectorAll('.reveal');
-  if (reveals.length) {
-    const observer = new IntersectionObserver((entries) => {
-      entries.forEach((entry, i) => {
-        if (entry.isIntersecting) {
-          setTimeout(() => entry.target.classList.add('visible'), i * 80);
-          observer.unobserve(entry.target);
-        }
-      });
-    }, { threshold: 0.1, rootMargin: '0px 0px -40px 0px' });
+  // --- Reveal on scroll (exposed so dynamically-inserted nodes can rebind) ---
+  let revealObserver = null;
+  window.__observeReveals = function observeReveals() {
+    if (!revealObserver) {
+      revealObserver = new IntersectionObserver((entries) => {
+        entries.forEach((entry, i) => {
+          if (entry.isIntersecting) {
+            setTimeout(() => entry.target.classList.add('visible'), i * 80);
+            revealObserver.unobserve(entry.target);
+          }
+        });
+      }, { threshold: 0.1, rootMargin: '0px 0px -40px 0px' });
+    }
+    document.querySelectorAll('.reveal:not(.visible)').forEach((el) => revealObserver.observe(el));
+  };
+  window.__observeReveals();
 
-    reveals.forEach(el => observer.observe(el));
-  }
-
-  // --- Append user-uploaded gallery items (if /api/gallery-items returns any) ---
+  // --- Render the entire gallery from /api/gallery-items (fully dynamic). ---
   const galleryAllEarly = document.getElementById("gallery-all");
   if (galleryAllEarly) {
     fetch("/api/gallery-items", { cache: "no-store" })
       .then((r) => r.json())
       .then((data) => {
         const items = Array.isArray(data.items) ? data.items : [];
-        if (!items.length) return;
+        if (!items.length) {
+          galleryAllEarly.innerHTML = `<p class="muted" style="grid-column:1/-1;text-align:center;color:var(--text-light);padding:2rem;">Galerija je u pripremi.</p>`;
+          return;
+        }
         const frag = document.createDocumentFragment();
         for (const it of items) {
           const wrap = document.createElement("div");
@@ -76,10 +81,15 @@ document.addEventListener('DOMContentLoaded', () => {
           wrap.appendChild(img);
           frag.appendChild(wrap);
         }
-        // Prepend newer uploads so the owner sees fresh additions first.
-        galleryAllEarly.insertBefore(frag, galleryAllEarly.firstChild);
+        galleryAllEarly.appendChild(frag);
+        // Wire lightbox on freshly inserted tiles.
+        if (window.__rebindGalleryLightbox) window.__rebindGalleryLightbox();
+        // Re-observe reveal animations.
+        if (window.__observeReveals) window.__observeReveals();
       })
-      .catch(() => { /* non-critical */ });
+      .catch(() => {
+        galleryAllEarly.innerHTML = `<p class="muted" style="grid-column:1/-1;text-align:center;color:var(--text-light);padding:2rem;">Galerija se trenutno ne može učitati.</p>`;
+      });
   }
 
   // --- Gallery tabs (Sve slike / Prije-Poslije) ---
@@ -138,22 +148,25 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
-  // --- Gallery lightbox ---
+  // --- Gallery lightbox (re-bindable for dynamically-added tiles) ---
   const lightbox = document.querySelector('.lightbox');
   const lightboxImg = lightbox?.querySelector('img');
-  const galleryItems = document.querySelectorAll('.gallery-item');
-
-  galleryItems.forEach(item => {
-    item.addEventListener('click', () => {
-      const img = item.querySelector('img');
-      if (img && lightbox && lightboxImg) {
-        lightboxImg.src = img.src;
-        lightboxImg.alt = img.alt;
-        lightbox.classList.add('active');
-        document.body.style.overflow = 'hidden';
-      }
+  window.__rebindGalleryLightbox = function rebind() {
+    document.querySelectorAll('.gallery-item').forEach((item) => {
+      if (item.dataset.lbBound === "1") return;
+      item.dataset.lbBound = "1";
+      item.addEventListener('click', () => {
+        const img = item.querySelector('img');
+        if (img && lightbox && lightboxImg) {
+          lightboxImg.src = img.src;
+          lightboxImg.alt = img.alt;
+          lightbox.classList.add('active');
+          document.body.style.overflow = 'hidden';
+        }
+      });
     });
-  });
+  };
+  window.__rebindGalleryLightbox();
 
   if (lightbox) {
     lightbox.addEventListener('click', () => {

@@ -2,6 +2,7 @@ import { registerTab, must, api, toast, openModal, closeModal, escapeHtml, fmtDa
 import { renderTimeline } from "./timeline.js";
 import { renderWeekView, shiftWeek, mondayOf, weekLabel } from "./schedule-week.js";
 import { renderMonthView, shiftMonth, monthLabel } from "./schedule-month.js";
+import { renderClientCard } from "./client-card.js";
 
 const fromInput = document.getElementById("today-from");
 const toInput = document.getElementById("today-to");
@@ -546,6 +547,7 @@ async function onAction(e) {
 
   if (action === "cancel") {
     openModal("Otkaži termin", `
+      <div id="kk-host-cancel"></div>
       <p><strong>${escapeHtml(service)}</strong> — ${escapeHtml(name)}<br><span class="muted">${fmtDateTime(start)}</span></p>
       <div class="field">
         <label for="cancel-reason">Razlog (opciono, šalje se klijentu)</label>
@@ -556,6 +558,7 @@ async function onAction(e) {
         <button class="btn btn-danger" type="button" id="confirm-cancel">Otkaži termin</button>
       </div>
     `);
+    renderClientCard(document.getElementById("kk-host-cancel"), { phone, fallbackName: name, suppressIfMissing: true });
     document.getElementById("confirm-cancel").addEventListener("click", async () => {
       const reason = document.getElementById("cancel-reason").value.trim();
       try {
@@ -573,6 +576,7 @@ async function onAction(e) {
 
   if (action === "reject") {
     openModal("Odbij termin", `
+      <div id="kk-host-reject"></div>
       <p><strong>${escapeHtml(service)}</strong> — ${escapeHtml(name)}<br><span class="muted">${fmtDateTime(start)}</span></p>
       <p class="muted" style="font-size:0.88rem;">Klijent dobija poruku da termin nije moguć, bez poziva na novi termin.</p>
       <label class="check-row" for="reject-block" style="margin-top:0.5rem;">
@@ -584,6 +588,7 @@ async function onAction(e) {
         <button class="btn btn-danger" type="button" id="confirm-reject">Odbij termin</button>
       </div>
     `);
+    renderClientCard(document.getElementById("kk-host-reject"), { phone, fallbackName: name, suppressIfMissing: true });
     document.getElementById("confirm-reject").addEventListener("click", async () => {
       const block = document.getElementById("reject-block").checked;
       try {
@@ -603,6 +608,7 @@ async function onAction(e) {
   if (action === "reschedule") {
     const curLocal = new Date(start).toISOString().slice(0, 16);
     openModal("Pomjeri termin", `
+      <div id="kk-host-reschedule"></div>
       <p><strong>${escapeHtml(service)}</strong> — ${escapeHtml(name)}<br><span class="muted">Trenutno: ${fmtDateTime(start)}</span></p>
       <div class="field">
         <label for="new-start">Novo vrijeme</label>
@@ -613,6 +619,7 @@ async function onAction(e) {
         <button class="btn btn-primary" type="button" id="confirm-reschedule">Pomjeri</button>
       </div>
     `);
+    renderClientCard(document.getElementById("kk-host-reschedule"), { phone, fallbackName: name, suppressIfMissing: true });
     document.getElementById("confirm-reschedule").addEventListener("click", async () => {
       const local = document.getElementById("new-start").value;
       if (!local) return;

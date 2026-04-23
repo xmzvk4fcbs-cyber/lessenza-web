@@ -1154,6 +1154,92 @@
 }
 .gi-card__actions .btn { flex: 1; }
 
+/* Origin tag on each card — distinguishes seeded existing images from uploads */
+.gi-tag {
+  display: inline-block;
+  padding: 2px 8px;
+  font-size: 0.66rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  border-radius: 999px;
+  text-transform: lowercase;
+  backdrop-filter: blur(4px);
+}
+.gi-tag--seed { background: rgba(255,255,255,0.92); color: var(--text); border: 1px solid var(--champagne-deep); }
+.gi-tag--new  { background: var(--gold); color: #fff; }
+
+/* Badge for accordion summary — shows active item count */
+.gi-badge {
+  display: inline-block;
+  margin-left: 10px;
+  padding: 2px 10px;
+  background: var(--gold);
+  color: #fff;
+  font-family: var(--font-sans);
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  border-radius: 999px;
+  vertical-align: middle;
+  line-height: 1.6;
+}
+
+/* Polished upload card — used for both gi (regular) and gr (before/after) */
+.gi-upload-card {
+  background: var(--cream-soft, #FAF6F0);
+  border: 1px solid var(--champagne-deep);
+  border-radius: 12px;
+  padding: 14px 16px 16px;
+  margin-top: 0.75rem;
+}
+.gi-upload-card__head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+.gi-upload-card__icon {
+  width: 40px; height: 40px;
+  display: inline-flex;
+  align-items: center; justify-content: center;
+  background: #fff;
+  border: 1px solid var(--champagne-deep);
+  border-radius: 50%;
+  font-size: 1.15rem;
+  flex: 0 0 auto;
+}
+.gi-upload-card__title {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 1.1rem;
+  color: var(--sage, #6B7B5D);
+  line-height: 1.2;
+}
+.gi-upload-card__hint {
+  font-size: 0.78rem;
+  color: var(--text-light);
+  margin-top: 2px;
+}
+.gi-upload-card__grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 12px;
+}
+@media (min-width: 560px) {
+  .gi-upload-card__grid { grid-template-columns: 1fr 1fr; align-items: start; }
+}
+.gi-upload-card__grid--3 { grid-template-columns: 1fr; }
+@media (min-width: 700px) {
+  .gi-upload-card__grid--3 { grid-template-columns: 1fr 1fr; }
+}
+.gi-upload-card__footer {
+  margin-top: 12px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.gi-upload-card__footer .btn { white-space: nowrap; }
+
 /* === Skeleton loaders === */
 .skel {
   background: linear-gradient(
@@ -2198,3 +2284,173 @@
 }
 @media (min-width: 768px) { .admin-topbar__logo { height: 32px; } }
 .admin-brand-logo { filter: none; }
+
+/* ============================================
+   Karton klijenta — appears inside booking modals
+   ============================================ */
+.client-card {
+  margin: 0 0 14px;
+  padding: 14px 16px 12px;
+  background:
+    radial-gradient(140% 100% at 100% 0%, rgba(201, 169, 97, 0.10) 0%, transparent 60%),
+    linear-gradient(180deg, var(--white-warm, #FBF8F2) 0%, #fff 100%);
+  border: 1px solid rgba(217, 192, 154, 0.55);
+  border-radius: 12px;
+  position: relative;
+  overflow: hidden;
+}
+.client-card::before {
+  content: "";
+  position: absolute;
+  left: 0; top: 0; bottom: 0;
+  width: 3px;
+  background: linear-gradient(180deg, var(--gold) 0%, transparent 100%);
+}
+.client-card__head {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 6px;
+}
+.client-card__name {
+  font-family: 'Cormorant Garamond', Georgia, serif;
+  font-size: 1.2rem;
+  font-weight: 500;
+  color: var(--sage);
+  line-height: 1.1;
+  margin: 0;
+}
+.client-card__phone {
+  font-family: 'Outfit', sans-serif;
+  font-size: 0.78rem;
+  color: var(--text-light);
+  margin-left: auto;
+  font-variant-numeric: tabular-nums;
+}
+.client-card__badge {
+  display: inline-block;
+  padding: 1px 8px;
+  font-family: 'Outfit', sans-serif;
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  background: rgba(201, 169, 97, 0.18);
+  color: var(--gold);
+  border-radius: 10px;
+  vertical-align: middle;
+}
+.client-card__badge--new {
+  background: rgba(107, 111, 79, 0.13);
+  color: var(--sage);
+}
+.client-card__stats {
+  display: flex;
+  gap: 4px 14px;
+  font-family: 'Outfit', sans-serif;
+  font-size: 0.85rem;
+  color: var(--text);
+  flex-wrap: wrap;
+  margin: 4px 0 6px;
+}
+.client-card__stats strong {
+  font-family: 'Cormorant Garamond', Georgia, serif;
+  font-size: 1.05rem;
+  font-weight: 600;
+  color: var(--gold);
+  margin-right: 2px;
+}
+.client-card__stats .sep { color: var(--champagne-deep); }
+.client-card__services {
+  font-family: 'Outfit', sans-serif;
+  font-size: 0.82rem;
+  color: var(--text-light);
+  margin-top: 2px;
+}
+.client-card__services em {
+  font-style: italic;
+  color: var(--sage);
+  font-weight: 500;
+}
+.client-card__warn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 1px 8px;
+  font-family: 'Outfit', sans-serif;
+  font-size: 0.75rem;
+  background: rgba(139, 58, 62, 0.08);
+  color: #8B3A3E;
+  border: 1px solid rgba(139, 58, 62, 0.2);
+  border-radius: 10px;
+  margin-left: 6px;
+}
+.client-card__note {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px dashed rgba(217, 192, 154, 0.5);
+}
+.client-card__note-label {
+  font-family: 'Outfit', sans-serif;
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--gold);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+.client-card__note-label::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: linear-gradient(90deg, rgba(201, 169, 97, 0.3), transparent);
+}
+.client-card__note-status {
+  font-family: 'Outfit', sans-serif;
+  font-size: 0.72rem;
+  color: var(--text-light);
+  font-weight: 400;
+  letter-spacing: 0;
+  text-transform: none;
+  margin-left: 6px;
+  min-width: 70px;
+}
+.client-card__note-input {
+  width: 100%;
+  min-height: 56px;
+  padding: 8px 10px;
+  border: 1px solid var(--champagne-deep);
+  border-radius: 8px;
+  background: #fffdf9;
+  font: inherit;
+  font-family: 'Outfit', sans-serif;
+  font-size: 0.88rem;
+  color: var(--text);
+  resize: vertical;
+}
+.client-card__note-input:focus {
+  outline: 2px solid rgba(201, 169, 97, 0.18);
+  outline-offset: 0;
+  border-color: var(--gold);
+}
+.client-card__loading {
+  font-family: 'Cormorant Garamond', Georgia, serif;
+  font-style: italic;
+  font-size: 0.95rem;
+  color: var(--text-light);
+  padding: 8px 0;
+}
+.client-card__err {
+  font-family: 'Outfit', sans-serif;
+  font-size: 0.85rem;
+  color: #8B3A3E;
+  padding: 4px 0;
+}
+@media (min-width: 768px) {
+  .client-card { padding: 16px 18px 14px; }
+  .client-card__name { font-size: 1.3rem; }
+}

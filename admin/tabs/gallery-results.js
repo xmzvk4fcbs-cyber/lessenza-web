@@ -9,6 +9,13 @@ const uploadBtn = document.getElementById("gr-upload");
 const statusEl = document.getElementById("gr-status");
 const listEl = document.getElementById("gr-list");
 const bannerEl = document.getElementById("gr-banner");
+const badgeEl = document.getElementById("gr-badge");
+
+function updateBadge(count) {
+  if (!badgeEl) return;
+  if (count > 0) { badgeEl.textContent = String(count); badgeEl.hidden = false; }
+  else { badgeEl.hidden = true; }
+}
 
 if (uploadBtn && listEl) {
   renderList();
@@ -126,6 +133,7 @@ async function renderList() {
   listEl.innerHTML = `<p class="muted">Učitavanje…</p>`;
   try {
     const { results, trash, trashDays } = await must("/api/admin/gallery-results");
+    updateBadge(results.length);
     await refreshBanner(results.length);
     let html = "";
 
