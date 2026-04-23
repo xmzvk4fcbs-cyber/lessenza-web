@@ -1,4 +1,5 @@
 import { registerTab, must, toast, openModal, closeModal, escapeHtml, getServices } from "../admin.js";
+import { renderClientCard } from "./client-card.js";
 
 const filter = document.getElementById("inq-filter");
 const dayFilter = document.getElementById("inq-day");
@@ -134,6 +135,7 @@ function openAccept(card) {
   const serviceId = card.dataset.service;
   const desired = card.dataset.desired;
   openModal("Prihvati upit", `
+    <div id="kk-host-acc"></div>
     <p>Zakaži termin za <strong>${escapeHtml(card.dataset.name)}</strong>.</p>
     <div class="field">
       <label for="acc-date">Datum</label>
@@ -156,6 +158,13 @@ function openAccept(card) {
       <button class="btn btn-primary" type="button" id="acc-confirm">Prihvati</button>
     </div>
   `);
+
+  // Show client karton if we recognize this phone from past visits.
+  renderClientCard(document.getElementById("kk-host-acc"), {
+    phone: card.dataset.phone || "",
+    fallbackName: card.dataset.name || "",
+    suppressIfMissing: true,
+  });
 
   const dateEl = document.getElementById("acc-date");
   const slotsEl = document.getElementById("acc-slots");
@@ -231,6 +240,7 @@ function openAccept(card) {
 function openDecline(card) {
   const id = card.dataset.id;
   openModal("Odbij upit", `
+    <div id="kk-host-dec"></div>
     <div class="field">
       <label for="dec-reason">Razlog (opciono, šalje se klijentu)</label>
       <input id="dec-reason" type="text" maxlength="200" placeholder="npr. godišnji odmor">
@@ -240,6 +250,11 @@ function openDecline(card) {
       <button class="btn btn-danger" type="button" id="dec-confirm">Odbij</button>
     </div>
   `);
+  renderClientCard(document.getElementById("kk-host-dec"), {
+    phone: card.dataset.phone || "",
+    fallbackName: card.dataset.name || "",
+    suppressIfMissing: true,
+  });
   document.getElementById("dec-confirm").addEventListener("click", async () => {
     const reason = document.getElementById("dec-reason").value.trim();
     try {

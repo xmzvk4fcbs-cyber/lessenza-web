@@ -403,8 +403,8 @@ function wireTimelineClicks(host) {
       const start = el.dataset.start;
       const eventId = el.dataset.eventId;
       openModal(`${service} — ${name}`, `
+        <div id="kk-host-tl"></div>
         <p class="muted">${fmtDateTime(start)}</p>
-        ${phone ? `<p>📞 ${escapeHtml(phone)}</p>` : ""}
         <div class="stack-card__actions">
           ${phone ? `<a class="btn btn-ghost" href="tel:${escapeHtml(phone)}">Pozovi</a>` : ""}
           ${phone ? `<a class="btn btn-ghost" href="https://wa.me/${escapeHtml(phone).replace(/[^\d]/g, '')}" target="_blank" rel="noopener">WhatsApp</a>` : ""}
@@ -414,6 +414,7 @@ function wireTimelineClicks(host) {
           <button class="btn btn-danger" type="button" id="tl-cancel">Otkaži</button>
         </div>
       `);
+      renderClientCard(document.getElementById("kk-host-tl"), { phone, fallbackName: name, suppressIfMissing: true });
       document.getElementById("tl-swap").onclick = () => {
         closeModal();
         openSwapModal({ eventId, name, phone, service, start });
@@ -987,8 +988,8 @@ function openItemMenu(item) {
   const eventId = item.eventId || "";
   const when = start ? fmtDateTime(start) : "";
   openModal(`${escapeHtml(service)} — ${escapeHtml(name)}`, `
+    <div id="kk-host-week"></div>
     <p class="muted">${escapeHtml(when)}</p>
-    ${phone ? `<p>📞 ${escapeHtml(phone)}</p>` : ""}
     <div class="stack-card__actions">
       ${phone ? `<a class="btn btn-ghost" href="tel:${escapeHtml(phone)}">Pozovi</a>` : ""}
       ${phone ? `<a class="btn btn-ghost" href="https://wa.me/${escapeHtml(phone).replace(/[^\d]/g, "")}" target="_blank" rel="noopener">WhatsApp</a>` : ""}
@@ -997,6 +998,7 @@ function openItemMenu(item) {
       <button class="btn btn-danger" type="button" id="wk-cancel">Otkaži</button>
     </div>
   `);
+  renderClientCard(document.getElementById("kk-host-week"), { phone, fallbackName: name, suppressIfMissing: true });
   const dispatch = (action) => {
     closeModal();
     const fakeCard = document.createElement("div");
