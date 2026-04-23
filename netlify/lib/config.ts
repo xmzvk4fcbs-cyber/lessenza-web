@@ -12,6 +12,7 @@ import {
   GalleryResultsSchema,
   GalleryItemsSchema,
   DismissedSuggestionsSchema,
+  ClientNoteSchema,
   type Service,
   type WorkingHours,
   type Settings,
@@ -22,6 +23,7 @@ import {
   type GalleryResult,
   type GalleryItem,
   type DismissedSuggestion,
+  type ClientNote,
 } from "./schemas";
 import { DEFAULT_SERVICES, DEFAULT_WORKING_HOURS, DEFAULT_PARALLEL_PAIRS } from "./defaults";
 
@@ -244,5 +246,40 @@ export async function getGalleryItems(): Promise<GalleryItem[]> {
 export async function saveGalleryItems(list: GalleryItem[]): Promise<GalleryItem[]> {
   const validated = GalleryItemsSchema.parse(list);
   await store().setJSON(KEY_GALLERY_ITEMS, validated);
+  return validated;
+}
+
+// ---------- Client notes (owner-only, never sent to clients) ----------
+const CLIENT_NOTE_PREFIX = "client-notes/";
+
+function clientNoteKey(phoneE164: string): string {
+  // Filename-safe: keep digits and "+", drop everything else.
+  const safe = phoneE164.replace(/[^\d+]/g, "");
+  return `${CLIENT_NOTE_PREFIX}${encodeURIComponent(safe)}.json`;
+}
+
+export async function getClientNote(phoneE164: string): Promise<ClientNote | null> {
+  if (!phoneE164) return null;
+  const raw = await store().getJSON<unknown>(clientNoteKey(phoneE164));
+  if (!raw) return null;
+  const r = ClientNoteSchema.safeParse(raw);
+  return r.success ? r.data : null;
+}
+
+export async function setClientNote(phoneE164: string, text: string): Promise<ClientNote> {
+  if (!phoneE164) throw new Error("phoneE164 required");
+  const trimmed = (text ?? "").slice(0, 1000);
+  if (!trimmed) {
+    // Empty note → delete the file entirely.
+    await store().delete(clientNoteKey(phoneE164));
+    return { phoneE164, text: "", updatedAt: new Date().toISOString() };
+  }
+  const note: ClientNote = {
+    phoneE164,
+    text: trimmed,
+    updatedAt: new Date().toISOString(),
+  };
+  const validated = ClientNoteSchema.parse(note);
+  await store().setJSON(clientNoteKey(phoneE164), validated);
   return validated;
 }

@@ -114,6 +114,14 @@ export const DismissedSuggestionSchema = z.object({
 });
 export type DismissedSuggestion = z.infer<typeof DismissedSuggestionSchema>;
 export const DismissedSuggestionsSchema = z.array(DismissedSuggestionSchema);
+
+/** Owner-only private note attached to a client by phoneE164. Never sent to clients. */
+export const ClientNoteSchema = z.object({
+  phoneE164: z.string().min(4).max(32),
+  text: z.string().max(1000).default(""),
+  updatedAt: z.string().datetime(),
+});
+export type ClientNote = z.infer<typeof ClientNoteSchema>;
 export type Settings = z.infer<typeof SettingsSchema>;
 
 // ----- Gallery results (Prije / Poslije) -----
