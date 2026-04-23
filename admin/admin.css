@@ -1119,17 +1119,23 @@
 /* Regular-gallery admin grid */
 .gi-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
-  gap: 10px;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 12px;
+}
+@media (max-width: 480px) {
+  .gi-grid { grid-template-columns: repeat(2, 1fr); gap: 10px; }
 }
 .gi-card {
   background: #fff;
   border: 1px solid var(--champagne-deep);
-  border-radius: 10px;
+  border-radius: 12px;
   overflow: hidden;
   display: flex;
   flex-direction: column;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.04);
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
 }
+.gi-card:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(0,0,0,0.08); }
 .gi-card__img-wrap { position: relative; }
 .gi-card img {
   display: block;
@@ -1138,7 +1144,7 @@
   object-fit: cover;
 }
 .gi-card__alt {
-  padding: 6px 10px 4px;
+  padding: 8px 10px 6px;
   font-size: 0.8rem;
   color: var(--text-light);
   border-top: 1px solid var(--champagne-deep);
@@ -1148,11 +1154,20 @@
 }
 .gi-card__actions {
   display: flex;
-  gap: 4px;
-  padding: 6px 8px;
+  gap: 6px;
+  padding: 8px;
   border-top: 1px solid var(--champagne-deep);
 }
-.gi-card__actions .btn { flex: 1; }
+.gi-card__actions .btn {
+  flex: 1;
+  min-height: 36px;
+  padding: 8px 10px;
+  font-size: 0.78rem;
+  white-space: nowrap;
+}
+@media (max-width: 480px) {
+  .gi-card__actions .btn { min-height: 40px; font-size: 0.82rem; }
+}
 
 /* Origin tag on each card — distinguishes seeded existing images from uploads */
 .gi-tag {

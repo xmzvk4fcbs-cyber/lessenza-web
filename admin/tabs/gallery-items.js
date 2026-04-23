@@ -92,12 +92,15 @@ async function renderList() {
     updateBadge(items.length);
     let html = "";
     if (!items.length) {
-      html += `<p class="muted">Još nema dodanih slika.</p>`;
+      html += `<p class="muted">Još nema slika u galeriji.</p>`;
     } else {
+      const seedCount = items.filter((i) => typeof i.id === "string" && i.id.startsWith("seed-")).length;
+      const newCount = items.length - seedCount;
+      html += `<div class="muted" style="font-size:0.82rem;margin:0.5rem 0 0.75rem;">Aktivno: <strong>${items.length}</strong>${newCount ? ` · nove: ${newCount}` : ""}${seedCount ? ` · postojeće: ${seedCount}` : ""}</div>`;
       html += `<div class="gi-grid">${items.map((it) => renderCard(it, false, trashDays)).join("")}</div>`;
     }
     if (trash && trash.length) {
-      html += `<div class="gr-trash-hd">🗑 U košu (vraća se za ${trashDays} dana)</div>`;
+      html += `<div class="gr-trash-hd">🗑 U košu (${trash.length}) — vraća se za ${trashDays} dana</div>`;
       html += `<div class="gi-grid">${trash.map((it) => renderCard(it, true, trashDays)).join("")}</div>`;
     }
     listEl.innerHTML = html;
@@ -119,9 +122,9 @@ function renderCard(it, trashed, trashDays) {
     ? `<span class="gr-chip gr-chip--trash" style="position:absolute;top:6px;left:6px;">${it.daysLeft ?? trashDays} dana</span>`
     : seedTag;
   const actions = trashed
-    ? `<button class="btn btn-ghost" type="button" data-restore="${escapeHtml(it.id)}" style="padding:4px 10px;font-size:0.8rem;">↩ Vrati</button>
-       <button class="btn btn-danger" type="button" data-hard="${escapeHtml(it.id)}" style="padding:4px 10px;font-size:0.8rem;">Trajno</button>`
-    : `<button class="btn btn-danger" type="button" data-soft="${escapeHtml(it.id)}" style="padding:4px 10px;font-size:0.8rem;">Obriši</button>`;
+    ? `<button class="btn btn-primary" type="button" data-restore="${escapeHtml(it.id)}">↩ Vrati</button>
+       <button class="btn btn-danger" type="button" data-hard="${escapeHtml(it.id)}">Trajno</button>`
+    : `<button class="btn btn-danger" type="button" data-soft="${escapeHtml(it.id)}">Obriši</button>`;
   return `
     <div class="gi-card">
       <div class="gi-card__img-wrap" style="position:relative;">
