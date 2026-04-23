@@ -503,6 +503,7 @@ function renderCard(a) {
         <a class="btn btn-ghost" data-action="viber">💜 Viber</a>
         <button class="btn btn-ghost" type="button" data-action="reschedule">✏️ Pomjeri</button>
         <button class="btn btn-ghost" type="button" data-action="swap">🔄 Zamijeni</button>
+        <button class="btn btn-ghost" type="button" data-action="noshow">⊘ Nije došla</button>
         <button class="btn btn-ghost" type="button" data-action="reject">🚫 Odbij</button>
         <button class="btn btn-danger" type="button" data-action="cancel">✕ Otkaži</button>
       </div>
@@ -640,6 +641,29 @@ async function onAction(e) {
 
   if (action === "swap") {
     await openSwapModal({ eventId, name, phone, service, start });
+    return;
+  }
+
+  if (action === "noshow") {
+    openModal("Označi 'nije došla'", `
+      <p><strong>${escapeHtml(service)}</strong> — ${escapeHtml(name)}<br><span class="muted">${fmtDateTime(start)}</span></p>
+      <p class="muted" style="font-size:0.88rem;">Termin se briše iz Google kalendara, a klijentkinja se broji u no-show statistici (vidiš u kartonu pri sljedećem zakazivanju).</p>
+      <p class="muted" style="font-size:0.85rem;">Ne šalje se nikakva poruka klijentu.</p>
+      <div class="stack-card__actions" style="margin-top:0.75rem;">
+        <button class="btn btn-ghost" type="button" data-close="1">Nazad</button>
+        <button class="btn btn-danger" type="button" id="confirm-noshow">Da, nije došla</button>
+      </div>
+    `);
+    document.getElementById("confirm-noshow").addEventListener("click", async () => {
+      try {
+        const r = await must("/api/admin/no-show", { method: "POST", body: { eventId } });
+        closeModal();
+        toast(`Označeno · ${r.count}× ukupno za ovaj broj.`, "success");
+        await renderList();
+      } catch (err) {
+        toast(err.message, "error");
+      }
+    });
     return;
   }
 }

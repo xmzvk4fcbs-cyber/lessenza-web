@@ -1,7 +1,7 @@
 import type { Handler } from "@netlify/functions";
 import { json, badRequest, methodNotAllowed } from "../lib/http";
 import { adminGuard } from "../lib/admin-guard";
-import { getClientNote, getServices, getSettings } from "../lib/config";
+import { getClientNote, getServices, getSettings, getNoShows } from "../lib/config";
 import { createCalendarClient, createCalendarClientAsync, type CalendarClient } from "../lib/calendar";
 import { eventToBooking } from "../lib/calendar-domain";
 import { normalizePhone } from "../lib/phone";
@@ -55,6 +55,7 @@ const inner: Handler = async (event) => {
 
   const summary = summarizeClientHistory(visits);
   const note = await getClientNote(phoneE164);
+  const noShows = await getNoShows(phoneE164);
 
   return json({
     phoneE164,
@@ -62,6 +63,7 @@ const inner: Handler = async (event) => {
     summary,
     nextBookingISO: nextBookingISO ?? null,
     note: note ? { text: note.text, updatedAt: note.updatedAt } : null,
+    noShowCount: noShows.length,
   });
 };
 

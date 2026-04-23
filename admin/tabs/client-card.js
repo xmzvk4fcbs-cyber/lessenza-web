@@ -83,6 +83,9 @@ export async function renderClientCard(host, opts) {
   if (s.cancellationCount && s.cancellationCount > 0) {
     warn = `<span class="client-card__warn">⚠ ${s.cancellationCount}× otkazala</span>`;
   }
+  if (data.noShowCount && data.noShowCount > 0) {
+    warn += `<span class="client-card__warn">🚫 ${data.noShowCount}× nije došla</span>`;
+  }
 
   const noteId = `cc-note-${Math.random().toString(36).slice(2, 8)}`;
   const statusId = `cc-status-${Math.random().toString(36).slice(2, 8)}`;

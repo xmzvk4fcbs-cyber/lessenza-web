@@ -13,6 +13,7 @@ import {
   GalleryItemsSchema,
   DismissedSuggestionsSchema,
   ClientNoteSchema,
+  NoShowsSchema,
   type Service,
   type WorkingHours,
   type Settings,
@@ -24,6 +25,7 @@ import {
   type GalleryItem,
   type DismissedSuggestion,
   type ClientNote,
+  type NoShow,
 } from "./schemas";
 import { DEFAULT_SERVICES, DEFAULT_WORKING_HOURS, DEFAULT_PARALLEL_PAIRS } from "./defaults";
 
@@ -282,4 +284,30 @@ export async function setClientNote(phoneE164: string, text: string): Promise<Cl
   const validated = ClientNoteSchema.parse(note);
   await store().setJSON(clientNoteKey(phoneE164), validated);
   return validated;
+}
+
+// ---------- No-shows (owner-only) ----------
+const NO_SHOW_PREFIX = "no-shows/";
+
+function noShowKey(phoneE164: string): string {
+  const safe = phoneE164.replace(/[^\d+]/g, "");
+  return `${NO_SHOW_PREFIX}${encodeURIComponent(safe)}.json`;
+}
+
+export async function getNoShows(phoneE164: string): Promise<NoShow[]> {
+  if (!phoneE164) return [];
+  const raw = await store().getJSON<unknown>(noShowKey(phoneE164));
+  if (!raw) return [];
+  const r = NoShowsSchema.safeParse(raw);
+  return r.success ? r.data : [];
+}
+
+export async function recordNoShow(phoneE164: string, entry: NoShow): Promise<NoShow[]> {
+  if (!phoneE164) throw new Error("phoneE164 required");
+  const current = await getNoShows(phoneE164);
+  // Dedupe by eventId — clicking "nije došla" twice on the same event is a no-op.
+  const filtered = current.filter((x) => x.eventId !== entry.eventId);
+  const next = NoShowsSchema.parse([entry, ...filtered]);
+  await store().setJSON(noShowKey(phoneE164), next);
+  return next;
 }
