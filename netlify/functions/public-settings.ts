@@ -21,5 +21,6 @@ export const handler: Handler = async (event) => {
     showPrices: s.showPrices,
     priceCurrency: s.priceCurrency,
     showBeforeAfter: s.showBeforeAfter,
+    analyticsScript: s.analyticsScript ?? "",
   });
 };

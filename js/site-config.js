@@ -213,6 +213,34 @@
     });
   }
 
+  /** Inject the analyticsScript snippet from settings exactly once.
+   *  Supports two flavors: a full <script>…</script> tag (Plausible/Cloudflare/Umami)
+   *  or raw JS body. We re-create the <script> node so the browser executes it. */
+  function injectAnalytics(snippet) {
+    if (!snippet || typeof snippet !== "string") return;
+    if (document.querySelector("script[data-analytics-injected]")) return;
+    const tagMatch = snippet.match(/<script\b([^>]*)>([\s\S]*?)<\/script>/i);
+    const s = document.createElement("script");
+    s.setAttribute("data-analytics-injected", "1");
+    if (tagMatch) {
+      const attrRe = /([a-z\-]+)(?:="([^"]*)")?/gi;
+      let m;
+      while ((m = attrRe.exec(tagMatch[1] || ""))) {
+        if (m[1].toLowerCase() === "src") s.setAttribute("src", m[2] || "");
+        else if (m[2] != null) s.setAttribute(m[1], m[2]);
+        else s.setAttribute(m[1], "");
+      }
+      const body = (tagMatch[2] || "").trim();
+      if (body) s.textContent = body;
+    } else {
+      s.textContent = snippet;
+    }
+    document.head.appendChild(s);
+  }
+
   // Fetch + apply as early as possible
-  loadSettings().then(apply);
+  loadSettings().then((settings) => {
+    apply(settings);
+    if (settings && settings.analyticsScript) injectAnalytics(settings.analyticsScript);
+  });
 })();

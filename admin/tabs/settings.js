@@ -37,6 +37,9 @@ const FIELDS = [
   ["reminderEmailEnabled", "Slati podsjetnik klijentu dan prije", "checkbox", {}],
   ["dailyDigestEnabled", "Slati dnevni pregled vlasnici u 20h", "checkbox", {}],
 
+  // --- Analytics (opciono) ---
+  ["analyticsScript", "Analytics skripta (zalijepi <script> iz Plausible / Cloudflare / Umami — prazno = bez praćenja)", "textarea", { maxlength: 2000, rows: 4, placeholder: '<script defer data-domain="lessenza.me" src="https://plausible.io/js/script.js"></script>' }],
+
   // --- Pametni predlozi (dashboard) ---
   ["suggestLapsedRegulars", "Predlozi: klijentkinje koje dugo nisu bile", "checkbox", {}],
   ["suggestSparseDays", "Predlozi: slabo popunjeni predstojeći dani", "checkbox", {}],
@@ -68,10 +71,13 @@ async function render() {
       `;
     }
     if (type === "textarea") {
+      const max = opts.maxlength ?? 500;
+      const rows = opts.rows ?? 3;
+      const ph = opts.placeholder ? ` placeholder="${escapeHtml(opts.placeholder)}"` : "";
       return `
         <div class="field">
           <label for="st-${key}">${label}</label>
-          <textarea id="st-${key}" rows="3" maxlength="500">${(value ?? "").replace(/</g, "&lt;")}</textarea>
+          <textarea id="st-${key}" rows="${rows}" maxlength="${max}"${ph}>${(value ?? "").replace(/</g, "&lt;")}</textarea>
         </div>
       `;
     }
@@ -96,7 +102,7 @@ saveBtn.addEventListener("click", async () => {
     else payload[key] = el.value;
   }
   // Strip empty optional fields so Zod accepts as undefined
-  for (const k of ["ownerEmail", "ownerPhone", "publicPhone", "publicEmail", "whatsappPhone", "instagramUrl"]) {
+  for (const k of ["ownerEmail", "ownerPhone", "publicPhone", "publicEmail", "whatsappPhone", "instagramUrl", "analyticsScript"]) {
     if (!payload[k]) delete payload[k];
   }
   try {

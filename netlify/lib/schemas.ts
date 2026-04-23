@@ -100,6 +100,9 @@ export const SettingsSchema = z.object({
   /** When true, the /galerija.html "Prije / Poslije" tab is visible. */
   showBeforeAfter: z.boolean().default(false),
 
+  /** Optional analytics snippet (e.g. Plausible / Cloudflare / Umami <script> tag) injected on every public page. */
+  analyticsScript: z.string().max(2000).optional(),
+
   /** Pametni predlozi — per-category toggles on the admin dashboard. */
   suggestLapsedRegulars: z.boolean().default(true),
   suggestSparseDays: z.boolean().default(true),
@@ -122,6 +125,17 @@ export const ClientNoteSchema = z.object({
   updatedAt: z.string().datetime(),
 });
 export type ClientNote = z.infer<typeof ClientNoteSchema>;
+
+/** A single "klijentkinja nije došla" event. Stored per-phone in an array. */
+export const NoShowSchema = z.object({
+  eventId: z.string().min(1).max(200),
+  dateISO: z.string().datetime(),
+  serviceName: z.string().max(80).optional(),
+  name: z.string().max(120).optional(),
+  markedAt: z.string().datetime(),
+});
+export type NoShow = z.infer<typeof NoShowSchema>;
+export const NoShowsSchema = z.array(NoShowSchema);
 export type Settings = z.infer<typeof SettingsSchema>;
 
 // ----- Gallery results (Prije / Poslije) -----
