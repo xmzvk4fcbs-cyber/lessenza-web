@@ -46,6 +46,10 @@
 html {
   scroll-behavior: smooth;
   -webkit-font-smoothing: antialiased;
+  overflow-x: hidden;
+  /* Belt-and-suspenders: some iOS Safari versions ignore overflow-x on body
+     when a descendant is wider than the viewport (e.g. hero bokeh span).   */
+  max-width: 100vw;
 }
 
 body {
@@ -56,7 +60,13 @@ body {
   line-height: 1.7;
   font-size: 16px;
   overflow-x: hidden;
+  max-width: 100vw;
+  position: relative;
 }
+
+/* Nothing should be wider than the viewport on mobile. Hard stop. */
+img, video, iframe, svg, canvas { max-width: 100%; }
+section, header, footer, nav, main, article { max-width: 100vw; }
 
 img {
   max-width: 100%;
@@ -1835,6 +1845,23 @@ h2 em {
   background: var(--cream-soft);
   padding: 1px 6px;
   border-radius: 3px;
+}
+
+/* --- Values grid on O Nama (3 cards, responsive) --- */
+.values-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 24px;
+  max-width: 1000px;
+  margin: 0 auto;
+}
+.values-grid > div {
+  text-align: center;
+  padding: 32px 24px;
+}
+@media (min-width: 768px) {
+  .values-grid { gap: 40px; }
+  .values-grid > div { padding: 40px 30px; }
 }
 
 /* --- Testimonials (homepage) --- */
