@@ -11,6 +11,7 @@ import { getMailer, getMailerAsync, type Mailer } from "../lib/mailer";
 import { bookingConfirmedToClient, bookingCreatedToOwner } from "../lib/email-templates";
 import { isHoneypotTriggered } from "../lib/honeypot";
 import { rateLimitAllow, clientIP } from "../lib/rate-limit";
+import { makeCancelToken } from "../lib/cancel-token";
 
 interface Deps {
   makeCalendar: () => CalendarClient;
@@ -138,11 +139,24 @@ export const handler: Handler = async (event) => {
     bookingId, startISO: booking.startISO, service: booking.serviceName,
     clientEmail: booking.email ?? "-", ownerEmail: settings.ownerEmail ?? "-",
   }));
+  // Build a self-cancel link the client can use from their email.
+  // Skipped silently if event id is missing or token signing isn't configured.
+  let cancelUrl: string | undefined;
+  if (booking.calendarEventId) {
+    try {
+      const siteUrl = (process.env.SITE_URL || "https://lessenza.me").replace(/\/$/, "");
+      const t = makeCancelToken(booking.calendarEventId);
+      cancelUrl = `${siteUrl}/cancel.html?t=${encodeURIComponent(t)}`;
+    } catch (e) {
+      console.warn("[book][cancel-token] not generated:", (e as Error).message);
+    }
+  }
+
   const sends: Array<Promise<unknown>> = [];
   if (booking.email) {
     sends.push(
       mailer
-        .send(bookingConfirmedToClient(booking, { salonAddress: settings.salonAddress, ownerPhone: settings.ownerPhone }))
+        .send(bookingConfirmedToClient(booking, { salonAddress: settings.salonAddress, ownerPhone: settings.ownerPhone, cancelUrl }))
         .then((id) => console.log(`[book][client-confirm] sent → ${booking.email} id=${id}`))
         .catch((e) => console.error(`[book][client-confirm] FAILED → ${booking.email}:`, e.message))
     );

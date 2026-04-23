@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="sr-Latn">
+<head>
+  <meta charset="UTF-8">
+  <meta name="google-site-verification" content="IMYhkz0OrufnGoWXA4Wt6hQ_dayJ0mt84J4gPimtZE8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Otkazivanje termina — L'Essenza</title>
+  <meta name="robots" content="noindex,nofollow">
+  <link rel="canonical" href="https://lessenza.me/cancel.html">
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="icon" type="image/png" sizes="32x32" href="/img/favicon-32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/img/favicon-16.png">
+  <link rel="shortcut icon" href="/img/favicon.ico">
+  <meta name="theme-color" content="#c9a96e">
+  <style>
+    .cancel-wrap {
+      max-width: 540px;
+      margin: 0 auto;
+      padding: 60px 24px 80px;
+      text-align: center;
+    }
+    .cancel-card {
+      background: var(--cream-soft, #F9F2E5);
+      border: 1px solid var(--champagne-deep, #D9C09A);
+      border-radius: 14px;
+      padding: 32px 28px;
+      text-align: left;
+    }
+    .cancel-card h1 {
+      font-family: 'Cormorant Garamond', Georgia, serif;
+      font-weight: 500;
+      color: var(--sage, #6B6F4F);
+      margin: 0 0 14px;
+      text-align: center;
+      font-size: 1.5rem;
+    }
+    .cancel-summary {
+      background: rgba(255, 255, 255, 0.7);
+      border-left: 3px solid var(--gold, #c9a96e);
+      padding: 14px 16px;
+      margin: 0 0 18px;
+      border-radius: 0 8px 8px 0;
+      font-size: 0.95rem;
+      line-height: 1.5;
+    }
+    .cancel-summary strong { color: var(--sage, #6B6F4F); display: block; margin-bottom: 4px; font-family: 'Cormorant Garamond', Georgia, serif; font-size: 1.15rem; }
+    .cancel-actions { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; margin-top: 16px; }
+    .cancel-actions .btn { min-width: 140px; }
+    .cancel-state {
+      padding: 16px;
+      border-radius: 10px;
+      text-align: center;
+      font-size: 0.95rem;
+      line-height: 1.5;
+    }
+    .cancel-state--ok { background: rgba(110, 156, 106, 0.12); color: #3e7a4a; border: 1px solid rgba(110, 156, 106, 0.3); }
+    .cancel-state--err { background: rgba(139, 58, 62, 0.08); color: #8B3A3E; border: 1px solid rgba(139, 58, 62, 0.25); }
+    .cancel-state--info { background: rgba(201, 169, 97, 0.08); color: var(--sage, #6B6F4F); border: 1px solid rgba(217, 192, 154, 0.45); }
+    .cancel-state h2 { font-family: 'Cormorant Garamond', Georgia, serif; font-weight: 500; margin: 0 0 8px; font-size: 1.25rem; }
+    .cancel-state p { margin: 6px 0 0; }
+    .cancel-state a { color: var(--gold, #c9a96e); }
+    .muted-link { display: inline-block; margin-top: 18px; color: var(--gold, #c9a96e); text-decoration: none; font-size: 0.9rem; }
+  </style>
+</head>
+<body>
+
+<header class="header">
+  <div class="header__inner">
+    <a href="index.html" class="header__logo" aria-label="L'Essenza Beauty Salon">
+      <img src="img/logo-wordmark.png" alt="L'Essenza Beauty Salon">
+    </a>
+  </div>
+</header>
+
+<section class="section cancel-wrap">
+
+  <!-- Loading state -->
+  <div id="loading" class="cancel-state cancel-state--info">
+    <h2>Učitavanje…</h2>
+    <p>Provjeravamo vaš termin.</p>
+  </div>
+
+  <!-- Confirm state: show booking + ask -->
+  <div id="confirm" hidden>
+    <div class="cancel-card">
+      <h1>Otkazivanje termina</h1>
+      <div id="cancel-summary" class="cancel-summary">
+        <strong id="cs-service">—</strong>
+        <span id="cs-when">—</span><br>
+        <span id="cs-name" style="color:#7A6F62;font-size:0.88rem;"></span>
+      </div>
+      <p style="text-align:center;margin:8px 0 0;color:#7A6F62;">Da li sigurno želite otkazati ovaj termin?</p>
+      <div class="cancel-actions">
+        <button id="btn-cancel" class="btn btn-primary" type="button">Da, otkaži</button>
+        <a class="btn btn-ghost" href="index.html">Ne, vrati me na sajt</a>
+      </div>
+    </div>
+  </div>
+
+  <!-- Success state -->
+  <div id="done" class="cancel-state cancel-state--ok" hidden>
+    <h2>Termin otkazan ✓</h2>
+    <p>Vaš termin je otkazan. Hvala što ste nas obavijestili.</p>
+    <p>Ako želite drugi termin, slobodno <a href="zakazivanje.html">zakažite novi</a>.</p>
+  </div>
+
+  <!-- Error states -->
+  <div id="too-late" class="cancel-state cancel-state--info" hidden>
+    <h2>Otkazivanje uskoro</h2>
+    <p>Termin je manje od <strong>24 sata</strong> daleko, online otkazivanje više nije moguće.</p>
+    <p>Molimo vas <a id="too-late-tel" href="tel:">pozovite salon</a> ili napišite na WhatsApp.</p>
+  </div>
+
+  <div id="not-found" class="cancel-state cancel-state--err" hidden>
+    <h2>Termin nije pronađen</h2>
+    <p>Ovaj termin već je otkazan ili ne postoji. Ako mislite da je greška, pišite nam.</p>
+    <a class="muted-link" href="index.html">← Vrati se na sajt</a>
+  </div>
+
+  <div id="bad-token" class="cancel-state cancel-state--err" hidden>
+    <h2>Neispravan link</h2>
+    <p>Otkazivanje koristi link iz vašeg potvrdnog email-a. Otvorite link iz email-a još jednom, ili nas <a href="kontakt.html">kontaktirajte</a>.</p>
+  </div>
+
+  <div id="fail" class="cancel-state cancel-state--err" hidden>
+    <h2>Greška</h2>
+    <p id="fail-msg">Nešto je pošlo po zlu. Probajte ponovo za par minuta ili nas pozovite.</p>
+  </div>
+
+</section>
+
+<script>
+(async function () {
+  const $ = (id) => document.getElementById(id);
+  const params = new URLSearchParams(location.search);
+  const token = params.get("t") || "";
+
+  function show(id) {
+    ["loading","confirm","done","too-late","not-found","bad-token","fail"].forEach((x) => {
+      const el = $(x);
+      if (el) el.hidden = (x !== id);
+    });
+  }
+
+  if (!token) { show("bad-token"); return; }
+
+  // 1. Fetch booking summary.
+  let info;
+  try {
+    const r = await fetch("/api/public-cancel?t=" + encodeURIComponent(token), {
+      cache: "no-store",
+      headers: { "cache-control": "no-cache" },
+    });
+    info = await r.json().catch(() => ({}));
+    if (!r.ok) {
+      if (r.status === 401 || info.error === "bad-signature" || info.error === "malformed") return show("bad-token");
+      if (r.status === 404 || info.error === "not-found") return show("not-found");
+      if (info.error === "too-late") {
+        if (info.ownerPhone) {
+          $("too-late-tel").href = "tel:" + info.ownerPhone.replace(/\s+/g, "");
+        }
+        return show("too-late");
+      }
+      $("fail-msg").textContent = info.message || "HTTP " + r.status;
+      return show("fail");
+    }
+  } catch (e) {
+    $("fail-msg").textContent = e.message || "Mreža nedostupna.";
+    return show("fail");
+  }
+
+  // 2. Render summary + ask.
+  $("cs-service").textContent = info.serviceName || "Termin";
+  $("cs-when").textContent = info.whenLabel || "";
+  $("cs-name").textContent = info.name ? "za " + info.name : "";
+  show("confirm");
+
+  // 3. Confirm → POST cancel.
+  $("btn-cancel").addEventListener("click", async () => {
+    $("btn-cancel").disabled = true;
+    $("btn-cancel").textContent = "Otkazujem…";
+    try {
+      const r = await fetch("/api/public-cancel", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ t: token }),
+      });
+      const body = await r.json().catch(() => ({}));
+      if (r.ok) return show("done");
+      if (body.error === "too-late") {
+        if (body.ownerPhone) $("too-late-tel").href = "tel:" + body.ownerPhone.replace(/\s+/g, "");
+        return show("too-late");
+      }
+      if (body.error === "not-found") return show("not-found");
+      if (body.error === "bad-signature" || body.error === "malformed") return show("bad-token");
+      $("fail-msg").textContent = body.message || "HTTP " + r.status;
+      show("fail");
+    } catch (e) {
+      $("fail-msg").textContent = e.message || "Mreža nedostupna.";
+      show("fail");
+    }
+  });
+})();
+</script>
+
+</body>
+</html>

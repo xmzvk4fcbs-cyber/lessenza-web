@@ -130,9 +130,13 @@ function replyNote(): string {
 // Templates
 // ---------------------------------------------------------------------------
 
-export function bookingConfirmedToClient(b: Booking, _ctx: ClientTemplateCtx): EmailMessage {
+export function bookingConfirmedToClient(
+  b: Booking,
+  _ctx: ClientTemplateCtx & { cancelUrl?: string }
+): EmailMessage {
   if (!b.email) throw new Error("Booking has no client email");
   const dateLine = formatDateHuman(b.startISO);
+  const cancelUrl = _ctx.cancelUrl;
   const text = [
     `Zdravo ${b.name},`,
     ``,
@@ -142,11 +146,21 @@ export function bookingConfirmedToClient(b: Booking, _ctx: ClientTemplateCtx): E
     `Kada: ${dateLine}`,
     `Gdje: ${_ctx.salonAddress}`,
     ``,
+    cancelUrl
+      ? `Ne mozete doci? Otkazi termin (najkasnije 24h prije):\n${cancelUrl}\n`
+      : "",
     `Za izmjene — odgovorite na ovaj email.`,
     ``,
     `Vidimo se uskoro!`,
     `— L'Essenza`,
   ].filter(Boolean).join("\n");
+
+  const cancelBlock = cancelUrl
+    ? `<table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="margin:16px 0 8px;"><tr><td align="center">
+        <a href="${esc(cancelUrl)}" style="display:inline-block;font-family:Georgia,serif;font-size:13px;color:${BRAND.gold};text-decoration:none;border:1px solid ${BRAND.gold};padding:9px 22px;border-radius:6px;letter-spacing:0.04em;">Otkazi termin</a>
+        <div style="font-size:11px;color:${BRAND.sageSoft};margin-top:8px;">Otkazivanje moguce najkasnije 24h prije termina.</div>
+      </td></tr></table>`
+    : "";
 
   const inner = [
     paragraph(`Zdravo ${b.name},`),
@@ -156,6 +170,7 @@ export function bookingConfirmedToClient(b: Booking, _ctx: ClientTemplateCtx): E
       ["Kada", dateLine],
       ["Gdje", _ctx.salonAddress],
     ]),
+    cancelBlock,
     replyNote(),
     paragraph(`Radujemo se vašem dolasku.`),
     signOff(),
@@ -524,5 +539,51 @@ export function reminderToClient(b: Booking, ctx: ClientTemplateCtx): EmailMessa
     subject: "L'Essenza — Podsjetnik za sutra",
     text,
     html: renderShell({ heading: "Podsjetnik za sutra", preheader: `${b.serviceName} · ${when}`, inner }),
+  };
+}
+
+/**
+ * Owner-facing notification when a client self-cancels via the public link.
+ * The corresponding `bookingCancelledToClient` template (admin-initiated)
+ * already lives above; this one is the inverse — owner is the recipient.
+ */
+export function bookingCancelledByClientToOwner(
+  b: Booking,
+  ctx: { ownerEmail: string }
+): EmailMessage {
+  const when = formatDateHuman(b.startISO);
+  const phoneLine = b.phoneE164 ? `Telefon: ${b.phoneE164}` : "Telefon: —";
+  const emailLine = b.email ? `Email: ${b.email}` : "Email: —";
+  const text = [
+    `Klijentkinja je sama otkazala termin preko sajta.`,
+    ``,
+    `Termin: ${b.serviceName}`,
+    `Klijentkinja: ${b.name}`,
+    phoneLine,
+    emailLine,
+    `Bio zakazan: ${when}`,
+    ``,
+    `Slot je sad slobodan u Google kalendaru.`,
+    ``,
+    `— L'Essenza booking sistem`,
+  ].join("\n");
+
+  const inner = [
+    paragraph(`<strong>Klijentkinja je sama otkazala termin preko sajta.</strong>`),
+    detailsTable([
+      ["Termin", b.serviceName],
+      ["Klijentkinja", b.name],
+      ["Telefon", b.phoneE164 || "—"],
+      ["Email", b.email || "—"],
+      ["Bio zakazan", when],
+    ]),
+    softNote(`Slot je sad slobodan u Google kalendaru.`),
+  ].filter(Boolean).join("\n");
+
+  return {
+    to: ctx.ownerEmail,
+    subject: `Otkazan termin — ${b.name}, ${b.serviceName}`,
+    text,
+    html: renderShell({ heading: "Termin otkazan", preheader: `${b.name} · ${when}`, inner }),
   };
 }
