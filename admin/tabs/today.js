@@ -739,98 +739,269 @@ async function openManualBookingModal() {
     toast("Nema aktivnih usluga — dodaj bar jednu u Uslugama.", "error");
     return;
   }
-  const opts = services.map((s) => `<option value="${s.id}">${escapeHtml(s.name)} (${s.durationMinutes} min)</option>`).join("");
+  const opts = services.map((s) => `<option value="${s.id}" data-dur="${s.durationMinutes}">${escapeHtml(s.name)} (${s.durationMinutes} min)</option>`).join("");
   const defaultDate = (dayInput && dayInput.value) || todayKey();
 
   openModal("Dodaj termin ručno", `
-    <div class="field"><label for="mb-service">Usluga</label><select id="mb-service">${opts}</select></div>
-    <div class="field"><label for="mb-date">Datum</label><input id="mb-date" type="date" value="${defaultDate}" required></div>
-
-    <div id="mb-slots-wrap" class="mb-slots-wrap">
-      <div class="mb-slots-label">Slobodni termini</div>
-      <div id="mb-slots" class="mb-slots"></div>
-      <div id="mb-slots-empty" class="muted" hidden style="padding:0.5rem 0;">Nema slobodnih termina za ovaj datum.</div>
-      <div style="margin-top:0.5rem;">
-        <a href="#" id="mb-manual-toggle" style="font-size:0.85rem;color:var(--gold);">Unesi tačno vrijeme ručno →</a>
+    <div class="mb">
+      <div class="mb__row">
+        <div class="field"><label for="mb-service">Usluga</label><select id="mb-service">${opts}</select></div>
+        <div class="field mb__date-field">
+          <label for="mb-date">Datum</label>
+          <button type="button" id="mb-date-trigger" class="mb-date-trigger" aria-haspopup="true">
+            <span class="mb-date-trigger__icon" aria-hidden="true">📅</span>
+            <span class="mb-date-trigger__text" id="mb-date-text">—</span>
+            <span class="mb-date-trigger__chev" aria-hidden="true">▾</span>
+          </button>
+          <input id="mb-date" type="date" value="${defaultDate}" required class="mb-date-native">
+          <div class="mb-date-shortcuts">
+            <button type="button" class="chip" data-quick="today">Danas</button>
+            <button type="button" class="chip" data-quick="tomorrow">Sjutra</button>
+            <button type="button" class="chip" data-quick="+2">+2 dana</button>
+            <button type="button" class="chip" data-quick="+7">+7 dana</button>
+          </div>
+        </div>
       </div>
-      <div id="mb-manual" hidden style="margin-top:0.5rem;">
-        <input id="mb-start" type="datetime-local" style="width:100%;">
-        <p class="muted" style="font-size:0.8rem;margin:0.35rem 0 0;">Koristi samo ako treba upisati termin van pravila (npr. van radnog vremena).</p>
+
+      <div class="mb__day-glance" id="mb-glance">
+        <div class="mb__glance-head">
+          <span class="mb__glance-title">Dan u pregledu</span>
+          <span class="mb__glance-meta" id="mb-glance-meta"></span>
+        </div>
+        <div id="mb-timeline" class="mb-timeline">
+          <div class="muted" style="padding:0.75rem 0;">Učitavanje…</div>
+        </div>
       </div>
-    </div>
 
-    <input type="hidden" id="mb-chosen-iso">
+      <details class="mb__manual" id="mb-manual-details">
+        <summary class="mb__manual-summary">
+          <span>Unesi vrijeme ručno</span>
+          <span class="muted" style="font-size:0.78rem;">(van rasporeda — npr. ako klijentkinja zove i traži drugačiji termin)</span>
+        </summary>
+        <div class="mb__manual-body">
+          <input id="mb-start" type="datetime-local">
+          <div id="mb-conflict-live" class="mb-conflict-live" hidden></div>
+        </div>
+      </details>
 
-    <div class="field"><label for="mb-name">Ime</label><input id="mb-name" type="text" required maxlength="120"></div>
-    <div class="field"><label for="mb-phone">Telefon (opciono)</label><input id="mb-phone" type="tel" placeholder="+38269123456 ili 069123456"></div>
-    <div class="field"><label for="mb-email">Email (opciono)</label><input id="mb-email" type="email"></div>
-    <div class="field"><label for="mb-note">Napomena (opciono)</label><input id="mb-note" type="text" maxlength="500"></div>
-    <div id="mb-conflict" hidden style="background:#FBEDEC;color:#8B3A3E;padding:0.75rem;border-radius:10px;margin:0.75rem 0;"></div>
-    <div class="stack-card__actions">
-      <button class="btn btn-ghost" type="button" data-close="1">Nazad</button>
-      <button class="btn btn-primary" type="button" id="mb-save">Dodaj</button>
+      <input type="hidden" id="mb-chosen-iso">
+
+      <div class="mb__chosen" id="mb-chosen-banner" hidden></div>
+
+      <div class="field"><label for="mb-name">Ime klijentkinje</label><input id="mb-name" type="text" required maxlength="120" autocomplete="name"></div>
+      <div class="mb__row">
+        <div class="field"><label for="mb-phone">Telefon (opciono)</label><input id="mb-phone" type="tel" placeholder="+38269123456 ili 069123456" autocomplete="tel"></div>
+        <div class="field"><label for="mb-email">Email (opciono)</label><input id="mb-email" type="email" autocomplete="email"></div>
+      </div>
+      <div class="field"><label for="mb-note">Napomena (opciono)</label><input id="mb-note" type="text" maxlength="500" placeholder="npr. donesi gel lakove"></div>
+
+      <div id="mb-conflict" class="mb-conflict-banner" hidden></div>
+
+      <div class="mb__actions">
+        <button class="btn btn-ghost" type="button" data-close="1">Nazad</button>
+        <button class="btn btn-primary" type="button" id="mb-save" disabled>Dodaj termin</button>
+      </div>
     </div>
   `);
 
   const serviceEl = document.getElementById("mb-service");
   const dateEl = document.getElementById("mb-date");
-  const slotsEl = document.getElementById("mb-slots");
-  const emptyEl = document.getElementById("mb-slots-empty");
-  const manualToggle = document.getElementById("mb-manual-toggle");
-  const manualBox = document.getElementById("mb-manual");
+  const dateText = document.getElementById("mb-date-text");
+  const dateTrigger = document.getElementById("mb-date-trigger");
+  const timelineEl = document.getElementById("mb-timeline");
+  const glanceMetaEl = document.getElementById("mb-glance-meta");
+  const manualDetails = document.getElementById("mb-manual-details");
   const manualInput = document.getElementById("mb-start");
+  const conflictLive = document.getElementById("mb-conflict-live");
   const chosenIso = document.getElementById("mb-chosen-iso");
+  const chosenBanner = document.getElementById("mb-chosen-banner");
   const saveBtn = document.getElementById("mb-save");
   const conflictBox = document.getElementById("mb-conflict");
   let forceNext = false;
+  let dayCache = null; // { appointments, blocks, rawEvents, windows, isOpen }
 
+  function fmtDatePretty(yyyymmdd) {
+    if (!yyyymmdd) return "—";
+    const [y, m, d] = yyyymmdd.split("-").map(Number);
+    const dt = new Date(y, m - 1, d);
+    return dt.toLocaleDateString("sr-Latn", { weekday: "long", day: "numeric", month: "long", year: "numeric" });
+  }
+  function syncDateLabel() { dateText.textContent = fmtDatePretty(dateEl.value); }
+
+  // Date picker — modern trigger that opens native picker reliably
+  function openDatePicker() {
+    if (dateEl.showPicker && typeof dateEl.showPicker === "function") {
+      try { dateEl.showPicker(); return; } catch { /* fallthrough */ }
+    }
+    dateEl.focus();
+    dateEl.click();
+  }
+  dateTrigger.addEventListener("click", openDatePicker);
+  dateEl.addEventListener("change", () => { syncDateLabel(); refreshAll(); });
+
+  // Date shortcuts
+  document.querySelectorAll(".mb-date-shortcuts .chip").forEach((c) => {
+    c.addEventListener("click", () => {
+      const q = c.dataset.quick;
+      const base = new Date();
+      if (q === "tomorrow") base.setDate(base.getDate() + 1);
+      else if (q === "+2") base.setDate(base.getDate() + 2);
+      else if (q === "+7") base.setDate(base.getDate() + 7);
+      dateEl.value = localDateKey(base);
+      syncDateLabel();
+      refreshAll();
+    });
+  });
+
+  syncDateLabel();
+
+  function setChosen(iso, label, kind) {
+    chosenIso.value = iso;
+    if (!iso) {
+      chosenBanner.hidden = true;
+      saveBtn.disabled = true;
+      return;
+    }
+    chosenBanner.hidden = false;
+    chosenBanner.innerHTML = `
+      <span class="mb__chosen-icon">✓</span>
+      <div>
+        <div class="mb__chosen-label">${escapeHtml(label)}</div>
+        <div class="mb__chosen-meta">${kind === "manual" ? "Ručno uneseno vrijeme" : "Slobodan termin iz rasporeda"}</div>
+      </div>
+    `;
+    saveBtn.disabled = false;
+  }
+
+  function clearTimelineSelection() {
+    timelineEl.querySelectorAll(".mb-slot-btn").forEach((b) => b.classList.remove("is-selected"));
+  }
   function setChosenFromSlot(hhmm) {
-    chosenIso.value = localToISO(dateEl.value, hhmm);
+    setChosen(localToISO(dateEl.value, hhmm), `${hhmm} · ${fmtDatePretty(dateEl.value)}`, "slot");
     manualInput.value = "";
-    slotsEl.querySelectorAll(".mb-slot-btn").forEach((b) =>
+    conflictLive.hidden = true;
+    timelineEl.querySelectorAll(".mb-slot-btn").forEach((b) =>
       b.classList.toggle("is-selected", b.dataset.hhmm === hhmm)
     );
   }
 
-  async function loadSlots() {
+  function timeKey(iso) {
+    const d = new Date(iso);
+    return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
+  }
+
+  function renderTimeline(slots, day) {
+    const isClosed = day && !day.isOpen;
+    const items = [];
+    for (const s of slots) items.push({ kind: "free", t: s, sortKey: s });
+    for (const a of (day?.appointments || [])) {
+      const t = timeKey(a.startISO);
+      const dur = (() => {
+        try { return Math.round((new Date(a.endISO) - new Date(a.startISO)) / 60000); } catch { return null; }
+      })();
+      items.push({ kind: "busy", t, sortKey: t, label: a.name, sub: a.serviceName, dur });
+    }
+    for (const b of (day?.blocks || [])) {
+      const t = timeKey(b.startISO);
+      items.push({ kind: "block", t, sortKey: t, label: b.reason || "Pauza" });
+    }
+    for (const e of (day?.rawEvents || [])) {
+      const t = timeKey(e.startISO);
+      items.push({ kind: "raw", t, sortKey: t, label: e.summary });
+    }
+    items.sort((a, b) => a.sortKey.localeCompare(b.sortKey));
+
+    if (!items.length) {
+      timelineEl.innerHTML = `<div class="mb-timeline__empty">${isClosed ? "Salon ne radi tog dana." : "Nema dostupnih termina."}</div>`;
+      return;
+    }
+
+    timelineEl.innerHTML = items.map((it) => {
+      if (it.kind === "free") {
+        return `<button type="button" class="mb-slot-btn" data-hhmm="${escapeHtml(it.t)}">
+          <span class="mb-slot-btn__time">${escapeHtml(it.t)}</span>
+          <span class="mb-slot-btn__tag">slobodno</span>
+        </button>`;
+      }
+      const cls = it.kind === "busy" ? "is-busy" : it.kind === "block" ? "is-block" : "is-raw";
+      const sub = it.sub ? ` · ${escapeHtml(it.sub)}` : "";
+      const dur = it.dur ? `<span class="mb-occ__dur">${it.dur} min</span>` : "";
+      return `<div class="mb-occ ${cls}">
+        <span class="mb-occ__time">${escapeHtml(it.t)}</span>
+        <span class="mb-occ__icon" aria-hidden="true">${it.kind === "busy" ? "●" : it.kind === "block" ? "⏸" : "·"}</span>
+        <span class="mb-occ__label">${escapeHtml(it.label)}${sub}</span>
+        ${dur}
+      </div>`;
+    }).join("");
+
+    timelineEl.querySelectorAll(".mb-slot-btn").forEach((btn) =>
+      btn.addEventListener("click", () => setChosenFromSlot(btn.dataset.hhmm))
+    );
+  }
+
+  async function refreshAll() {
+    setChosen("", "", "");
     const sid = serviceEl.value;
     const date = dateEl.value;
-    chosenIso.value = "";
-    slotsEl.innerHTML = `<div class="muted" style="padding:0.5rem 0;">Učitavanje…</div>`;
-    emptyEl.hidden = true;
     if (!sid || !date) return;
+    timelineEl.innerHTML = `<div class="muted" style="padding:0.5rem 0;">Učitavanje…</div>`;
+    glanceMetaEl.textContent = "";
     try {
-      const r = await must(`/api/admin/slots?serviceId=${encodeURIComponent(sid)}&date=${encodeURIComponent(date)}`);
-      const slots = Array.isArray(r.slots) ? r.slots : [];
-      if (!slots.length) {
-        slotsEl.innerHTML = "";
-        emptyEl.hidden = false;
-        return;
-      }
-      slotsEl.innerHTML = slots
-        .map((s) => `<button type="button" class="mb-slot-btn" data-hhmm="${escapeHtml(s)}">${escapeHtml(s)}</button>`)
-        .join("");
-      slotsEl.querySelectorAll(".mb-slot-btn").forEach((btn) =>
-        btn.addEventListener("click", () => setChosenFromSlot(btn.dataset.hhmm))
-      );
+      const [slotsRes, dayRes] = await Promise.all([
+        must(`/api/admin/slots?serviceId=${encodeURIComponent(sid)}&date=${encodeURIComponent(date)}`),
+        must(`/api/admin/day-view?date=${encodeURIComponent(date)}`).catch(() => null),
+      ]);
+      dayCache = dayRes;
+      const slots = Array.isArray(slotsRes.slots) ? slotsRes.slots : [];
+      const busyCount = (dayRes?.appointments?.length || 0) + (dayRes?.blocks?.length || 0) + (dayRes?.rawEvents?.length || 0);
+      glanceMetaEl.textContent = dayRes?.isOpen
+        ? `${slots.length} slobodnih · ${busyCount} zauzetih`
+        : "Salon ne radi";
+      renderTimeline(slots, dayRes);
     } catch (e) {
-      slotsEl.innerHTML = `<div class="muted" style="padding:0.5rem 0;">Ne mogu da učitam termine: ${escapeHtml(e.message)}</div>`;
+      timelineEl.innerHTML = `<div class="muted" style="padding:0.5rem 0;">Ne mogu učitati: ${escapeHtml(e.message)}</div>`;
     }
   }
 
-  serviceEl.addEventListener("change", loadSlots);
-  dateEl.addEventListener("change", loadSlots);
+  function checkManualConflict() {
+    if (!manualInput.value) { conflictLive.hidden = true; return; }
+    const iso = new Date(manualInput.value).toISOString();
+    const ms = new Date(iso).getTime();
+    const sid = serviceEl.value;
+    const dur = Number(serviceEl.options[serviceEl.selectedIndex]?.dataset.dur || 60);
+    const newEnd = ms + dur * 60_000;
+    const conflicts = [];
+    for (const a of (dayCache?.appointments || [])) {
+      const aS = new Date(a.startISO).getTime();
+      const aE = new Date(a.endISO).getTime();
+      if (ms < aE && newEnd > aS) conflicts.push({ label: `${a.name} — ${a.serviceName || ""}`, time: timeKey(a.startISO) });
+    }
+    for (const b of (dayCache?.blocks || [])) {
+      const aS = new Date(b.startISO).getTime();
+      const aE = new Date(b.endISO).getTime();
+      if (ms < aE && newEnd > aS) conflicts.push({ label: `Pauza · ${b.reason || ""}`, time: timeKey(b.startISO) });
+    }
+    if (conflicts.length) {
+      conflictLive.hidden = false;
+      conflictLive.innerHTML = `⚠️ Poklapa se sa: <strong>${escapeHtml(conflicts[0].time + " · " + conflicts[0].label)}</strong>. Možeš svejedno dodati — bićeš pitana da potvrdiš.`;
+    } else {
+      conflictLive.hidden = false;
+      conflictLive.className = "mb-conflict-live mb-conflict-live--ok";
+      conflictLive.innerHTML = `✓ Slobodno je u to vrijeme.`;
+      setTimeout(() => { conflictLive.className = "mb-conflict-live"; }, 1200);
+    }
+  }
+
+  serviceEl.addEventListener("change", refreshAll);
   manualInput.addEventListener("input", () => {
-    if (!manualInput.value) return;
-    chosenIso.value = new Date(manualInput.value).toISOString();
-    slotsEl.querySelectorAll(".mb-slot-btn").forEach((b) => b.classList.remove("is-selected"));
-  });
-  manualToggle.addEventListener("click", (e) => {
-    e.preventDefault();
-    manualBox.hidden = !manualBox.hidden;
+    if (!manualInput.value) { setChosen("", "", ""); conflictLive.hidden = true; return; }
+    const iso = new Date(manualInput.value).toISOString();
+    setChosen(iso, fmtDateTime(iso), "manual");
+    clearTimelineSelection();
+    checkManualConflict();
   });
 
-  loadSlots();
+  refreshAll();
 
   async function submit() {
     const serviceId = serviceEl.value;
@@ -849,6 +1020,7 @@ async function openManualBookingModal() {
     if (note) body.note = note;
     if (forceNext) body.force = true;
 
+    saveBtn.disabled = true;
     try {
       const res = await fetch("/api/admin/manual-booking", {
         method: "POST",
@@ -859,8 +1031,9 @@ async function openManualBookingModal() {
       const data = await res.json().catch(() => ({}));
       if (res.status === 409 && data.error === "conflict") {
         conflictBox.hidden = false;
-        conflictBox.innerHTML = `⚠️ Već postoji termin: <strong>${escapeHtml(data.existing?.summary || "zauzeto")}</strong>. Klikni ponovo "Dodaj svejedno" da forsiraš.`;
-        saveBtn.textContent = "Dodaj svejedno";
+        conflictBox.innerHTML = `<strong>⚠️ Termin se preklapa</strong><br>Već postoji: <em>${escapeHtml(data.existing?.summary || "zauzeto")}</em>.<br><span style="font-size:0.85rem;">Ako svejedno želiš dodati, klikni "Dodaj uprkos preklapanju".</span>`;
+        saveBtn.textContent = "Dodaj uprkos preklapanju";
+        saveBtn.disabled = false;
         forceNext = true;
         return;
       }
@@ -869,6 +1042,7 @@ async function openManualBookingModal() {
       toast("Termin dodan.", "success");
       await renderList();
     } catch (e) {
+      saveBtn.disabled = false;
       toast(e.message, "error");
     }
   }

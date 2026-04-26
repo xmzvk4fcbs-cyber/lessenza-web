@@ -2800,6 +2800,316 @@
 }
 
 /* ============================================
+   Manual booking modal — real-time day-at-a-glance
+   ============================================ */
+.mb { display: flex; flex-direction: column; gap: 0.5rem; }
+.mb__row {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0.75rem;
+}
+@media (min-width: 520px) {
+  .mb__row { grid-template-columns: 1fr 1fr; }
+}
+
+/* Date trigger — modern pill that opens native picker */
+.mb__date-field { position: relative; }
+.mb-date-trigger {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0.75rem 0.9rem;
+  border: 1px solid rgba(217, 192, 154, 0.55);
+  border-radius: 12px;
+  background: #FFFFFF;
+  font: inherit;
+  color: var(--text, #4A4238);
+  font-size: 0.95rem;
+  font-weight: 500;
+  cursor: pointer;
+  text-align: left;
+  min-height: 46px;
+  transition: border-color 0.2s, box-shadow 0.2s;
+  box-shadow: 0 1px 2px rgba(74, 66, 56, 0.04) inset;
+}
+.mb-date-trigger:hover { border-color: var(--gold, #C9A961); }
+.mb-date-trigger:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
+.mb-date-trigger__icon { font-size: 1.05rem; }
+.mb-date-trigger__text {
+  flex: 1;
+  font-family: 'Cormorant Garamond', Georgia, serif;
+  font-style: italic;
+  font-size: 1.05rem;
+  color: var(--text, #4A4238);
+}
+.mb-date-trigger__chev { color: var(--gold, #C9A961); font-size: 0.85rem; }
+
+/* Hide the actual native input visually but keep clickable for browsers without showPicker() */
+.mb-date-native {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  pointer-events: none;
+  z-index: -1;
+}
+
+.mb-date-shortcuts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+/* Day at a glance */
+.mb__day-glance {
+  background: var(--cream-soft, #F9F2E5);
+  border: 1px solid rgba(217, 192, 154, 0.45);
+  border-radius: 14px;
+  padding: 0.85rem 0.95rem 1rem;
+  margin: 0.35rem 0 0.35rem;
+}
+.mb__glance-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 8px;
+  margin-bottom: 0.65rem;
+}
+.mb__glance-title {
+  font-family: 'Cormorant Garamond', Georgia, serif;
+  font-style: italic;
+  font-size: 1.05rem;
+  color: var(--sage, #6B6F4F);
+}
+.mb__glance-meta {
+  font-family: 'Outfit', sans-serif;
+  font-size: 0.72rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--text-light, #6B5F52);
+}
+
+.mb-timeline {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-height: 280px;
+  overflow-y: auto;
+  padding-right: 4px;
+  scrollbar-width: thin;
+}
+.mb-timeline::-webkit-scrollbar { width: 6px; }
+.mb-timeline::-webkit-scrollbar-thumb { background: rgba(201, 169, 97, 0.4); border-radius: 999px; }
+
+.mb-timeline__empty {
+  text-align: center;
+  padding: 1.25rem 0.75rem;
+  color: var(--text-light, #6B5F52);
+  font-style: italic;
+  font-family: 'Cormorant Garamond', Georgia, serif;
+  font-size: 1rem;
+}
+
+/* Free slot button — tappable */
+.mb-slot-btn {
+  appearance: none;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 14px;
+  background: #FFFFFF;
+  border: 1px solid rgba(217, 192, 154, 0.5);
+  border-radius: 10px;
+  cursor: pointer;
+  text-align: left;
+  font-family: inherit;
+  transition: all 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+  -webkit-tap-highlight-color: transparent;
+  min-height: 42px;
+}
+.mb-slot-btn:hover {
+  border-color: var(--gold, #C9A961);
+  background: var(--cream, #F4ECDB);
+  transform: translateX(2px);
+}
+.mb-slot-btn:active { transform: translateX(1px) scale(0.99); }
+.mb-slot-btn.is-selected {
+  background: linear-gradient(135deg, #D4B575 0%, #C9A961 50%, #B89856 100%);
+  border-color: var(--gold);
+  color: #fff;
+  box-shadow: 0 4px 12px rgba(201, 169, 97, 0.35);
+}
+.mb-slot-btn.is-selected .mb-slot-btn__tag { color: #FFF; opacity: 0.85; }
+.mb-slot-btn__time {
+  font-family: 'Cormorant Garamond', Georgia, serif;
+  font-size: 1.15rem;
+  font-weight: 500;
+  color: inherit;
+  min-width: 60px;
+}
+.mb-slot-btn__tag {
+  font-family: 'Outfit', sans-serif;
+  font-size: 0.7rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--gold, #C9A961);
+  font-weight: 600;
+}
+
+/* Occupied row — non-tappable */
+.mb-occ {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 14px;
+  background: rgba(255, 255, 255, 0.5);
+  border: 1px dashed rgba(217, 192, 154, 0.55);
+  border-radius: 10px;
+  font-family: 'Outfit', sans-serif;
+  font-size: 0.86rem;
+  color: var(--text-light, #6B5F52);
+  min-height: 42px;
+}
+.mb-occ.is-busy { background: #FBEDEC; border-color: #E8B0AB; border-style: solid; color: #7B2B2F; }
+.mb-occ.is-block { background: #FAF6F0; border-style: dashed; color: #6B5F52; }
+.mb-occ.is-raw { background: rgba(255,255,255,0.4); }
+.mb-occ__time {
+  font-family: 'Cormorant Garamond', Georgia, serif;
+  font-size: 1.05rem;
+  font-weight: 500;
+  min-width: 60px;
+  color: inherit;
+}
+.mb-occ__icon { color: inherit; opacity: 0.7; font-size: 0.7rem; }
+.mb-occ__label { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.mb-occ__dur {
+  font-family: 'Outfit', sans-serif;
+  font-size: 0.7rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: inherit;
+  opacity: 0.7;
+}
+
+/* Manual time override */
+.mb__manual {
+  background: #FFFFFF;
+  border: 1px solid rgba(217, 192, 154, 0.45);
+  border-radius: 12px;
+  padding: 0.6rem 0.85rem;
+  margin-top: 0.25rem;
+}
+.mb__manual[open] { background: var(--cream-soft, #F9F2E5); border-color: var(--gold, #C9A961); }
+.mb__manual-summary {
+  cursor: pointer;
+  list-style: none;
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  font-weight: 600;
+  color: var(--sage, #6B6F4F);
+  font-size: 0.9rem;
+  flex-wrap: wrap;
+}
+.mb__manual-summary::-webkit-details-marker { display: none; }
+.mb__manual-summary::before {
+  content: '▸';
+  color: var(--gold, #C9A961);
+  font-size: 0.75rem;
+  transition: transform 0.25s;
+}
+.mb__manual[open] .mb__manual-summary::before { transform: rotate(90deg); }
+.mb__manual-body { padding: 12px 0 4px; }
+.mb__manual-body input {
+  width: 100%;
+  padding: 0.6rem 0.85rem;
+  border: 1px solid rgba(217, 192, 154, 0.55);
+  border-radius: 10px;
+  font: inherit;
+  background: #FFFFFF;
+  min-height: 44px;
+}
+
+.mb-conflict-live {
+  margin-top: 8px;
+  padding: 8px 12px;
+  background: #FBEDEC;
+  border: 1px solid #E8B0AB;
+  color: #7B2B2F;
+  border-radius: 10px;
+  font-size: 0.85rem;
+}
+.mb-conflict-live--ok {
+  background: #E9F1E5;
+  border-color: #B5C9A8;
+  color: #4F6B41;
+}
+
+/* Chosen confirmation banner */
+.mb__chosen {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 0.85rem 1rem;
+  background: linear-gradient(135deg, #FBF6EB 0%, #F1E5CC 100%);
+  border: 1px solid rgba(201, 169, 97, 0.55);
+  border-radius: 12px;
+  margin: 0.5rem 0;
+  box-shadow: 0 4px 12px rgba(201, 169, 97, 0.15);
+}
+.mb__chosen-icon {
+  font-size: 1rem;
+  width: 30px; height: 30px;
+  border-radius: 50%;
+  background: var(--gold, #C9A961);
+  color: #fff;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  flex: 0 0 auto;
+}
+.mb__chosen-label {
+  font-family: 'Cormorant Garamond', Georgia, serif;
+  font-style: italic;
+  font-size: 1.1rem;
+  color: var(--sage, #6B6F4F);
+}
+.mb__chosen-meta {
+  font-family: 'Outfit', sans-serif;
+  font-size: 0.72rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--text-light, #6B5F52);
+  margin-top: 2px;
+}
+
+/* Conflict banner on submit */
+.mb-conflict-banner {
+  background: #FBEDEC;
+  border: 1px solid #E8B0AB;
+  color: #7B2B2F;
+  border-radius: 12px;
+  padding: 0.85rem 1rem;
+  margin: 0.75rem 0;
+  font-size: 0.92rem;
+  line-height: 1.5;
+}
+
+.mb__actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 1rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid rgba(217, 192, 154, 0.4);
+}
+.mb__actions .btn { flex: 1; min-height: 48px; }
+.mb__actions .btn-primary { flex: 2; }
+
+/* ============================================
    Editorial Maison — designer polish layer
    ────────────────────────────────────────────
    Aesthetic: Hermès lookbook meets Aesop quietude.
