@@ -1,4 +1,4 @@
-import { registerTab, must, toast, escapeHtml } from "../admin.js";
+import { registerTab, must, toast, escapeHtml, confirmDialog } from "../admin.js";
 
 const form = document.getElementById("settings-form");
 const saveBtn = document.getElementById("settings-save");
@@ -167,7 +167,13 @@ async function renderBlocked() {
       btn.addEventListener("click", async () => {
         const card = btn.closest(".stack-card");
         const phone = card.dataset.phone;
-        if (!confirm(`Odblokirati ${phone}?`)) return;
+        const ok = await confirmDialog({
+          title: "Odblokirati broj?",
+          message: `Klijentkinja sa brojem ${phone} će ponovo moći da zakaže online.`,
+          confirmText: "Odblokiraj",
+          variant: "default",
+        });
+        if (!ok) return;
         try {
           await must("/api/admin/blocked-phones", { method: "DELETE", body: { phoneE164: phone } });
           toast("Odblokiran.", "success");

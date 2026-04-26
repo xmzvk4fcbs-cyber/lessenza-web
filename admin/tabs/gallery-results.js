@@ -1,5 +1,5 @@
 // Admin: upload + manage "Prije / Poslije" image pairs.
-import { must, toast, escapeHtml } from "../admin.js";
+import { must, toast, escapeHtml, confirmDialog } from "../admin.js";
 
 const beforeInput = document.getElementById("gr-before");
 const afterInput = document.getElementById("gr-after");
@@ -187,7 +187,13 @@ function wire() {
 }
 
 async function softDelete(id) {
-  if (!confirm("Staviti par u koš? Imaš 15 dana da ga vratiš.")) return;
+  const ok = await confirmDialog({
+    title: "Staviti par u koš?",
+    message: "Imaš 15 dana da ga vratiš prije nego se trajno obriše.",
+    confirmText: "U koš",
+    variant: "danger",
+  });
+  if (!ok) return;
   try {
     await must(`/api/admin/gallery-results?id=${encodeURIComponent(id)}`, { method: "DELETE" });
     toast("Premješteno u koš.", "success");
@@ -204,7 +210,13 @@ async function restore(id) {
 }
 
 async function hardDelete(id) {
-  if (!confirm("OBRISAĆE SE TRAJNO — sa fajlovima. Sigurno?")) return;
+  const ok = await confirmDialog({
+    title: "Trajno obriši?",
+    message: "Par se briše zauvijek — fajlovi sa servera nestaju.",
+    confirmText: "Trajno obriši",
+    variant: "danger",
+  });
+  if (!ok) return;
   try {
     await must(`/api/admin/gallery-results?id=${encodeURIComponent(id)}&hard=1`, { method: "DELETE" });
     toast("Obrisano trajno.", "success");

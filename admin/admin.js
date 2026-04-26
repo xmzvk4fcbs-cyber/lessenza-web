@@ -55,6 +55,39 @@ modalEl.addEventListener("click", (e) => {
   if (e.target.dataset && e.target.dataset.close) closeModal();
 });
 
+/**
+ * Custom confirmation dialog — returns Promise<boolean>. Replaces native confirm().
+ * Variants: "danger" (red CTA) | "default" (gold CTA).
+ *
+ * Usage: const ok = await confirmDialog({ title, message, confirmText, variant });
+ */
+export function confirmDialog({ title = "Potvrdi", message = "", confirmText = "Potvrdi", cancelText = "Odustani", variant = "default" } = {}) {
+  return new Promise((resolve) => {
+    const ctaClass = variant === "danger" ? "btn-danger" : "btn-primary";
+    const icon = variant === "danger" ? "⚠️" : "?";
+    const iconColor = variant === "danger" ? "#8B3A3E" : "var(--gold, #C9A961)";
+    openModal(title, `
+      <div class="confirm-dialog">
+        <div class="confirm-dialog__icon" style="color:${iconColor};">${icon}</div>
+        <p class="confirm-dialog__msg">${escapeHtml(message)}</p>
+        <div class="confirm-dialog__actions">
+          <button class="btn btn-ghost" type="button" id="cd-cancel">${escapeHtml(cancelText)}</button>
+          <button class="btn ${ctaClass}" type="button" id="cd-confirm">${escapeHtml(confirmText)}</button>
+        </div>
+      </div>
+    `);
+    const onCancel = () => { closeModal(); resolve(false); };
+    const onConfirm = () => { closeModal(); resolve(true); };
+    document.getElementById("cd-cancel").addEventListener("click", onCancel);
+    document.getElementById("cd-confirm").addEventListener("click", onConfirm);
+    // Esc / backdrop click resolves false (existing modal close handler will fire close, watch for it)
+    const obs = new MutationObserver(() => {
+      if (modalEl.hidden) { obs.disconnect(); resolve(false); }
+    });
+    obs.observe(modalEl, { attributes: true, attributeFilter: ["hidden"] });
+  });
+}
+
 // ---------- Utilities ----------
 
 export function escapeHtml(s) {

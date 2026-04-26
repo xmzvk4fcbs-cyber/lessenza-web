@@ -788,10 +788,14 @@ async function openManualBookingModal() {
 
       <div class="mb__chosen" id="mb-chosen-banner" hidden></div>
 
-      <div class="field"><label for="mb-name">Ime klijentkinje</label><input id="mb-name" type="text" required maxlength="120" autocomplete="name"></div>
+      <div class="field mb__autocomplete">
+        <label for="mb-name">Ime klijentkinje</label>
+        <input id="mb-name" type="text" required maxlength="120" autocomplete="off" placeholder="Otkucaj ime — autocomplete iz prethodnih klijentkinja">
+        <div id="mb-name-suggest" class="mb-suggest" hidden></div>
+      </div>
       <div class="mb__row">
-        <div class="field"><label for="mb-phone">Telefon (opciono)</label><input id="mb-phone" type="tel" placeholder="+38269123456 ili 069123456" autocomplete="tel"></div>
-        <div class="field"><label for="mb-email">Email (opciono)</label><input id="mb-email" type="email" autocomplete="email"></div>
+        <div class="field"><label for="mb-phone">Telefon (opciono)</label><input id="mb-phone" type="tel" placeholder="+38269123456 ili 069123456" autocomplete="off"></div>
+        <div class="field"><label for="mb-email">Email (opciono)</label><input id="mb-email" type="email" autocomplete="off"></div>
       </div>
       <div class="field"><label for="mb-note">Napomena (opciono)</label><input id="mb-note" type="text" maxlength="500" placeholder="npr. donesi gel lakove"></div>
 
@@ -1048,6 +1052,68 @@ async function openManualBookingModal() {
   }
 
   saveBtn.addEventListener("click", submit);
+
+  // --- Client autocomplete: type name → suggest existing clients ---
+  let clientsCache = null;
+  async function loadClients() {
+    if (clientsCache) return clientsCache;
+    try {
+      const r = await must("/api/admin/clients");
+      clientsCache = Array.isArray(r.clients) ? r.clients : [];
+    } catch { clientsCache = []; }
+    return clientsCache;
+  }
+  const nameInput = document.getElementById("mb-name");
+  const phoneInput = document.getElementById("mb-phone");
+  const emailInput = document.getElementById("mb-email");
+  const suggestEl = document.getElementById("mb-name-suggest");
+
+  function renderSuggestions(matches) {
+    if (!matches.length) { suggestEl.hidden = true; suggestEl.innerHTML = ""; return; }
+    suggestEl.hidden = false;
+    suggestEl.innerHTML = matches.slice(0, 6).map((c) => {
+      const last = c.lastVisitISO ? new Date(c.lastVisitISO).toLocaleDateString("sr-Latn", { day: "numeric", month: "short" }) : "";
+      const init = (c.name || "?").trim().slice(0, 1).toUpperCase();
+      return `<button type="button" class="mb-suggest__item" data-phone="${escapeHtml(c.phoneE164)}" data-name="${escapeHtml(c.name)}" data-email="${escapeHtml(c.email || "")}">
+        <span class="mb-suggest__avatar">${escapeHtml(init)}</span>
+        <span class="mb-suggest__main">
+          <span class="mb-suggest__name">${escapeHtml(c.name)}</span>
+          <span class="mb-suggest__sub">${escapeHtml(c.phoneE164)}${last ? ` · zadnji ${escapeHtml(last)}` : ""}</span>
+        </span>
+        <span class="mb-suggest__count">${c.count}×</span>
+      </button>`;
+    }).join("");
+    suggestEl.querySelectorAll(".mb-suggest__item").forEach((el) => {
+      el.addEventListener("click", () => {
+        nameInput.value = el.dataset.name || "";
+        phoneInput.value = el.dataset.phone || "";
+        if (el.dataset.email) emailInput.value = el.dataset.email;
+        suggestEl.hidden = true;
+        nameInput.focus();
+      });
+    });
+  }
+
+  let acTimer = null;
+  nameInput.addEventListener("input", () => {
+    if (acTimer) clearTimeout(acTimer);
+    const q = nameInput.value.trim().toLowerCase();
+    if (q.length < 2) { suggestEl.hidden = true; return; }
+    acTimer = setTimeout(async () => {
+      const list = await loadClients();
+      const matches = list.filter((c) =>
+        (c.name && c.name.toLowerCase().includes(q)) ||
+        (c.phoneE164 && c.phoneE164.includes(q))
+      );
+      renderSuggestions(matches);
+    }, 120);
+  });
+  nameInput.addEventListener("blur", () => {
+    setTimeout(() => { suggestEl.hidden = true; }, 180);
+  });
+  nameInput.addEventListener("focus", () => {
+    if (nameInput.value.trim().length >= 2) nameInput.dispatchEvent(new Event("input"));
+  });
 }
 
 function localToISO(dateKey, hhmm) {

@@ -1,4 +1,4 @@
-import { registerTab, must, toast, openModal, closeModal, escapeHtml, cache } from "../admin.js";
+import { registerTab, must, toast, openModal, closeModal, escapeHtml, cache, confirmDialog } from "../admin.js";
 
 const addBtn = document.getElementById("services-add");
 const list = document.getElementById("services-list");
@@ -43,7 +43,13 @@ async function render() {
     list.querySelectorAll("[data-del]").forEach((b) =>
       b.addEventListener("click", async () => {
         const id = b.dataset.del;
-        if (!confirm("Deaktivirati ovu uslugu?")) return;
+        const ok = await confirmDialog({
+          title: "Deaktivirati uslugu?",
+          message: "Klijentkinje je više neće moći zakazati. Postojeći termini ostaju.",
+          confirmText: "Deaktiviraj",
+          variant: "danger",
+        });
+        if (!ok) return;
         try {
           await must(`/api/admin/services?id=${encodeURIComponent(id)}`, { method: "DELETE" });
           toast("Usluga deaktivirana.", "success");

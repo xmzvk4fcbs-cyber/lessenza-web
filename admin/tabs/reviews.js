@@ -1,5 +1,5 @@
 // Admin: manage client reviews (recenzije).
-import { must, toast, escapeHtml } from "../admin.js";
+import { must, toast, escapeHtml, confirmDialog } from "../admin.js";
 
 const authorInput = document.getElementById("rv-author");
 const serviceInput = document.getElementById("rv-service");
@@ -199,7 +199,13 @@ function wire() {
 }
 
 async function softDelete(id) {
-  if (!confirm("Staviti recenziju u koš? Imaš 15 dana da je vratiš.")) return;
+  const ok = await confirmDialog({
+    title: "Staviti u koš?",
+    message: "Recenzija ide u koš na 15 dana. Možeš je vratiti u tom periodu.",
+    confirmText: "U koš",
+    variant: "danger",
+  });
+  if (!ok) return;
   try {
     await must(`/api/admin/reviews?id=${encodeURIComponent(id)}`, { method: "DELETE" });
     toast("Premješteno u koš.", "success");
@@ -214,7 +220,13 @@ async function restore(id) {
   } catch (e) { toast(e.message, "error"); }
 }
 async function hardDelete(id) {
-  if (!confirm("OBRISAĆE SE TRAJNO. Sigurno?")) return;
+  const ok = await confirmDialog({
+    title: "Trajno obriši?",
+    message: "Recenzija će biti obrisana zauvijek — nema povratka.",
+    confirmText: "Trajno obriši",
+    variant: "danger",
+  });
+  if (!ok) return;
   try {
     await must(`/api/admin/reviews?id=${encodeURIComponent(id)}&hard=1`, { method: "DELETE" });
     toast("Obrisano trajno.", "success");

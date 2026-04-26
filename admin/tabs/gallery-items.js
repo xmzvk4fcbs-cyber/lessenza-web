@@ -1,5 +1,5 @@
 // Admin: upload + manage regular gallery images (not pre/after).
-import { must, toast, escapeHtml } from "../admin.js";
+import { must, toast, escapeHtml, confirmDialog } from "../admin.js";
 
 const fileInput = document.getElementById("gi-file");
 const preview = document.getElementById("gi-preview");
@@ -144,7 +144,13 @@ function wire() {
 }
 
 async function softDelete(id) {
-  if (!confirm("Staviti sliku u koš? Imaš 15 dana da je vratiš.")) return;
+  const ok = await confirmDialog({
+    title: "Staviti u koš?",
+    message: "Imaš 15 dana da je vratiš prije nego se trajno obriše.",
+    confirmText: "U koš",
+    variant: "danger",
+  });
+  if (!ok) return;
   try {
     await must(`/api/admin/gallery-items?id=${encodeURIComponent(id)}`, { method: "DELETE" });
     toast("Premješteno u koš.", "success");
@@ -159,7 +165,13 @@ async function restore(id) {
   } catch (e) { toast(e.message, "error"); }
 }
 async function hardDelete(id) {
-  if (!confirm("OBRISAĆE SE TRAJNO sa fajlovima. Sigurno?")) return;
+  const ok = await confirmDialog({
+    title: "Trajno obriši?",
+    message: "Slika će biti obrisana zauvijek — nema povratka. Fajl se briše sa servera.",
+    confirmText: "Trajno obriši",
+    variant: "danger",
+  });
+  if (!ok) return;
   try {
     await must(`/api/admin/gallery-items?id=${encodeURIComponent(id)}&hard=1`, { method: "DELETE" });
     toast("Obrisano trajno.", "success");

@@ -1,4 +1,4 @@
-import { registerTab, must, toast, escapeHtml } from "../admin.js";
+import { registerTab, must, toast, escapeHtml, confirmDialog } from "../admin.js";
 
 const statusEl = document.getElementById("google-status");
 const actionsEl = document.getElementById("google-actions");
@@ -30,7 +30,13 @@ function renderConnected(r) {
     </div>`;
   actionsEl.innerHTML = `<button type="button" class="btn btn-ghost" id="gd-disconnect">Prekini vezu</button>`;
   document.getElementById("gd-disconnect").addEventListener("click", async () => {
-    if (!confirm("Prekinuti vezu? Novi termini neće ići u kalendar dok ne povežeš ponovo.")) return;
+    const ok = await confirmDialog({
+      title: "Prekinuti vezu sa Google?",
+      message: "Novi termini neće ići u Google kalendar dok ne povežeš ponovo. Postojeći ostaju.",
+      confirmText: "Prekini vezu",
+      variant: "danger",
+    });
+    if (!ok) return;
     try { await must("/api/admin/google-disconnect", { method: "POST" }); toast("Veza prekinuta.", "success"); render(); }
     catch (e) { toast(e.message, "error"); }
   });
