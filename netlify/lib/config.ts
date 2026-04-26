@@ -321,6 +321,19 @@ export async function getNoShows(phoneE164: string): Promise<NoShow[]> {
   return r.success ? r.data : [];
 }
 
+/** Walk every per-phone no-shows file and return the flat list. Used by stats. */
+export async function listAllNoShows(): Promise<NoShow[]> {
+  const keys = await store().list(NO_SHOW_PREFIX);
+  const out: NoShow[] = [];
+  for (const k of keys) {
+    const raw = await store().getJSON<unknown>(k);
+    if (!raw) continue;
+    const r = NoShowsSchema.safeParse(raw);
+    if (r.success) out.push(...r.data);
+  }
+  return out;
+}
+
 export async function recordNoShow(phoneE164: string, entry: NoShow): Promise<NoShow[]> {
   if (!phoneE164) throw new Error("phoneE164 required");
   const current = await getNoShows(phoneE164);

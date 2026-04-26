@@ -214,6 +214,126 @@ async function render() {
 
   await loadTodayNote();
   renderSuggestions(); // fire-and-forget — not critical to dashboard
+  renderStats();        // monthly summary card (also fire-and-forget)
+}
+
+// --- Mjesečni rezime (analytics card) ---
+
+const STATS_MONTHS_SR = ["januar", "februar", "mart", "april", "maj", "jun", "jul", "avgust", "septembar", "oktobar", "novembar", "decembar"];
+
+function statsMonthKey(d) {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+}
+function statsMonthLabel(key) {
+  const [y, m] = key.split("-").map(Number);
+  return `${STATS_MONTHS_SR[m - 1]} ${y}`;
+}
+
+let statsCurrentKey = statsMonthKey(new Date());
+
+function renderStatsTile(label, value, sub) {
+  const subHtml = sub ? `<div class="stats-tile__sub">${escapeHtml(sub)}</div>` : "";
+  return `<div class="stats-tile">
+    <div class="stats-tile__label">${escapeHtml(label)}</div>
+    <div class="stats-tile__value">${value}</div>
+    ${subHtml}
+  </div>`;
+}
+
+async function renderStats(monthKey) {
+  const host = document.getElementById("stats-host");
+  if (!host) return;
+  const key = monthKey || statsCurrentKey;
+  statsCurrentKey = key;
+
+  const now = new Date();
+  const thisKey = statsMonthKey(now);
+  const lastDt = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+  const lastKey = statsMonthKey(lastDt);
+
+  const switchBar = `
+    <div class="stats-switch">
+      <button type="button" class="stats-switch__btn ${key === thisKey ? "is-active" : ""}" data-stats-month="${thisKey}">Ovaj mjesec</button>
+      <button type="button" class="stats-switch__btn ${key === lastKey ? "is-active" : ""}" data-stats-month="${lastKey}">Prošli</button>
+    </div>`;
+
+  // Loading skeleton
+  host.innerHTML = `
+    <section class="stats-card">
+      <div class="stats-card__head">
+        <h3 class="stats-card__title">Mjesečni rezime · <em style="font-style:italic;color:var(--sage);font-weight:500;text-transform:none;letter-spacing:0;">${escapeHtml(statsMonthLabel(key))}</em></h3>
+        ${switchBar}
+      </div>
+      <div class="stats-empty">Učitavanje…</div>
+    </section>`;
+
+  let data;
+  try {
+    data = await must(`/api/admin/stats?month=${encodeURIComponent(key)}`);
+  } catch (e) {
+    host.innerHTML = `<section class="stats-card">
+      <div class="stats-card__head"><h3 class="stats-card__title">Mjesečni rezime</h3>${switchBar}</div>
+      <div class="stats-empty">Ne mogu učitati: ${escapeHtml(e.message)}</div>
+    </section>`;
+    wireStatsSwitcher(host);
+    return;
+  }
+
+  if (!data.bookingsCount) {
+    host.innerHTML = `<section class="stats-card">
+      <div class="stats-card__head">
+        <h3 class="stats-card__title">Mjesečni rezime · <em style="font-style:italic;color:var(--sage);font-weight:500;text-transform:none;letter-spacing:0;">${escapeHtml(statsMonthLabel(key))}</em></h3>
+        ${switchBar}
+      </div>
+      <div class="stats-empty">Nije bilo termina ovog mjeseca.</div>
+    </section>`;
+    wireStatsSwitcher(host);
+    return;
+  }
+
+  const tiles = [
+    renderStatsTile("Termini", String(data.bookingsCount), data.noShowCount > 0 ? `${data.noShowCount}× nije došla` : ""),
+    renderStatsTile(
+      "Klijentkinje",
+      `${data.newClients + data.returningClients}`,
+      `${data.newClients} novih · ${data.returningClients} stalnih`
+    ),
+    data.busiestDow
+      ? renderStatsTile("Najbusiji dan", `<span style="font-size:1.1rem;">${escapeHtml(data.busiestDow.label)}</span>`, `prosjek ${data.busiestDow.avgPerDay}/dan`)
+      : "",
+    data.busiestHour
+      ? renderStatsTile("Najbusiji sat", `${String(data.busiestHour.hour).padStart(2, "0")}:00`, `${data.busiestHour.count}× termin`)
+      : "",
+  ].filter(Boolean).join("");
+
+  const services = data.topServices && data.topServices.length
+    ? `<div class="stats-services">📋 najtraženije: ${data.topServices.map((s) => `<em>${escapeHtml(s.name)}</em> ${s.count}×`).join(" · ")}</div>`
+    : "";
+
+  const revenue = data.revenueEstimate != null
+    ? `<div class="stats-row"><span>💰 procijenjeno: <strong>${data.revenueEstimate}</strong> €</span></div>`
+    : "";
+
+  host.innerHTML = `
+    <section class="stats-card">
+      <div class="stats-card__head">
+        <h3 class="stats-card__title">Mjesečni rezime · <em style="font-style:italic;color:var(--sage);font-weight:500;text-transform:none;letter-spacing:0;">${escapeHtml(statsMonthLabel(key))}</em></h3>
+        ${switchBar}
+      </div>
+      <div class="stats-grid">${tiles}</div>
+      ${services}
+      ${revenue}
+    </section>`;
+  wireStatsSwitcher(host);
+}
+
+function wireStatsSwitcher(host) {
+  host.querySelectorAll("[data-stats-month]").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const key = btn.dataset.statsMonth;
+      if (key && key !== statsCurrentKey) renderStats(key);
+    });
+  });
 }
 
 // --- Pametni predlozi ---
