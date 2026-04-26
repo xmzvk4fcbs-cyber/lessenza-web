@@ -1969,6 +1969,31 @@ h2 em {
   text-transform: uppercase;
   margin-top: 3px;
 }
+.testimonial__avatar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  object-fit: cover;
+  margin-bottom: 14px;
+  background: var(--gold);
+  color: #fff;
+  font-family: var(--font-display, 'Cormorant Garamond', Georgia, serif);
+  font-size: 1.5rem;
+  border: 2px solid #fff;
+  box-shadow: 0 2px 8px rgba(201, 169, 97, 0.25);
+}
+.testimonial__avatar--initial { background: var(--gold); }
+.testimonial__stars {
+  display: block;
+  color: var(--gold);
+  font-size: 1rem;
+  letter-spacing: 0.08em;
+  margin-bottom: 10px;
+  line-height: 1;
+}
 
 /* --- FAQ accordion (O Nama stranica) --- */
 .faq {

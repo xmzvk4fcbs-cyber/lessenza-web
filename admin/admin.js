@@ -201,7 +201,7 @@ const screenTabs = {
   schedule: ["today"],
   inquiries: ["inquiries"],
   clients: ["clients"],
-  settings: ["hours", "services", "blocks", "pairs", "settings", "google", "gallery-items", "gallery-results"],
+  settings: ["hours", "services", "blocks", "pairs", "settings", "google", "gallery-items", "gallery-results", "reviews"],
 };
 
 async function activateScreen(name) {
@@ -267,6 +267,7 @@ async function initAdmin() {
   await import("./tabs/google.js");
   await import("./tabs/gallery-results.js");
   await import("./tabs/gallery-items.js");
+  await import("./tabs/reviews.js");
   await import("./tabs/clients.js");
 
   const name = location.hash.replace(/^#/, "") || "dashboard";

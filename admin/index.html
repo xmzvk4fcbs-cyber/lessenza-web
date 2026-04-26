@@ -499,6 +499,63 @@
               </div>
             </details>
 
+            <details class="accordion__item">
+              <summary class="accordion__summary">Recenzije klijentkinja <span id="rv-badge" class="gi-badge" hidden></span></summary>
+              <div class="accordion__body">
+                <section class="tab-panel" id="tab-reviews">
+                  <p class="muted" style="font-size:0.88rem;">Citati klijentkinja koji se pojavljuju na <code>/index.html</code>. Slika je opciona — ako nema slike, prikazuje se inicijal u zlatnom krugu. Brisanje → koš 15 dana.</p>
+
+                  <div class="gi-upload-card">
+                    <div class="gi-upload-card__head">
+                      <span class="gi-upload-card__icon">★</span>
+                      <div>
+                        <div class="gi-upload-card__title">Dodaj recenziju</div>
+                        <div class="gi-upload-card__hint">Ime može biti anonimno (npr. "M.V., Cetinje")</div>
+                      </div>
+                    </div>
+                    <div class="gi-upload-card__grid">
+                      <div class="field" style="margin:0;">
+                        <label for="rv-author">Ime / inicijali</label>
+                        <input id="rv-author" type="text" placeholder="npr. Marija V., Cetinje" maxlength="120">
+                      </div>
+                      <div class="field" style="margin:0;">
+                        <label for="rv-service">Usluga (opciono)</label>
+                        <input id="rv-service" type="text" placeholder="npr. Body Sculpt" maxlength="80">
+                      </div>
+                    </div>
+                    <div class="field" style="margin-top:12px;">
+                      <label for="rv-text">Tekst recenzije</label>
+                      <textarea id="rv-text" rows="4" maxlength="1500" placeholder="Citat klijentkinje…"></textarea>
+                    </div>
+                    <div class="gi-upload-card__grid" style="margin-top:12px;">
+                      <div class="field" style="margin:0;">
+                        <label for="rv-rating">Ocjena (1–5, opciono)</label>
+                        <select id="rv-rating">
+                          <option value="">Bez ocjene</option>
+                          <option value="5">★★★★★ — 5</option>
+                          <option value="4">★★★★ — 4</option>
+                          <option value="3">★★★ — 3</option>
+                          <option value="2">★★ — 2</option>
+                          <option value="1">★ — 1</option>
+                        </select>
+                      </div>
+                      <div class="field" style="margin:0;">
+                        <label for="rv-photo">Slika (opciono, max 2 MB)</label>
+                        <input id="rv-photo" type="file" accept="image/*">
+                        <img id="rv-photo-preview" class="gr-preview" hidden alt="Preview">
+                      </div>
+                    </div>
+                    <div class="gi-upload-card__footer">
+                      <button id="rv-save" class="btn btn-primary" type="button">Dodaj recenziju</button>
+                      <span id="rv-status" class="muted" style="font-size:0.85rem;"></span>
+                    </div>
+                  </div>
+
+                  <div id="rv-list" style="margin-top:1.25rem;"></div>
+                </section>
+              </div>
+            </details>
+
           </div>
         </section>
 

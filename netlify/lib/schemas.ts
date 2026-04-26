@@ -152,6 +152,28 @@ export const GalleryResultSchema = z.object({
 export type GalleryResult = z.infer<typeof GalleryResultSchema>;
 export const GalleryResultsSchema = z.array(GalleryResultSchema);
 
+// ----- Reviews (recenzije klijenata) -----
+export const ReviewSchema = z.object({
+  id: z.string().min(1).max(64),
+  /** Display name — anonimno OK ("M.V., Cetinje"). */
+  author: z.string().min(1).max(120),
+  /** Citat. */
+  text: z.string().min(1).max(1500),
+  /** Optional 1–5 star rating. */
+  rating: z.number().int().min(1).max(5).optional(),
+  /** Optional photo URL — uploaded image (/uploads/reviews/…) or external. */
+  photoUrl: z.string().min(1).max(300).optional(),
+  /** Optional service tag ("Body Sculpt", "Manikir"). */
+  service: z.string().max(80).optional(),
+  /** Whether to show on public site. Defaults true. */
+  published: z.boolean().default(true),
+  createdAt: z.string().datetime(),
+  /** When set, item is in trash; purged after 15 days. */
+  deletedAt: z.string().datetime().optional(),
+});
+export type Review = z.infer<typeof ReviewSchema>;
+export const ReviewsSchema = z.array(ReviewSchema);
+
 // ----- Gallery items (obične slike u galeriji) -----
 export const GalleryItemSchema = z.object({
   id: z.string().min(1).max(64),

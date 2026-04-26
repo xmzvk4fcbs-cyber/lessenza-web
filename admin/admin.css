@@ -1255,6 +1255,47 @@
 }
 .gi-upload-card__footer .btn { white-space: nowrap; }
 
+/* === Reviews admin === */
+.rv-list { display: grid; gap: 12px; }
+.rv-card {
+  background: #fff;
+  border: 1px solid var(--champagne-deep);
+  border-radius: 12px;
+  padding: 14px;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.04);
+}
+.rv-card.is-trashed { opacity: 0.7; background: var(--cream-soft, #FAF6F0); }
+.rv-card__head { display: flex; align-items: center; gap: 12px; margin-bottom: 10px; }
+.rv-avatar {
+  width: 48px; height: 48px;
+  border-radius: 50%;
+  object-fit: cover;
+  display: inline-flex;
+  align-items: center; justify-content: center;
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 1.4rem;
+  flex: 0 0 auto;
+}
+.rv-avatar--initial {
+  background: var(--gold);
+  color: #fff;
+}
+.rv-card__who { flex: 1; min-width: 0; }
+.rv-card__author { font-weight: 600; color: var(--text); font-family: 'Cormorant Garamond', serif; font-size: 1.05rem; }
+.rv-card__meta { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-top: 2px; }
+.rv-stars { color: var(--gold); font-size: 0.92rem; letter-spacing: 0.04em; }
+.rv-tag { font-size: 0.74rem; padding: 1px 8px; background: var(--cream-soft, #FAF6F0); border: 1px solid var(--champagne-deep); border-radius: 999px; color: var(--text-light); }
+.rv-card__text {
+  font-style: italic;
+  color: var(--text);
+  line-height: 1.55;
+  margin: 0 0 10px;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+.rv-card__actions { display: flex; flex-wrap: wrap; gap: 6px; }
+.rv-card__actions .btn { padding: 6px 12px; font-size: 0.82rem; min-height: 36px; }
+
 /* === Skeleton loaders === */
 .skel {
   background: linear-gradient(

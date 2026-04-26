@@ -148,6 +148,39 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
+  // --- Testimonials (recenzije) — fetched from /api/reviews if any exist,
+  //     otherwise the static fallback baked into the HTML stays put. ---
+  const testimonialsEl = document.getElementById("testimonials");
+  if (testimonialsEl) {
+    fetch("/api/reviews", { cache: "no-store" })
+      .then((r) => r.json())
+      .then((data) => {
+        const items = Array.isArray(data.items) ? data.items : [];
+        if (!items.length) return; // keep fallback
+        const escTM = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
+        const stars = (n) => {
+          if (!n) return "";
+          const full = "★".repeat(n);
+          const empty = "☆".repeat(5 - n);
+          return `<span class="testimonial__stars" aria-label="${n}/5">${full}${empty}</span>`;
+        };
+        testimonialsEl.removeAttribute("data-default");
+        testimonialsEl.innerHTML = items.map((r) => {
+          const photo = r.photoUrl
+            ? `<img class="testimonial__avatar" src="${escTM(r.photoUrl)}" alt="${escTM(r.author)}" loading="lazy" decoding="async">`
+            : `<span class="testimonial__avatar testimonial__avatar--initial">${escTM((r.author || "?").trim().slice(0, 1).toUpperCase())}</span>`;
+          return `<figure class="testimonial reveal">
+            ${photo}
+            ${stars(r.rating)}
+            <blockquote class="testimonial__quote">„${escTM(r.text)}"</blockquote>
+            <figcaption class="testimonial__author">${escTM(r.author)}${r.service ? `<span>${escTM(r.service)}</span>` : ""}</figcaption>
+          </figure>`;
+        }).join("");
+        if (window.__observeReveals) window.__observeReveals();
+      })
+      .catch(() => { /* keep fallback */ });
+  }
+
   // --- Gallery lightbox (re-bindable for dynamically-added tiles) ---
   const lightbox = document.querySelector('.lightbox');
   const lightboxImg = lightbox?.querySelector('img');

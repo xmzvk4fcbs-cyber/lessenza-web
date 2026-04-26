@@ -11,6 +11,7 @@ import {
   BlockedPhonesSchema,
   GalleryResultsSchema,
   GalleryItemsSchema,
+  ReviewsSchema,
   DismissedSuggestionsSchema,
   ClientNoteSchema,
   NoShowsSchema,
@@ -23,6 +24,7 @@ import {
   type BlockedPhone,
   type GalleryResult,
   type GalleryItem,
+  type Review,
   type DismissedSuggestion,
   type ClientNote,
   type NoShow,
@@ -37,6 +39,9 @@ const KEY_BLOCKS = "config/blocks.json";
 const KEY_BLOCKED_PHONES = "config/blocked-phones.json";
 const KEY_GALLERY_RESULTS = "config/gallery-results.json";
 const KEY_GALLERY_ITEMS = "config/gallery-items.json";
+const KEY_REVIEWS = "config/reviews.json";
+/** Trash window for soft-deleted reviews. */
+export const REVIEW_TRASH_DAYS = 15;
 /** How many days we keep soft-deleted gallery entries before purging. */
 export const GALLERY_TRASH_DAYS = 15;
 const KEY_DISMISSED_SUGGESTIONS = "admin/dismissed-suggestions.json";
@@ -248,6 +253,20 @@ export async function getGalleryItems(): Promise<GalleryItem[]> {
 export async function saveGalleryItems(list: GalleryItem[]): Promise<GalleryItem[]> {
   const validated = GalleryItemsSchema.parse(list);
   await store().setJSON(KEY_GALLERY_ITEMS, validated);
+  return validated;
+}
+
+// ---------- Reviews (recenzije klijenata) ----------
+
+export async function getReviews(): Promise<Review[]> {
+  const raw = await store().getJSON<unknown>(KEY_REVIEWS);
+  if (!raw) return [];
+  return ReviewsSchema.parse(raw);
+}
+
+export async function saveReviews(list: Review[]): Promise<Review[]> {
+  const validated = ReviewsSchema.parse(list);
+  await store().setJSON(KEY_REVIEWS, validated);
   return validated;
 }
 
