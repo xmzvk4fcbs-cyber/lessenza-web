@@ -2800,8 +2800,219 @@
 }
 
 /* ============================================
-   Profi polish layer — final pass overrides
+   Editorial Maison — designer polish layer
+   ────────────────────────────────────────────
+   Aesthetic: Hermès lookbook meets Aesop quietude.
+   Restraint, breathing room, one moment of gold per screen.
    ============================================ */
+
+/* Atmospheric paper grain on body — barely there */
+.admin-body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background-image:
+    radial-gradient(ellipse 800px 600px at 15% -10%, rgba(201, 169, 97, 0.06) 0%, transparent 60%),
+    radial-gradient(ellipse 600px 400px at 110% 110%, rgba(107, 111, 79, 0.05) 0%, transparent 55%);
+  pointer-events: none;
+  z-index: 0;
+}
+.admin-body > * { position: relative; z-index: 1; }
+
+/* Drop cap on greeting — editorial flourish */
+.greeting__line::first-letter {
+  font-size: 1.4em;
+  line-height: 1;
+  font-weight: 500;
+  color: var(--gold, #C9A961);
+  margin-right: 2px;
+  font-style: italic;
+}
+
+/* Fleuron section divider — used to break dashboard into chapters */
+.section-fleuron {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin: 1.75rem 0 1.25rem;
+  color: var(--gold, #C9A961);
+  opacity: 0.85;
+}
+.section-fleuron::before,
+.section-fleuron::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(201, 169, 97, 0.45), transparent);
+}
+.section-fleuron__mark {
+  font-family: 'Cormorant Garamond', Georgia, serif;
+  font-style: italic;
+  font-size: 1.05rem;
+  letter-spacing: 0.06em;
+  color: var(--gold, #C9A961);
+}
+
+/* H2 in admin-main — refined editorial header with eyebrow option */
+.admin-main h2 {
+  position: relative;
+  padding-bottom: 0.4rem;
+}
+.admin-main h2::after {
+  content: '';
+  position: absolute;
+  left: 0; bottom: 0;
+  width: 36px; height: 1px;
+  background: linear-gradient(90deg, var(--gold, #C9A961), transparent);
+}
+
+/* Hero card — magazine-cover treatment for "Sljedeći termin" */
+.hero-card {
+  background:
+    radial-gradient(ellipse 320px 180px at 0% 100%, rgba(201, 169, 97, 0.14) 0%, transparent 60%),
+    radial-gradient(ellipse 240px 140px at 100% 0%, rgba(255, 255, 255, 0.6) 0%, transparent 55%),
+    linear-gradient(135deg, #FBF6EB 0%, #F1E5CC 100%) !important;
+  border-color: rgba(217, 192, 154, 0.6) !important;
+  border-radius: 20px !important;
+  padding: 1.85rem 1.6rem 1.6rem !important;
+}
+.hero-card::after {
+  width: 48px !important;
+  background: linear-gradient(90deg, transparent, var(--gold, #C9A961), transparent) !important;
+  opacity: 0.65;
+}
+.hero-card__title {
+  font-weight: 400 !important;
+}
+
+/* Hero empty state — softer, more refined */
+.hero-card__empty {
+  position: relative;
+  padding-left: 0;
+}
+.hero-card__empty::before {
+  content: '✦';
+  display: block;
+  font-size: 0.95rem;
+  color: var(--gold, #C9A961);
+  letter-spacing: 0.4em;
+  margin-bottom: 0.5rem;
+  opacity: 0.6;
+}
+
+/* Stat chips — editorial split: huge serif numeral + tracked-out tiny label */
+.stat-chip {
+  background: #FFFFFF !important;
+  border-color: rgba(217, 192, 154, 0.45) !important;
+  padding: 1.25rem 1.2rem 1.1rem !important;
+  border-radius: 16px !important;
+}
+.stat-chip__num {
+  font-weight: 400 !important;
+  font-style: italic !important;
+}
+.stat-chip__label {
+  font-size: 0.65rem !important;
+  letter-spacing: 0.28em !important;
+  color: #6B5F52 !important;
+  margin-top: 14px !important;
+}
+
+/* Greeting — bigger ritual moment */
+.greeting {
+  margin: 0.5rem 0 1.75rem !important;
+  padding: 0.5rem 0 1.1rem !important;
+}
+.greeting::after {
+  width: 64px !important;
+  background: linear-gradient(90deg, var(--gold, #C9A961), transparent) !important;
+  height: 1px !important;
+}
+.greeting__line {
+  font-family: 'Cormorant Garamond', Georgia, serif !important;
+  font-weight: 400 !important;
+  font-style: italic !important;
+  font-size: clamp(1.85rem, 6vw, 2.3rem) !important;
+}
+.greeting__date {
+  margin-top: 0.5rem !important;
+  font-size: 0.72rem !important;
+  letter-spacing: 0.32em !important;
+}
+
+/* Primary action — slim ornament suffix on block buttons */
+.btn.btn-primary.block::after {
+  content: '→';
+  margin-left: 8px;
+  font-weight: 400;
+  font-size: 1.1em;
+  letter-spacing: 0;
+  transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.btn.btn-primary.block:hover::after { transform: translateX(4px); }
+
+/* Bottom nav — italic active label for personality */
+.bottom-nav__btn.is-active {
+  font-family: 'Cormorant Garamond', Georgia, serif !important;
+  font-style: italic !important;
+  font-size: 0.85rem !important;
+  letter-spacing: 0.02em !important;
+  font-weight: 500 !important;
+  text-transform: lowercase;
+}
+
+/* Top bar — hairline gold rule replacing thick border */
+.admin-topbar {
+  border-bottom: none !important;
+  position: relative;
+}
+.admin-topbar::after {
+  content: '';
+  position: absolute;
+  left: 16px; right: 16px;
+  bottom: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(217, 192, 154, 0.7) 20%, rgba(217, 192, 154, 0.7) 80%, transparent);
+}
+
+/* Cards in general — paper-grain depth, no harsh borders */
+.stack-card,
+.acc,
+.gi-upload-card {
+  background: #FFFFFF !important;
+  border: 1px solid rgba(217, 192, 154, 0.4) !important;
+  box-shadow:
+    0 1px 1px rgba(74, 66, 56, 0.03),
+    0 4px 12px -4px rgba(74, 66, 56, 0.06) !important;
+}
+.stack-card:hover,
+.acc:hover {
+  border-color: rgba(201, 169, 97, 0.55) !important;
+  box-shadow:
+    0 1px 1px rgba(74, 66, 56, 0.04),
+    0 12px 28px -10px rgba(74, 66, 56, 0.12) !important;
+}
+
+/* Inputs / textareas — editorial: more height, refined focus */
+.field input, .field textarea {
+  background: #FFFFFF !important;
+  border-color: rgba(217, 192, 154, 0.55) !important;
+}
+
+/* Section labels (small caps eyebrows) — already used elsewhere; now consistent */
+.eyebrow,
+.field--eyebrow > label {
+  font-family: 'Outfit', sans-serif;
+  font-size: 0.66rem;
+  font-weight: 600;
+  letter-spacing: 0.32em;
+  text-transform: uppercase;
+  color: var(--gold, #C9A961);
+  display: inline-block;
+  margin-bottom: 8px;
+}
+
+/* Profi polish layer — final pass overrides */
 
 /* All chip-row buttons more breathable */
 .chip-row { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
