@@ -1213,6 +1213,39 @@
 .gr-banner__text { flex: 1; min-width: 200px; color: #7B2B2F; font-size: 0.92rem; }
 .gr-banner .btn { white-space: nowrap; }
 
+/* Live status pill for Prije/Poslije visibility */
+.gr-status {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+  background: #FFFFFF;
+  border: 1px solid rgba(217, 192, 154, 0.5);
+  border-radius: 12px;
+  padding: 0.85rem 1rem;
+  margin-bottom: 1rem;
+}
+.gr-status.is-on  { background: linear-gradient(135deg, #F1F6EE 0%, #FFFFFF 100%); border-color: #B5C9A8; }
+.gr-status.is-off { background: linear-gradient(135deg, #FBEDEC 0%, #FFFFFF 100%); border-color: #E8B0AB; }
+.gr-status__main { flex: 1; min-width: 240px; display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.gr-status__pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 12px;
+  border-radius: 999px;
+  font-family: 'Outfit', sans-serif;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+.gr-status__pill.is-on  { background: #4F6B41; color: #fff; box-shadow: 0 2px 6px rgba(79, 107, 65, 0.25); }
+.gr-status__pill.is-off { background: #B5585E; color: #fff; box-shadow: 0 2px 6px rgba(181, 88, 94, 0.25); }
+.gr-status__text { color: var(--text, #4A4238); font-size: 0.92rem; line-height: 1.45; }
+.gr-status .btn { white-space: nowrap; }
+
 /* Trash header between active + trashed sections */
 .gr-trash-hd {
   margin: 1.5rem 0 0.75rem;

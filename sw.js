@@ -1,7 +1,7 @@
 /* L'Essenza Service Worker — minimalan offline shell.
    Strategija: SWR za HTML stranice, cache-first za statik (img/css/js),
    nikad ne diraj /api/ ni /admin/. */
-const VERSION = "v1";
+const VERSION = "v2";
 const CACHE_STATIC = `lessenza-static-${VERSION}`;
 const CACHE_HTML = `lessenza-html-${VERSION}`;
 

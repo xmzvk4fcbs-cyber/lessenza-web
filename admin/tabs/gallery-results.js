@@ -70,25 +70,30 @@ async function refreshBanner(pairCount) {
   try {
     const { settings } = await must("/api/admin/settings");
     const on = !!settings.showBeforeAfter;
-    if (on || pairCount === 0) {
-      bannerEl.hidden = true;
-      bannerEl.innerHTML = "";
-      return;
-    }
     bannerEl.hidden = false;
     bannerEl.innerHTML = `
-      <div class="gr-banner">
-        <div class="gr-banner__text">
-          ⚠️ Imaš <strong>${pairCount}</strong> ${pairCount === 1 ? "par" : "parova"} ali je tab "Prije / Poslije" trenutno <strong>sakriven</strong> od klijenata.
+      <div class="gr-status ${on ? "is-on" : "is-off"}">
+        <div class="gr-status__main">
+          <span class="gr-status__pill ${on ? "is-on" : "is-off"}">${on ? "● Vidljivo na sajtu" : "○ Sakriveno"}</span>
+          <span class="gr-status__text">
+            ${on
+              ? `Tab "Prije / Poslije" je <strong>uključen</strong> na <a href="/galerija.html" target="_blank" rel="noopener" style="color:var(--gold);">sajtu</a>.`
+              : (pairCount > 0
+                  ? `Imaš <strong>${pairCount}</strong> ${pairCount === 1 ? "par" : "parova"} ali tab je sakriven od klijenata.`
+                  : `Tab je sakriven. Dodaj prvi par i automatski će se uključiti.`)
+            }
+          </span>
         </div>
-        <button id="gr-enable" type="button" class="btn btn-primary">Uključi prikaz</button>
+        <button id="gr-toggle" type="button" class="btn ${on ? "btn-ghost" : "btn-primary"}">
+          ${on ? "Sakrij" : "Uključi prikaz"}
+        </button>
       </div>`;
-    document.getElementById("gr-enable")?.addEventListener("click", async () => {
+    document.getElementById("gr-toggle")?.addEventListener("click", async () => {
+      const next = !on;
       try {
-        await must("/api/admin/settings", { method: "PATCH", body: { showBeforeAfter: true } });
-        toast("Tab je sada vidljiv na sajtu.", "success");
-        bannerEl.hidden = true;
-        bannerEl.innerHTML = "";
+        await must("/api/admin/settings", { method: "PATCH", body: { showBeforeAfter: next } });
+        toast(next ? "Tab je sada vidljiv na sajtu." : "Tab je sakriven od klijenata.", "success");
+        await refreshBanner(pairCount);
       } catch (e) { toast(e.message, "error"); }
     });
   } catch { /* ignore — non-critical */ }

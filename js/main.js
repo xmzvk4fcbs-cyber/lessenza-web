@@ -89,10 +89,10 @@ document.addEventListener('DOMContentLoaded', () => {
           wrap.appendChild(img);
           frag.appendChild(wrap);
         }
-        galleryAllEarly.appendChild(frag);
-        // Wire lightbox on freshly inserted tiles.
+        // Replace any cached/preexisting children to avoid duplicates flashing
+        // when the page was served from the Service Worker cache.
+        galleryAllEarly.replaceChildren(frag);
         if (window.__rebindGalleryLightbox) window.__rebindGalleryLightbox();
-        // Re-observe reveal animations.
         if (window.__observeReveals) window.__observeReveals();
       })
       .catch(() => {
