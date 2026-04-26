@@ -44,7 +44,7 @@ const inner: Handler = async (event) => {
         inquiryDeclinedToClient(
           { ...inquiry, serviceName: service?.name ?? inquiry.serviceId },
           reason,
-          { salonAddress: settings.salonAddress, ownerPhone: settings.ownerPhone }
+          { salonAddress: settings.salonAddress, ownerPhone: settings.ownerPhone, emailGreeting: settings.emailGreeting, emailClosing: settings.emailClosing, emailSignature: settings.emailSignature }
         )
       );
       emailSent = true;

@@ -56,7 +56,7 @@ export const handler: Handler = async () => {
     if (await alreadySent(b.bookingId)) continue;
     try {
       await mailer.send(
-        reminderToClient(b, { salonAddress: settings.salonAddress, ownerPhone: settings.ownerPhone })
+        reminderToClient(b, { salonAddress: settings.salonAddress, ownerPhone: settings.ownerPhone, emailGreeting: settings.emailGreeting, emailClosing: settings.emailClosing, emailSignature: settings.emailSignature })
       );
       await markSent(b.bookingId);
       sent++;

@@ -156,7 +156,7 @@ export const handler: Handler = async (event) => {
   if (booking.email) {
     sends.push(
       mailer
-        .send(bookingConfirmedToClient(booking, { salonAddress: settings.salonAddress, ownerPhone: settings.ownerPhone, cancelUrl }))
+        .send(bookingConfirmedToClient(booking, { salonAddress: settings.salonAddress, ownerPhone: settings.ownerPhone, emailGreeting: settings.emailGreeting, emailClosing: settings.emailClosing, emailSignature: settings.emailSignature, cancelUrl }))
         .then((id) => console.log(`[book][client-confirm] sent → ${booking.email} id=${id}`))
         .catch((e) => console.error(`[book][client-confirm] FAILED → ${booking.email}:`, e.message))
     );

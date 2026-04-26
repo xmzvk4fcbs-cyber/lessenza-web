@@ -103,6 +103,12 @@ export const SettingsSchema = z.object({
   /** Optional analytics snippet (e.g. Plausible / Cloudflare / Umami <script> tag) injected on every public page. */
   analyticsScript: z.string().max(2000).optional(),
 
+  /** Email template overrides — when set, these strings replace the
+   *  default greeting/closing/signature in all client-facing emails. */
+  emailGreeting: z.string().max(500).optional(),
+  emailClosing: z.string().max(500).optional(),
+  emailSignature: z.string().max(200).optional(),
+
   /** Pametni predlozi — per-category toggles on the admin dashboard. */
   suggestLapsedRegulars: z.boolean().default(true),
   suggestSparseDays: z.boolean().default(true),

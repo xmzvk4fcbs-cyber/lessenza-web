@@ -2652,3 +2652,19 @@
 @media (min-width: 480px) {
   .stats-grid { grid-template-columns: repeat(4, 1fr); }
 }
+
+/* VIP badge in karton — gold gradient with subtle shimmer */
+.client-card__badge--vip {
+  background: linear-gradient(135deg, #C9A961 0%, #E0C58A 50%, #C9A961 100%);
+  background-size: 200% 200%;
+  color: #fff !important;
+  border: 0;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  box-shadow: 0 1px 4px rgba(201, 169, 97, 0.35);
+  animation: vipShimmer 4s ease-in-out infinite;
+}
+@keyframes vipShimmer {
+  0%, 100% { background-position: 0% 50%; }
+  50%      { background-position: 100% 50%; }
+}

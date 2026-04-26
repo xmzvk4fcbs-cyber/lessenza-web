@@ -53,9 +53,12 @@ export async function renderClientCard(host, opts) {
   const isNew = (s.visitCount || 0) === 0;
   const noteText = data.note?.text || "";
 
+  const isVip = !isNew && (s.visitCount || 0) >= 10;
   const badge = isNew
     ? `<span class="client-card__badge client-card__badge--new">nova</span>`
-    : `<span class="client-card__badge">${s.visitCount}× ovdje</span>`;
+    : isVip
+      ? `<span class="client-card__badge client-card__badge--vip">⭐ VIP · ${s.visitCount}× ovdje</span>`
+      : `<span class="client-card__badge">${s.visitCount}× ovdje</span>`;
 
   let stats = "";
   if (!isNew) {

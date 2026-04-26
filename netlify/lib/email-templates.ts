@@ -5,6 +5,29 @@ import { formatSalon } from "./time";
 export interface ClientTemplateCtx {
   salonAddress: string;
   ownerPhone?: string;
+  /** Owner-customized greeting used in the second paragraph of confirmations. */
+  emailGreeting?: string;
+  /** Owner-customized closing line shown above the signature. */
+  emailClosing?: string;
+  /** Owner-customized signature label shown after the em-dash. */
+  emailSignature?: string;
+}
+
+/** Build a ClientTemplateCtx from a Settings-shaped object. */
+export function clientCtx<T extends {
+  salonAddress: string;
+  ownerPhone?: string;
+  emailGreeting?: string;
+  emailClosing?: string;
+  emailSignature?: string;
+}>(s: T): ClientTemplateCtx {
+  return {
+    salonAddress: s.salonAddress,
+    ownerPhone: s.ownerPhone,
+    emailGreeting: s.emailGreeting,
+    emailClosing: s.emailClosing,
+    emailSignature: s.emailSignature,
+  };
 }
 
 export interface OwnerTemplateCtx {
@@ -114,8 +137,9 @@ function softNote(text: string): string {
   return `<p style="margin:18px 0 0;padding:14px 18px;background:${BRAND.cream};border-left:3px solid ${BRAND.gold};color:${BRAND.sage};font-size:14px;line-height:1.6;">${esc(text)}</p>`;
 }
 
-function signOff(): string {
-  return `<p style="margin:28px 0 0;color:${BRAND.sageSoft};font-family:'Playfair Display',Georgia,serif;font-size:16px;font-style:italic;text-align:center;">&mdash; L'Essenza</p>`;
+function signOff(custom?: string): string {
+  const label = custom?.trim() || "L'Essenza";
+  return `<p style="margin:28px 0 0;color:${BRAND.sageSoft};font-family:'Playfair Display',Georgia,serif;font-size:16px;font-style:italic;text-align:center;">&mdash; ${esc(label)}</p>`;
 }
 
 /** Client-facing "reply to this email" CTA. Salon phone is intentionally
@@ -162,9 +186,11 @@ export function bookingConfirmedToClient(
       </td></tr></table>`
     : "";
 
+  const greeting = _ctx.emailGreeting?.trim() || "Hvala što ste odabrali L'Essenza. Vaš termin je potvrđen.";
+  const closing = _ctx.emailClosing?.trim() || "Radujemo se vašem dolasku.";
   const inner = [
     paragraph(`Zdravo ${b.name},`),
-    paragraph(`Hvala što ste odabrali L'Essenza. Vaš termin je potvrđen.`),
+    paragraph(esc(greeting)),
     detailsTable([
       ["Usluga", b.serviceName],
       ["Kada", dateLine],
@@ -172,8 +198,8 @@ export function bookingConfirmedToClient(
     ]),
     cancelBlock,
     replyNote(),
-    paragraph(`Radujemo se vašem dolasku.`),
-    signOff(),
+    paragraph(esc(closing)),
+    signOff(_ctx.emailSignature),
   ].filter(Boolean).join("\n");
 
   return {
@@ -303,7 +329,7 @@ export function bookingCancelledToClient(
     paragraph(`Izvinjavamo se, ali moramo otkazati vaš termin.`),
     detailsTable(rows),
     softNote(`Odgovorite na ovaj email da dogovorimo novi termin koji Vam odgovara — biće nam drago da Vas ugostimo.`),
-    signOff(),
+    signOff(_ctx?.emailSignature),
   ].filter(Boolean).join("\n");
 
   return {
@@ -373,7 +399,7 @@ export function bookingRescheduledToClient(
       ["Gdje", ctx.salonAddress],
     ]),
     softNote(`Ako Vam novi termin ne odgovara, odgovorite na ovaj email pa ćemo naći drugi.`),
-    signOff(),
+    signOff(ctx?.emailSignature),
   ].filter(Boolean).join("\n");
 
   return {
@@ -414,7 +440,7 @@ export function inquiryAcceptedToClient(
       ["Gdje", ctx.salonAddress],
     ]),
     replyNote(),
-    signOff(),
+    signOff(ctx?.emailSignature),
   ].filter(Boolean).join("\n");
 
   return {
@@ -447,7 +473,7 @@ export function inquiryDeclinedToClient(
     paragraph(`Nažalost za datum ${i.desiredDateISO} nemamo slobodan termin.`),
     reason ? softNote(reason) : "",
     paragraph(`Rado ćemo naći drugi datum — odgovorite na ovaj email pa ćemo dogovoriti.`),
-    signOff(),
+    signOff(_ctx?.emailSignature),
   ].filter(Boolean).join("\n");
 
   return {
@@ -531,7 +557,7 @@ export function reminderToClient(b: Booking, ctx: ClientTemplateCtx): EmailMessa
     ]),
     softNote(`Ako nešto iskrsne, odgovorite na ovaj email i dogovorićemo novi termin.`),
     paragraph(`Vidimo se sutra!`),
-    signOff(),
+    signOff(ctx?.emailSignature),
   ].filter(Boolean).join("\n");
 
   return {

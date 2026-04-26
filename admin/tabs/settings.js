@@ -37,6 +37,11 @@ const FIELDS = [
   ["reminderEmailEnabled", "Slati podsjetnik klijentu dan prije", "checkbox", {}],
   ["dailyDigestEnabled", "Slati dnevni pregled vlasnici u 20h", "checkbox", {}],
 
+  // --- Tekst poruka klijentu (opciono — prazno = default tekst) ---
+  ["emailGreeting", "Pozdrav u potvrdi (npr. 'Hvala što ste odabrali L'Essenza. Vaš termin je potvrđen.')", "textarea", { maxlength: 500, rows: 2, placeholder: "Hvala što ste odabrali L'Essenza. Vaš termin je potvrđen." }],
+  ["emailClosing", "Završna poruka (npr. 'Radujemo se vašem dolasku.')", "textarea", { maxlength: 500, rows: 2, placeholder: "Radujemo se vašem dolasku." }],
+  ["emailSignature", "Potpis (npr. 'L'Essenza' ili 'Marija — L'Essenza')", "text", { maxlength: 200, placeholder: "L'Essenza" }],
+
   // --- Analytics (opciono) ---
   ["analyticsScript", "Analytics skripta (zalijepi <script> iz Plausible / Cloudflare / Umami — prazno = bez praćenja)", "textarea", { maxlength: 2000, rows: 4, placeholder: '<script defer data-domain="lessenza.me" src="https://plausible.io/js/script.js"></script>' }],
 
@@ -102,7 +107,7 @@ saveBtn.addEventListener("click", async () => {
     else payload[key] = el.value;
   }
   // Strip empty optional fields so Zod accepts as undefined
-  for (const k of ["ownerEmail", "ownerPhone", "publicPhone", "publicEmail", "whatsappPhone", "instagramUrl", "analyticsScript"]) {
+  for (const k of ["ownerEmail", "ownerPhone", "publicPhone", "publicEmail", "whatsappPhone", "instagramUrl", "analyticsScript", "emailGreeting", "emailClosing", "emailSignature"]) {
     if (!payload[k]) delete payload[k];
   }
   try {
