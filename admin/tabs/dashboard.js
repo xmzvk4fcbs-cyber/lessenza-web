@@ -202,7 +202,13 @@ async function render() {
     renderNextCard(next);
 
     if (!todayApps.length) {
-      listEl.innerHTML = `<p class="muted">Danas nema zakazanih termina.</p>`;
+      listEl.innerHTML = `
+        <div class="empty-state">
+          <span class="empty-state__icon">☕</span>
+          <h3 class="empty-state__title">Danas je miran dan</h3>
+          <p class="empty-state__sub">Nema zakazanih termina. Iskoristi vrijeme za ono što obično ne stigneš.</p>
+        </div>
+      `;
     } else {
       listEl.innerHTML = todayApps.map(renderAppointmentCard).join("");
     }

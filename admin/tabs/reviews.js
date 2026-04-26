@@ -130,7 +130,7 @@ async function renderList() {
     updateBadge(items.length);
     let html = "";
     if (!items.length) {
-      html += `<p class="muted">Još nema recenzija — dodaj prvu iznad.</p>`;
+      html += `<div class="empty-state"><span class="empty-state__icon">★</span><h3 class="empty-state__title">Još nema recenzija</h3><p class="empty-state__sub">Dodaj prvu iznad. Citati klijentkinja pojavljuju se na početnoj strani sajta.</p></div>`;
     } else {
       html += `<div class="muted" style="font-size:0.82rem;margin:0.5rem 0 0.75rem;">Aktivnih: <strong>${items.length}</strong></div>`;
       html += `<div class="rv-list">${items.map((r) => renderCard(r, false, trashDays)).join("")}</div>`;

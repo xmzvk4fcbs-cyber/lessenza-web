@@ -58,8 +58,8 @@ function paint() {
 
   if (!filtered.length) {
     listEl.innerHTML = q
-      ? `<p class="muted">Nema rezultata za "${escapeHtml(q)}".</p>`
-      : `<p class="muted">Još nema klijentkinja — kad zakažeš prvi termin, pojaviće se ovdje.</p>`;
+      ? `<div class="empty-state"><span class="empty-state__icon">🔍</span><h3 class="empty-state__title">Nema rezultata</h3><p class="empty-state__sub">Nema klijentkinje koja odgovara "${escapeHtml(q)}". Probaj sa imenom ili dijelom broja.</p></div>`
+      : `<div class="empty-state"><span class="empty-state__icon">✦</span><h3 class="empty-state__title">Još nema klijentkinja</h3><p class="empty-state__sub">Čim zakažeš prvi termin, klijentkinja se pojavljuje ovdje sa istorijom dolazaka.</p></div>`;
     return;
   }
 

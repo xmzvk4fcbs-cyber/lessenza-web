@@ -3109,6 +3109,48 @@
 .mb__actions .btn { flex: 1; min-height: 48px; }
 .mb__actions .btn-primary { flex: 2; }
 
+/* Empty state — used across admin lists when no data */
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: 2rem 1rem 1.75rem;
+  background: linear-gradient(180deg, var(--cream-soft, #F9F2E5) 0%, transparent 100%);
+  border: 1px dashed rgba(217, 192, 154, 0.55);
+  border-radius: 14px;
+  color: var(--text-light, #6B5F52);
+}
+.empty-state__icon {
+  font-size: 1.6rem;
+  width: 56px; height: 56px;
+  display: inline-flex;
+  align-items: center; justify-content: center;
+  border-radius: 50%;
+  background: rgba(201, 169, 97, 0.15);
+  color: var(--gold, #C9A961);
+  margin-bottom: 14px;
+}
+.empty-state__title {
+  font-family: 'Cormorant Garamond', Georgia, serif;
+  font-style: italic;
+  font-size: 1.15rem;
+  color: var(--sage, #6B6F4F);
+  margin: 0 0 0.35rem;
+  letter-spacing: -0.005em;
+}
+.empty-state__sub {
+  font-size: 0.88rem;
+  line-height: 1.5;
+  max-width: 380px;
+  margin: 0 0 1rem;
+}
+.empty-state__sub:last-child { margin-bottom: 0; }
+.empty-state__action { margin-top: 0.25rem; }
+
+/* Body when modal open — prevent background scroll */
+body.modal-open { overflow: hidden; }
+
 /* Confirm dialog — replaces native confirm() */
 .confirm-dialog {
   text-align: center;

@@ -42,17 +42,38 @@ const modalEl = document.getElementById("modal");
 const modalTitle = document.getElementById("modal-title");
 const modalBody = document.getElementById("modal-body");
 
+let modalLastFocus = null;
 export function openModal(title, html) {
+  modalLastFocus = document.activeElement;
   modalTitle.textContent = title;
   modalBody.innerHTML = html;
   modalEl.hidden = false;
+  document.body.classList.add("modal-open");
+  // Auto-focus first field for keyboard users
+  setTimeout(() => {
+    const first = modalEl.querySelector("input:not([type=hidden]),select,textarea,button:not([data-close])");
+    if (first && typeof first.focus === "function") first.focus();
+  }, 50);
 }
 export function closeModal() {
   modalEl.hidden = true;
   modalBody.innerHTML = "";
+  document.body.classList.remove("modal-open");
+  if (modalLastFocus && typeof modalLastFocus.focus === "function") {
+    try { modalLastFocus.focus(); } catch { /* gone from DOM */ }
+  }
+  modalLastFocus = null;
 }
 modalEl.addEventListener("click", (e) => {
   if (e.target.dataset && e.target.dataset.close) closeModal();
+});
+
+// Esc closes any open modal — works for confirm dialogs too.
+document.addEventListener("keydown", (e) => {
+  if (e.key === "Escape" && !modalEl.hidden) {
+    e.preventDefault();
+    closeModal();
+  }
 });
 
 /**

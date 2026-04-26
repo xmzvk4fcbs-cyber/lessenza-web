@@ -138,7 +138,7 @@ async function renderList() {
     let html = "";
 
     if (results.length === 0) {
-      html += `<p class="muted">Još nema dodanih parova.</p>`;
+      html += `<div class="empty-state"><span class="empty-state__icon">✨</span><h3 class="empty-state__title">Nema prije / poslije parova</h3><p class="empty-state__sub">Dodaj prvi par fotografija iznad. Pojaviće se na sajtu kad uključiš tab "Prije / Poslije" u Podešavanjima.</p></div>`;
     } else {
       html += results.map((r) => renderCard(r, false, trashDays)).join("");
     }

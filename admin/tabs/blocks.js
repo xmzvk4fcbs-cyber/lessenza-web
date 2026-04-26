@@ -31,7 +31,7 @@ async function render() {
   try {
     const { blocks } = await must("/api/admin/blocks");
     if (!blocks.length) {
-      list.innerHTML = `<p class="muted">Nema aktivnih blokova.</p>`;
+      list.innerHTML = `<div class="empty-state"><span class="empty-state__icon">🌿</span><h3 class="empty-state__title">Nema blokova</h3><p class="empty-state__sub">Dodaj blok kad ti treba pauza, godišnji ili nedostupnost. Klijentke neće moći zakazati u tom terminu.</p></div>`;
       return;
     }
     list.innerHTML = blocks

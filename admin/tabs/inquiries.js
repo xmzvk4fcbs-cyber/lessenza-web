@@ -70,7 +70,7 @@ async function render() {
       : inquiries;
 
     if (!filtered.length) {
-      list.innerHTML = `<p class="muted">Nema upita za ${dayValue ? escapeHtml(fmtDayLabel(dayValue)) : "ovaj filter"}.</p>`;
+      list.innerHTML = `<div class="empty-state"><span class="empty-state__icon">💌</span><h3 class="empty-state__title">Nema upita</h3><p class="empty-state__sub">${dayValue ? `Nije stiglo nijedno pitanje za ${escapeHtml(fmtDayLabel(dayValue))}.` : "Klijentkinje šalju upite kad ne mogu da pronađu željeni termin online."}</p></div>`;
       return;
     }
 

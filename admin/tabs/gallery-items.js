@@ -92,7 +92,7 @@ async function renderList() {
     updateBadge(items.length);
     let html = "";
     if (!items.length) {
-      html += `<p class="muted">Još nema slika u galeriji.</p>`;
+      html += `<div class="empty-state"><span class="empty-state__icon">📷</span><h3 class="empty-state__title">Galerija je prazna</h3><p class="empty-state__sub">Dodaj prvu sliku iznad — JPG/PNG/WebP, max 3 MB. Automatski se kompresuje.</p></div>`;
     } else {
       const seedCount = items.filter((i) => typeof i.id === "string" && i.id.startsWith("seed-")).length;
       const newCount = items.length - seedCount;
