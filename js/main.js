@@ -2,6 +2,14 @@
    L'ESSENZA — Main JavaScript
    ============================================ */
 
+// Service Worker registration — runs once per page load, doesn't block.
+// Skipped on /admin/ and on file:// to keep dev clean.
+if ("serviceWorker" in navigator && location.protocol !== "file:" && !location.pathname.startsWith("/admin")) {
+  window.addEventListener("load", () => {
+    navigator.serviceWorker.register("/sw.js").catch(() => { /* SW registration is best-effort */ });
+  });
+}
+
 document.addEventListener('DOMContentLoaded', () => {
 
   // --- Header scroll effect ---
