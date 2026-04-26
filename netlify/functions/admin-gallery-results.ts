@@ -4,7 +4,7 @@ import * as path from "node:path";
 import type { Handler } from "@netlify/functions";
 import { json, badRequest, notFound, methodNotAllowed, parseJson } from "../lib/http";
 import { adminGuard } from "../lib/admin-guard";
-import { getGalleryResults, saveGalleryResults, GALLERY_TRASH_DAYS } from "../lib/config";
+import { getGalleryResults, saveGalleryResults, GALLERY_TRASH_DAYS, getSettings, setSettings } from "../lib/config";
 import type { GalleryResult } from "../lib/schemas";
 
 const UPLOAD_DIR = path.resolve(process.cwd(), "uploads", "gallery");
@@ -117,7 +117,15 @@ const inner: Handler = async (event) => {
       createdAt: new Date().toISOString(),
     };
     await saveGalleryResults([entry, ...all]);
-    return json({ result: entry });
+    // Auto-enable the public Prije / Poslije tab on first add — saves the
+    // owner from a "why nothing shows up?" gotcha. We only flip ON; never OFF.
+    let autoEnabled = false;
+    const settings = await getSettings();
+    if (!settings.showBeforeAfter) {
+      await setSettings({ showBeforeAfter: true });
+      autoEnabled = true;
+    }
+    return json({ result: entry, autoEnabled });
   }
 
   if (event.httpMethod === "DELETE") {
