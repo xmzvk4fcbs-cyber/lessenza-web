@@ -123,22 +123,27 @@ function renderNextCard(appointment) {
 
 function renderAppointmentCard(a) {
   const phone = escapeHtml(a.phoneE164 || "");
-  const note = a.note ? `<div>📝 ${escapeHtml(a.note)}</div>` : "";
+  const note = a.note ? `<p class="appt-card__note">📝 ${escapeHtml(a.note)}</p>` : "";
+  const start = new Date(a.startISO);
+  const end = new Date(a.endISO);
+  const dur = Math.max(0, Math.round((end - start) / 60000));
+  const hh = String(start.getHours()).padStart(2, "0");
+  const mm = String(start.getMinutes()).padStart(2, "0");
   return `
-    <article class="stack-card">
-      <div class="stack-card__head">
-        <div>
-          <div class="stack-card__title">${escapeHtml(a.serviceName)} — ${escapeHtml(a.name)}</div>
-          <div class="stack-card__meta">🕐 ${fmtTime(a.startISO)}</div>
-        </div>
+    <article class="appt-card">
+      <div class="appt-card__time">
+        <span class="appt-card__hh">${hh}</span><span class="appt-card__sep">:</span><span class="appt-card__mm">${mm}</span>
+        <span class="appt-card__dur">${dur} min</span>
       </div>
-      <div class="stack-card__details">
-        ${phone ? `<div>📞 ${phone}</div>` : ""}
+      <div class="appt-card__body">
+        <div class="appt-card__name">${escapeHtml(a.name)}</div>
+        <div class="appt-card__service">${escapeHtml(a.serviceName)}</div>
+        ${phone ? `<div class="appt-card__phone">📞 ${phone}</div>` : ""}
         ${note}
-      </div>
-      <div class="stack-card__actions">
-        ${phone ? `<a class="btn btn-ghost" href="tel:${phone}">📞 Pozovi</a>` : ""}
-        ${phone ? `<a class="btn btn-ghost" href="https://wa.me/${phone.replace(/[^\d]/g, "")}" target="_blank" rel="noopener">📱 WhatsApp</a>` : ""}
+        <div class="appt-card__actions">
+          ${phone ? `<a class="btn btn-ghost" href="tel:${phone}">Pozovi</a>` : ""}
+          ${phone ? `<a class="btn btn-ghost" href="https://wa.me/${phone.replace(/[^\d]/g, "")}" target="_blank" rel="noopener">WhatsApp</a>` : ""}
+        </div>
       </div>
     </article>
   `;

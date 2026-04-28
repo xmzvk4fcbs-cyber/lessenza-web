@@ -45,7 +45,11 @@
 
 html {
   scroll-behavior: smooth;
+  /* Section anchors land *under* the sticky header, not flush against it. */
+  scroll-padding-top: calc(var(--header-height, 70px) + 12px);
   -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
   overflow-x: hidden;
   /* Belt-and-suspenders: some iOS Safari versions ignore overflow-x on body
      when a descendant is wider than the viewport (e.g. hero bokeh span).
