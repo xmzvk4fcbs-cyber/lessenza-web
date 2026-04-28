@@ -834,3 +834,43 @@ Hetzner sells a dedicated 1TB Storage Box for €3.49/month. One-time setup:
 6. Verify by running once manually: `systemctl start lessenza-backup.service` then `tail /var/log/lessenza-backup.log`.
 
 Restore: `scp <user>@<host>:/home/lessenza/snapshots/<ts>/lessenza.db /opt/lessenza/app/data/lessenza.db && systemctl restart lessenza`.
+
+## 17. Email deliverability (SPF / DKIM / DMARC)
+
+Without these three TXT records on `lessenza.me`, automated emails (booking
+confirmations, reminders, review nudges) frequently land in spam. Setup is one
+visit to Namecheap → Domain List → lessenza.me → Advanced DNS → Add new record.
+
+### SPF (declares which servers may send on behalf of lessenza.me)
+
+| Type | Host | Value | TTL |
+|---|---|---|---|
+| TXT Record | @ | `v=spf1 include:spf.privateemail.com ~all` | Automatic |
+
+(Already present from PrivateEmail setup — verify with `dig TXT lessenza.me +short`. If you also send through Gmail OAuth, replace with `v=spf1 include:spf.privateemail.com include:_spf.google.com ~all`.)
+
+### DKIM (cryptographically signs outgoing email)
+
+In PrivateEmail webmail panel → Settings → Mail Settings → DKIM → "Generate DKIM
+key". You'll get something like:
+
+| Type | Host | Value | TTL |
+|---|---|---|---|
+| TXT Record | default._domainkey | `v=DKIM1; k=rsa; p=MIGfMA0...AAAB` | Automatic |
+
+Paste at Namecheap exactly as PrivateEmail provides — no quotes, no line breaks.
+
+### DMARC (policy + reporting)
+
+| Type | Host | Value | TTL |
+|---|---|---|---|
+| TXT Record | _dmarc | `v=DMARC1; p=quarantine; rua=mailto:info@lessenza.me; pct=100` | Automatic |
+
+Start with `p=quarantine` for the first 2 weeks; tighten to `p=reject` after monitoring `rua=` reports.
+
+### Verify
+
+1. Wait 1 hour for propagation.
+2. Send a test booking confirmation to a Gmail address.
+3. Open the message → "Show original" → check `Authentication-Results: ... spf=pass dkim=pass dmarc=pass`.
+4. Or run https://www.mail-tester.com — paste the address it gives you, send from booking flow, check the score (target ≥ 9 / 10).
