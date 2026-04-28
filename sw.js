@@ -1,7 +1,7 @@
 /* L'Essenza Service Worker — minimalan offline shell.
    Strategija: SWR za HTML stranice, cache-first za statik (img/css/js),
    nikad ne diraj /api/ ni /admin/. */
-const VERSION = "v2";
+const VERSION = "v3";
 const CACHE_STATIC = `lessenza-static-${VERSION}`;
 const CACHE_HTML = `lessenza-html-${VERSION}`;
 
@@ -44,29 +44,39 @@ function isHtml(req) {
   return a.includes("text/html");
 }
 
+function isLogic(url) {
+  // JS/CSS/JSON — these change with every deploy. Never serve a stale copy.
+  return /\.(js|mjs|css|json|webmanifest)(\?|$)/i.test(url.pathname);
+}
+
 self.addEventListener("fetch", (event) => {
   const req = event.request;
   if (req.method !== "GET") return;
   const url = new URL(req.url);
   if (url.origin !== self.location.origin) return;
-  // Never intercept API calls or the admin app — admin needs fresh state.
   if (url.pathname.startsWith("/api/")) return;
   if (url.pathname.startsWith("/admin")) return;
   if (url.pathname === "/sw.js") return;
 
-  if (isHtml(req)) {
+  // HTML and logic files (.js/.css/.json) → network-first, cache fallback.
+  // Ensures owner edits propagate immediately without manual hard-refresh.
+  if (isHtml(req) || isLogic(url)) {
     event.respondWith(
       fetch(req)
         .then((res) => {
-          const copy = res.clone();
-          caches.open(CACHE_HTML).then((c) => c.put(req, copy)).catch(() => {});
+          if (res.ok) {
+            const copy = res.clone();
+            const target = isHtml(req) ? CACHE_HTML : CACHE_STATIC;
+            caches.open(target).then((c) => c.put(req, copy)).catch(() => {});
+          }
           return res;
         })
-        .catch(() => caches.match(req).then((r) => r || caches.match("/index.html")))
+        .catch(() => caches.match(req).then((r) => r || (isHtml(req) ? caches.match("/index.html") : undefined)))
     );
     return;
   }
 
+  // Images / fonts → cache-first (large, rarely changing).
   event.respondWith(
     caches.match(req).then((cached) => {
       if (cached) return cached;
