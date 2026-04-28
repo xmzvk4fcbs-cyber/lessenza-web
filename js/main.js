@@ -2,11 +2,33 @@
    L'ESSENZA — Main JavaScript
    ============================================ */
 
-// Service Worker registration — runs once per page load, doesn't block.
+// Service Worker registration with auto-update on deploy.
 // Skipped on /admin/ and on file:// to keep dev clean.
 if ("serviceWorker" in navigator && location.protocol !== "file:" && !location.pathname.startsWith("/admin")) {
   window.addEventListener("load", () => {
-    navigator.serviceWorker.register("/sw.js").catch(() => { /* SW registration is best-effort */ });
+    navigator.serviceWorker.register("/sw.js").then((reg) => {
+      // Check for updates immediately and every 60s while page is open
+      reg.update().catch(() => {});
+      setInterval(() => reg.update().catch(() => {}), 60_000);
+      // When a new worker installs alongside an active one, swap immediately
+      reg.addEventListener("updatefound", () => {
+        const nw = reg.installing;
+        if (!nw) return;
+        nw.addEventListener("statechange", () => {
+          if (nw.state === "installed" && navigator.serviceWorker.controller) {
+            // New version ready; tell it to take over.
+            nw.postMessage({ type: "SKIP_WAITING" });
+          }
+        });
+      });
+    }).catch(() => { /* best-effort */ });
+    // Reload exactly once when control passes to the new worker.
+    let swRefreshing = false;
+    navigator.serviceWorker.addEventListener("controllerchange", () => {
+      if (swRefreshing) return;
+      swRefreshing = true;
+      window.location.reload();
+    });
   });
 }
 
@@ -84,6 +106,12 @@ document.addEventListener('DOMContentLoaded', () => {
           const img = document.createElement("img");
           img.loading = "lazy";
           img.decoding = "async";
+          // Reserve aspect-ratio with explicit width/height so the layout
+          // doesn't jiggle as each image decodes. .gallery-item is 4/5;
+          // the actual image is object-fit: cover, so the numbers just
+          // need to share the ratio.
+          img.width = 800;
+          img.height = 1000;
           img.src = it.url;
           img.alt = it.alt || "";
           wrap.appendChild(img);
@@ -105,6 +133,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const galleryAll = document.getElementById("gallery-all");
   const galleryResults = document.getElementById("gallery-results");
   if (galleryTabs.length && galleryAll && galleryResults) {
+    const tabsBar = document.querySelector(".gallery-tabs");
     galleryTabs.forEach((tab) => {
       tab.addEventListener("click", () => {
         const which = tab.dataset.tab;
@@ -116,6 +145,11 @@ document.addEventListener('DOMContentLoaded', () => {
         galleryAll.hidden = which !== "all";
         galleryResults.hidden = which !== "results";
         if (which === "results") loadGalleryResults();
+        // Anchor view at the tabs so the new content starts visible.
+        if (tabsBar) {
+          const top = tabsBar.getBoundingClientRect().top + window.scrollY - 80;
+          window.scrollTo({ top, behavior: "smooth" });
+        }
       });
     });
 
@@ -141,8 +175,8 @@ document.addEventListener('DOMContentLoaded', () => {
           const cap = r.caption ? `<p class="ba-item__caption">${esc(r.caption)}</p>` : "";
           return `<figure class="ba-item reveal">
             <div class="ba-item__pair">
-              <div class="ba-item__cell"><span class="ba-item__label">Prije</span><img loading="lazy" decoding="async" src="${esc(r.beforeUrl)}" alt="Prije"></div>
-              <div class="ba-item__cell"><span class="ba-item__label is-after">Poslije</span><img loading="lazy" decoding="async" src="${esc(r.afterUrl)}" alt="Poslije"></div>
+              <div class="ba-item__cell"><span class="ba-item__label">Prije</span><img loading="lazy" decoding="async" width="800" height="1000" src="${esc(r.beforeUrl)}" alt="Prije"></div>
+              <div class="ba-item__cell"><span class="ba-item__label is-after">Poslije</span><img loading="lazy" decoding="async" width="800" height="1000" src="${esc(r.afterUrl)}" alt="Poslije"></div>
             </div>
             ${(svc || cap) ? `<figcaption class="ba-item__meta">${svc}${cap}</figcaption>` : ""}
           </figure>`;
@@ -175,7 +209,7 @@ document.addEventListener('DOMContentLoaded', () => {
         testimonialsEl.removeAttribute("data-default");
         testimonialsEl.innerHTML = items.map((r) => {
           const photo = r.photoUrl
-            ? `<img class="testimonial__avatar" src="${escTM(r.photoUrl)}" alt="${escTM(r.author)}" loading="lazy" decoding="async">`
+            ? `<img class="testimonial__avatar" src="${escTM(r.photoUrl)}" alt="${escTM(r.author)}" loading="lazy" decoding="async" width="56" height="56">`
             : `<span class="testimonial__avatar testimonial__avatar--initial">${escTM((r.author || "?").trim().slice(0, 1).toUpperCase())}</span>`;
           return `<figure class="testimonial reveal">
             ${photo}

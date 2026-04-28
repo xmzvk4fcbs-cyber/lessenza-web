@@ -1,7 +1,7 @@
 /* L'Essenza Service Worker — minimalan offline shell.
    Strategija: SWR za HTML stranice, cache-first za statik (img/css/js),
    nikad ne diraj /api/ ni /admin/. */
-const VERSION = "v3";
+const VERSION = "v4";
 const CACHE_STATIC = `lessenza-static-${VERSION}`;
 const CACHE_HTML = `lessenza-html-${VERSION}`;
 
@@ -23,7 +23,14 @@ self.addEventListener("install", (event) => {
   event.waitUntil(
     caches.open(CACHE_STATIC).then((c) => c.addAll(PRECACHE).catch(() => {}))
   );
-  self.skipWaiting();
+  // Don't skipWaiting() automatically; wait for the page to send SKIP_WAITING
+  // so it can coordinate the reload (avoids tearing in mid-action).
+});
+
+self.addEventListener("message", (event) => {
+  if (event.data && event.data.type === "SKIP_WAITING") {
+    self.skipWaiting();
+  }
 });
 
 self.addEventListener("activate", (event) => {
