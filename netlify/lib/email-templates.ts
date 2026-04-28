@@ -613,3 +613,35 @@ export function bookingCancelledByClientToOwner(
     html: renderShell({ heading: "Termin otkazan", preheader: `${b.name} · ${when}`, inner }),
   };
 }
+
+/** Sent ~4h after a booking ends, asking for a Google review. */
+export function reviewNudgeToClient(
+  b: Booking,
+  ctx: ClientTemplateCtx & { reviewLinkUrl: string }
+): EmailMessage {
+  if (!b.email) throw new Error("Booking has no client email");
+  const url = ctx.reviewLinkUrl;
+  const cta = `<table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="margin:18px 0 8px;"><tr><td align="center">
+    <a href="${esc(url)}" style="display:inline-block;font-family:Georgia,serif;font-size:14px;color:#fff;text-decoration:none;background:linear-gradient(135deg,${BRAND.gold} 0%,${BRAND.goldLight} 100%);padding:12px 24px;border-radius:8px;letter-spacing:0.04em;">Ostavi recenziju &raquo;</a>
+  </td></tr></table>`;
+
+  const inner = [
+    paragraph(`Draga ${b.name},`),
+    paragraph(`Hvala što ste danas posjetili L'Essenzu. Bilo nam je drago.`),
+    paragraph(`Ako imate jedan minut — vaš utisak na <strong>Google-u</strong> nam mnogo znači. Pomaže drugim klijentkinjama koje traže salon u Cetinju.`),
+    cta,
+    softNote(`Ako vam se nešto nije svidjelo, jednostavno odgovorite na ovaj email — uzećemo to ozbiljno.`),
+    signOff(ctx.emailSignature),
+  ].filter(Boolean).join("\n");
+
+  return {
+    to: b.email,
+    subject: "L'Essenza — Hvala što ste bili",
+    text:
+      `Draga ${b.name},\n\n` +
+      `Hvala što ste danas posjetili L'Essenzu.\n\n` +
+      `Ako imate jedan minut, vaš utisak nam mnogo znači:\n${url}\n\n` +
+      `Srdačno,\n${ctx.emailSignature || "L'Essenza"}`,
+    html: renderShell({ heading: "Hvala vam", preheader: "Vaš utisak nam mnogo znači", inner }),
+  };
+}

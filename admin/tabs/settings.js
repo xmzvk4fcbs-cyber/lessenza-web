@@ -42,6 +42,15 @@ const FIELDS = [
   ["emailClosing", "Završna poruka (npr. 'Radujemo se vašem dolasku.')", "textarea", { maxlength: 500, rows: 2, placeholder: "Radujemo se vašem dolasku." }],
   ["emailSignature", "Potpis (npr. 'L'Essenza' ili 'Marija — L'Essenza')", "text", { maxlength: 200, placeholder: "L'Essenza" }],
 
+  // --- Banner za akcije / poruke (na vrhu javnih stranica) ---
+  ["bannerText", "Banner tekst (npr. 'Laser -20% do kraja maja') — prazno = nema banner-a", "textarea", { maxlength: 200, rows: 2, placeholder: "Laser -20% do kraja maja" }],
+  ["bannerLinkText", "Tekst dugmeta u banneru (opciono)", "text", { maxlength: 40, placeholder: "Saznaj više" }],
+  ["bannerLinkUrl", "Link iz banner-a (opciono)", "url", { placeholder: "https://lessenza.me/usluge.html#laser" }],
+
+  // --- Google recenzije (auto-zahtjev nakon termina) ---
+  ["reviewNudgeEnabled", "Slati klijentkinji link za Google recenziju 4h nakon termina", "checkbox", {}],
+  ["reviewLinkUrl", "Google review link (https://g.page/r/... ili Maps short link)", "url", { placeholder: "https://g.page/r/CXXXXXXXXXXXX/review" }],
+
   // --- Analytics (opciono) ---
   ["analyticsScript", "Analytics skripta (zalijepi <script> iz Plausible / Cloudflare / Umami — prazno = bez praćenja)", "textarea", { maxlength: 2000, rows: 4, placeholder: '<script defer data-domain="lessenza.me" src="https://plausible.io/js/script.js"></script>' }],
 
@@ -107,7 +116,7 @@ saveBtn.addEventListener("click", async () => {
     else payload[key] = el.value;
   }
   // Strip empty optional fields so Zod accepts as undefined
-  for (const k of ["ownerEmail", "ownerPhone", "publicPhone", "publicEmail", "whatsappPhone", "instagramUrl", "analyticsScript", "emailGreeting", "emailClosing", "emailSignature"]) {
+  for (const k of ["ownerEmail", "ownerPhone", "publicPhone", "publicEmail", "whatsappPhone", "instagramUrl", "analyticsScript", "emailGreeting", "emailClosing", "emailSignature", "bannerText", "bannerLinkText", "bannerLinkUrl", "reviewLinkUrl"]) {
     if (!payload[k]) delete payload[k];
   }
   try {

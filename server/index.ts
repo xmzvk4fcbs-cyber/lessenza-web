@@ -173,8 +173,10 @@ async function scheduleCrons(mounted: Mounted[]): Promise<void> {
   cron.schedule("0 * * * *", () => invokeHandler("cron-reminder", "hourly"), { timezone: "UTC" });
   // Daily digest at 18:00 UTC (matches netlify.toml).
   cron.schedule("0 18 * * *", () => invokeHandler("cron-daily-digest", "daily 18:00 UTC"), { timezone: "UTC" });
+  // Hourly Google-review nudge — finds bookings that ended ~4h ago.
+  cron.schedule("15 * * * *", () => invokeHandler("cron-review-nudge", "hourly :15"), { timezone: "UTC" });
 
-  console.log("[cron] scheduled: reminder=hourly, daily-digest=18:00 UTC");
+  console.log("[cron] scheduled: reminder=hourly, daily-digest=18:00 UTC, review-nudge=hourly :15");
 }
 
 // --- 6. Boot ---

@@ -22,5 +22,8 @@ export const handler: Handler = async (event) => {
     priceCurrency: s.priceCurrency,
     showBeforeAfter: s.showBeforeAfter,
     analyticsScript: s.analyticsScript ?? "",
+    bannerText: s.bannerText ?? "",
+    bannerLinkUrl: s.bannerLinkUrl ?? "",
+    bannerLinkText: s.bannerLinkText ?? "",
   });
 };

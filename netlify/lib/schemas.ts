@@ -109,6 +109,16 @@ export const SettingsSchema = z.object({
   emailClosing: z.string().max(500).optional(),
   emailSignature: z.string().max(200).optional(),
 
+  /** Promotional banner shown at the top of every public page when non-empty. */
+  bannerText: z.string().max(200).optional(),
+  bannerLinkUrl: z.string().url().optional(),
+  bannerLinkText: z.string().max(40).optional(),
+
+  /** Send an automated Google review nudge ~4h after a booking ends. */
+  reviewNudgeEnabled: z.boolean().default(false),
+  /** Public URL clients click to leave the Google review (e.g. https://g.page/r/...). */
+  reviewLinkUrl: z.string().url().optional(),
+
   /** Pametni predlozi — per-category toggles on the admin dashboard. */
   suggestLapsedRegulars: z.boolean().default(true),
   suggestSparseDays: z.boolean().default(true),

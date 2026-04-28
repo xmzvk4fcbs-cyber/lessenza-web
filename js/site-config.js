@@ -184,9 +184,50 @@
     // Price injection: fill `[data-service-price]` labels when showPrices is on.
     if (settings.showPrices) injectPrices(settings.priceCurrency || "€");
 
+    // Promotional banner — when bannerText is non-empty, prepend a top strip.
+    if (settings.bannerText && settings.bannerText.trim()) {
+      injectBanner(settings.bannerText.trim(), settings.bannerLinkUrl, settings.bannerLinkText);
+    }
+
     // Expose for other scripts (e.g. booking WhatsApp fallback)
     window.__siteSettings = settings;
   }
+
+  function injectBanner(text, linkUrl, linkText) {
+    if (document.getElementById("site-promo-banner")) return; // idempotent
+    const a = (linkUrl && linkText)
+      ? ` <a href="${escapeAttr(linkUrl)}" style="color:#fff;text-decoration:underline;font-weight:600;">${escapeText(linkText)}</a>`
+      : (linkUrl ? ` <a href="${escapeAttr(linkUrl)}" style="color:#fff;text-decoration:underline;font-weight:600;">→</a>` : "");
+    const div = document.createElement("div");
+    div.id = "site-promo-banner";
+    div.setAttribute("role", "region");
+    div.setAttribute("aria-label", "Aktuelna ponuda");
+    div.style.cssText = [
+      "position:relative",
+      "background:linear-gradient(90deg,#C9A961 0%,#E0C58A 50%,#C9A961 100%)",
+      "color:#fff",
+      "font-family:'Outfit',system-ui,sans-serif",
+      "font-size:0.88rem",
+      "font-weight:500",
+      "letter-spacing:0.02em",
+      "text-align:center",
+      "padding:8px 36px 8px 16px",
+      "line-height:1.4",
+    ].join(";");
+    div.innerHTML = `<span>${escapeText(text)}</span>${a} <button type="button" aria-label="Zatvori" style="position:absolute;right:8px;top:50%;transform:translateY(-50%);background:transparent;border:0;color:#fff;font-size:1.05rem;cursor:pointer;padding:4px 8px;line-height:1;opacity:0.85;">×</button>`;
+    document.body.insertBefore(div, document.body.firstChild);
+    const btn = div.querySelector("button");
+    if (btn) {
+      // Respect a "this session, hide it" choice.
+      try { if (sessionStorage.getItem("promo-dismissed") === "1") { div.remove(); return; } } catch {}
+      btn.addEventListener("click", () => {
+        try { sessionStorage.setItem("promo-dismissed", "1"); } catch {}
+        div.remove();
+      });
+    }
+  }
+  function escapeAttr(s) { return String(s).replace(/[&"<>]/g, (c) => ({ "&":"&amp;", '"':"&quot;", "<":"&lt;", ">":"&gt;" })[c]); }
+  function escapeText(s) { return String(s).replace(/[&<>]/g, (c) => ({ "&":"&amp;", "<":"&lt;", ">":"&gt;" })[c]); }
 
   async function injectPrices(currency) {
     const slots = document.querySelectorAll("[data-service-price]");

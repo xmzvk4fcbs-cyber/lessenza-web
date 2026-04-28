@@ -343,3 +343,26 @@ export async function recordNoShow(phoneE164: string, entry: NoShow): Promise<No
   await store().setJSON(noShowKey(phoneE164), next);
   return next;
 }
+
+// ---------- Review-nudge sent tracker ----------
+// One blob with a map { eventId: sentAtISO } — auto-prunes to last 60 days
+// to keep the file tiny. Owner has no UI for this — purely internal.
+const KEY_REVIEW_NUDGES_SENT = "internal/review-nudges-sent.json";
+
+export async function getReviewNudgesSent(): Promise<Record<string, string>> {
+  const raw = await store().getJSON<Record<string, string>>(KEY_REVIEW_NUDGES_SENT);
+  return raw ?? {};
+}
+
+export async function markReviewNudgeSent(eventId: string): Promise<void> {
+  if (!eventId) return;
+  const cur = await getReviewNudgesSent();
+  const now = Date.now();
+  const PRUNE_MS = 60 * 24 * 60 * 60 * 1000;
+  const next: Record<string, string> = {};
+  for (const [k, v] of Object.entries(cur)) {
+    if (now - new Date(v).getTime() < PRUNE_MS) next[k] = v;
+  }
+  next[eventId] = new Date(now).toISOString();
+  await store().setJSON(KEY_REVIEW_NUDGES_SENT, next);
+}

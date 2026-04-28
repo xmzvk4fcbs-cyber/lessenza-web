@@ -35,6 +35,7 @@ const settings: Settings = {
   showPrices: false,
   priceCurrency: "€",
   showBeforeAfter: false,
+  reviewNudgeEnabled: false,
   suggestLapsedRegulars: true,
   suggestSparseDays: true,
   suggestFutureGaps: true,
