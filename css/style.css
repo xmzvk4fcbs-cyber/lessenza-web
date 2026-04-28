@@ -48,8 +48,10 @@ html {
   -webkit-font-smoothing: antialiased;
   overflow-x: hidden;
   /* Belt-and-suspenders: some iOS Safari versions ignore overflow-x on body
-     when a descendant is wider than the viewport (e.g. hero bokeh span).   */
-  max-width: 100vw;
+     when a descendant is wider than the viewport (e.g. hero bokeh span).
+     NOTE: 100% (not 100vw) — vw includes the scrollbar gutter on some
+     Safari/iOS builds and can produce a 1–2px horizontal jiggle. */
+  max-width: 100%;
 }
 
 body {
@@ -60,13 +62,14 @@ body {
   line-height: 1.7;
   font-size: 16px;
   overflow-x: hidden;
-  max-width: 100vw;
+  max-width: 100%;
+  width: 100%;
   position: relative;
 }
 
 /* Nothing should be wider than the viewport on mobile. Hard stop. */
 img, video, iframe, svg, canvas { max-width: 100%; }
-section, header, footer, nav, main, article { max-width: 100vw; }
+section, header, footer, nav, main, article { max-width: 100%; }
 
 /* Long unbroken strings (long emails, URLs) must wrap instead of forcing
    horizontal scroll. Applies where the content is user-visible text. */
@@ -277,6 +280,9 @@ p {
 .header__logo img {
   height: 38px;
   width: auto;
+  /* Logo wordmark is 1600x640 = 2.5:1; reserve space to prevent CLS on
+     first paint before the PNG decodes. */
+  aspect-ratio: 1600 / 640;
   display: block;
   transition: opacity 0.3s var(--ease-luxe);
 }
@@ -420,7 +426,10 @@ p {
 /* --- Hero --- */
 .hero {
   position: relative;
+  /* 100vh on iOS Safari includes the URL bar; the hero "jumps" when the bar
+     hides on scroll. svh = small viewport height, stable while scrolling. */
   min-height: 100vh;
+  min-height: 100svh;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -551,6 +560,9 @@ p {
   z-index: 1;
   width: min(640px, 80vw);
   height: auto;
+  /* Logo is 1600x640 (2.5:1). Reserve space so the layout doesn't
+     shift when the image decodes — fights CLS without an HTML w/h attr. */
+  aspect-ratio: 1600 / 640;
   display: block;
   margin: 0 auto 32px;
   opacity: 0;
@@ -936,6 +948,8 @@ p {
 .footer__brand-logo img {
   height: 44px;
   width: auto;
+  /* Same 1600x640 wordmark — reserve space for CLS. */
+  aspect-ratio: 1600 / 640;
   display: block;
   transition: opacity 0.3s var(--ease-luxe);
 }
@@ -996,6 +1010,9 @@ p {
   font-size: 0.9rem;
   color: var(--text-light);
   transition: color 0.3s var(--ease-luxe);
+  /* If owner ever puts a long phone or address here, let it wrap. */
+  overflow-wrap: break-word;
+  word-break: break-word;
 }
 
 .footer__links a:hover {
@@ -1303,6 +1320,10 @@ p {
   display: flex;
   flex-direction: column;
   gap: 6px;
+  /* Reserve roughly 7 rows of space so the contact card doesn't grow when
+     site-config.js replaces the "Učitavanje…" placeholder with the real
+     hours table. ~36px per row × 7 + small slack. */
+  min-height: 260px;
 }
 
 .working-hours__row,
@@ -1652,7 +1673,7 @@ h2 em {
 
 /* === Small-screen polish (≤480px) === */
 @media (max-width: 480px) {
-  .hero { min-height: 92vh; padding-top: calc(var(--header-height) + 24px); }
+  .hero { min-height: 92vh; min-height: 92svh; padding-top: calc(var(--header-height) + 24px); }
   .hero__logo-img { width: min(88vw, 480px); margin-bottom: 22px; }
   .hero__title { font-size: clamp(1.4rem, 7vw, 2rem); }
   .hero__desc { font-size: 0.95rem; padding: 0 12px; }
@@ -2088,6 +2109,9 @@ h2 em {
   opacity: 0;
   transition: transform 0.35s ease, opacity 0.3s ease, background 0.2s ease;
   pointer-events: none;
+  /* Never let the pill exceed the viewport width on tiny devices. */
+  max-width: calc(100vw - 32px);
+  white-space: nowrap;
   /* Honour the iPhone home-indicator area */
   bottom: calc(16px + env(safe-area-inset-bottom, 0px));
 }
