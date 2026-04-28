@@ -1,0 +1,10 @@
+[Unit]
+Description=L'Essenza nightly backup to Storage Box
+After=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/opt/lessenza/app/deploy/nightly-backup.sh
+User=root
+StandardOutput=append:/var/log/lessenza-backup.log
+StandardError=append:/var/log/lessenza-backup.log

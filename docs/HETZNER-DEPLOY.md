@@ -809,3 +809,28 @@ Do this only **after** you've verified end-to-end on Hetzner for at least 24h
    was larger).
 4. Traffic goes back to Netlify. Your Hetzner SQLite DB is untouched — you
    can restart the service and re-cutover after fixing the issue.
+
+## 16. Nightly backup (Hetzner Storage Box)
+
+Hetzner sells a dedicated 1TB Storage Box for €3.49/month. One-time setup:
+
+1. Order Storage Box: https://www.hetzner.com/storage/storage-box → smallest tier.
+2. In Storage Box admin → Settings → enable SSH support, paste the *server's* public SSH key (`cat /root/.ssh/id_ed25519.pub` from your VPS, or generate one with `ssh-keygen -t ed25519 -f /root/.ssh/storagebox_ed25519 -N ""`).
+3. Note the host (e.g. `u123456.your-storagebox.de`) and user (`u123456`).
+4. On the VPS create `/etc/lessenza-backup.env` (chmod 600):
+   ```
+   BACKUP_HOST=u123456.your-storagebox.de
+   BACKUP_USER=u123456
+   BACKUP_KEY=/root/.ssh/storagebox_ed25519
+   BACKUP_REMOTE_DIR=/home/lessenza
+   ```
+5. Install the systemd unit + timer:
+   ```bash
+   cp /opt/lessenza/app/deploy/lessenza-backup.service /etc/systemd/system/
+   cp /opt/lessenza/app/deploy/lessenza-backup.timer   /etc/systemd/system/
+   systemctl daemon-reload
+   systemctl enable --now lessenza-backup.timer
+   ```
+6. Verify by running once manually: `systemctl start lessenza-backup.service` then `tail /var/log/lessenza-backup.log`.
+
+Restore: `scp <user>@<host>:/home/lessenza/snapshots/<ts>/lessenza.db /opt/lessenza/app/data/lessenza.db && systemctl restart lessenza`.

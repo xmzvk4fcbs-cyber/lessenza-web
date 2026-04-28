@@ -1,0 +1,11 @@
+[Unit]
+Description=Run lessenza-backup.service nightly at 03:30 UTC
+
+[Timer]
+OnCalendar=*-*-* 03:30:00
+RandomizedDelaySec=10min
+Persistent=true
+Unit=lessenza-backup.service
+
+[Install]
+WantedBy=timers.target
