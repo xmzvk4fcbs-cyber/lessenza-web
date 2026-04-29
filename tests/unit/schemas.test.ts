@@ -53,7 +53,7 @@ describe("schemas", () => {
     const r = SettingsSchema.parse({});
     expect(r.bookingWindowDays).toBe(15);
     expect(r.minLeadHours).toBe(2);
-    expect(r.bufferMinutes).toBe(5);
+    expect(r.bufferMinutes).toBe(0);
     expect(r.slotGranularityMinutes).toBe(15);
     expect(r.defaultCountryCode).toBe("+382");
   });
