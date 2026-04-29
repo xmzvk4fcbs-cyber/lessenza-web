@@ -125,6 +125,38 @@ export async function requireAdmin(cookieHeader: string | undefined): Promise<Se
   return verifyToken(token);
 }
 
+/**
+ * Overwrite the stored admin password unconditionally. Used by the password
+ * reset flow once a valid reset token has been consumed — caller is
+ * responsible for verifying the token first.
+ *
+ * Refuses when ADMIN_PASSWORD_HASH env is set (env-managed deploys cannot be
+ * reset via this flow; owner edits the env variable directly).
+ */
+export async function forceSetPassword(newPassword: string): Promise<void> {
+  if (newPassword.length < 8) throw new Error("password-too-short");
+  if (envAuth() && !(await store().getJSON(KEY_AUTH))) {
+    // Env-only auth (no Blobs override yet): writing a Blobs record is the
+    // intended outcome — Blobs entry takes precedence over env, so the owner
+    // can recover even when the env hash is unknown to her.
+  }
+  const existing = await store().getJSON<unknown>(KEY_AUTH).catch(() => null);
+  let parsed: AdminAuth | null = null;
+  if (existing) {
+    const r = AdminAuthSchema.safeParse(existing);
+    if (r.success) parsed = r.data;
+  }
+  const passwordHash = await bcrypt.hash(newPassword, 12);
+  // Preserve the JWT secret so existing sessions (if any) keep working until
+  // they naturally expire — same policy as `changePassword`.
+  const jwtSecret = parsed?.jwtSecret || randomBytes(48).toString("base64url");
+  await store().setJSON(KEY_AUTH, {
+    passwordHash,
+    jwtSecret,
+    createdAt: parsed?.createdAt || new Date().toISOString(),
+  });
+}
+
 export async function changePassword(oldPassword: string, newPassword: string): Promise<void> {
   if (newPassword.length < 8) throw new Error("password-too-short");
   const ok = await verifyPassword(oldPassword);

@@ -1,4 +1,4 @@
-import { randomUUID } from "node:crypto";
+import { randomUUID, createHash } from "node:crypto";
 import { store } from "./blobs";
 import {
   ServicesSchema,
@@ -15,6 +15,7 @@ import {
   DismissedSuggestionsSchema,
   ClientNoteSchema,
   NoShowsSchema,
+  PasswordResetTokenSchema,
   type Service,
   type WorkingHours,
   type Settings,
@@ -28,6 +29,7 @@ import {
   type DismissedSuggestion,
   type ClientNote,
   type NoShow,
+  type PasswordResetToken,
 } from "./schemas";
 import { DEFAULT_SERVICES, DEFAULT_WORKING_HOURS, DEFAULT_PARALLEL_PAIRS } from "./defaults";
 
@@ -365,4 +367,57 @@ export async function markReviewNudgeSent(eventId: string): Promise<void> {
   }
   next[eventId] = new Date(now).toISOString();
   await store().setJSON(KEY_REVIEW_NUDGES_SENT, next);
+}
+
+// ---------- Password reset token (single-use, 30min TTL) ----------
+const KEY_PASSWORD_RESET = "auth/password-reset.json";
+
+function hashToken(token: string): string {
+  return createHash("sha256").update(token).digest("hex");
+}
+
+/**
+ * Persist a fresh single-use password-reset record. Only the SHA-256 hash of
+ * the raw token is stored — the raw token leaves this function only via the
+ * email link.
+ */
+export async function savePasswordResetToken(
+  token: string,
+  ttlMinutes = 30
+): Promise<PasswordResetToken> {
+  const now = new Date();
+  const persisted: PasswordResetToken = {
+    token: "", // raw token never persisted
+    tokenHash: hashToken(token),
+    issuedAt: now.toISOString(),
+    expiresAt: new Date(now.getTime() + ttlMinutes * 60 * 1000).toISOString(),
+  };
+  await store().setJSON(
+    KEY_PASSWORD_RESET,
+    PasswordResetTokenSchema.parse(persisted)
+  );
+  return persisted;
+}
+
+/**
+ * Verify a presented token; if valid, mark it consumed (one-time use) and
+ * return ok. Otherwise return a discriminated reason.
+ */
+export async function consumePasswordResetToken(
+  token: string
+): Promise<{ ok: true } | { ok: false; reason: "invalid" | "expired" | "used" }> {
+  const raw = await store().getJSON<unknown>(KEY_PASSWORD_RESET);
+  if (!raw) return { ok: false, reason: "invalid" };
+  const r = PasswordResetTokenSchema.safeParse(raw);
+  if (!r.success) return { ok: false, reason: "invalid" };
+  const rec = r.data;
+  if (rec.usedAt) return { ok: false, reason: "used" };
+  if (Date.now() > new Date(rec.expiresAt).getTime()) return { ok: false, reason: "expired" };
+  if (rec.tokenHash !== hashToken(token)) return { ok: false, reason: "invalid" };
+  // Mark used (preserve TTL but stamp usedAt so re-use yields { reason: "used" }).
+  await store().setJSON(
+    KEY_PASSWORD_RESET,
+    PasswordResetTokenSchema.parse({ ...rec, usedAt: new Date().toISOString() })
+  );
+  return { ok: true };
 }

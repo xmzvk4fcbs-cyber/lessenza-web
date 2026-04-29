@@ -223,6 +223,30 @@ document.getElementById("login-form").addEventListener("submit", async (e) => {
   await initAdmin();
 });
 
+// Self-serve password reset — owner enters her admin email; if it matches the
+// configured ownerEmail the server sends a one-time reset link. Server always
+// returns 200 to avoid leaking whether the email is correct.
+const forgotLink = document.getElementById("forgot-pw-link");
+if (forgotLink) {
+  forgotLink.addEventListener("click", async (e) => {
+    e.preventDefault();
+    const email = prompt("Unesi tvoj admin email — poslaće se link za reset lozinke.");
+    if (!email) return;
+    const r = await fetch("/api/admin/password-reset-request", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ email: String(email).trim() }),
+    });
+    if (r.ok) {
+      alert("Ako je email tačan, link za reset je poslat. Provjeri inbox (link važi 30 minuta).");
+    } else if (r.status === 429) {
+      alert("Previše pokušaja — sačekaj sat vremena pa probaj opet.");
+    } else {
+      alert("Greška pri slanju. Probaj ponovo.");
+    }
+  });
+}
+
 document.getElementById("logout-btn").addEventListener("click", async () => {
   await api("/api/admin/logout", { method: "POST" });
   location.hash = "";

@@ -615,6 +615,35 @@ export function bookingCancelledByClientToOwner(
 }
 
 
+/**
+ * Self-serve password reset link for the admin owner. Sent in response to
+ * the "Zaboravljena lozinka?" flow. Link TTL is enforced server-side (30min);
+ * we just communicate it here.
+ */
+export function passwordResetEmail(opts: { to: string; resetUrl: string }): EmailMessage {
+  const inner = [
+    paragraph(`Zatraženo je resetovanje lozinke za admin panel L'Essenze.`),
+    paragraph(`Klikni dugme dolje u narednih 30 minuta da postaviš novu lozinku:`),
+    btnLink(opts.resetUrl, "Resetuj lozinku"),
+    softNote(`Ako nisi ti zatražila reset, ignoriši ovaj email — niko ne može pristupiti panelu bez ovog linka.`),
+    signOff(),
+  ].join("\n");
+  return {
+    to: opts.to,
+    subject: "L'Essenza — Resetovanje admin lozinke",
+    text:
+      `Zatraženo je resetovanje lozinke.\n\n` +
+      `Otvori: ${opts.resetUrl}\n` +
+      `Link važi 30 minuta.\n\n` +
+      `Ako nisi ti — ignoriši ovaj email.\n\n— L'Essenza`,
+    html: renderShell({
+      heading: "Resetovanje lozinke",
+      preheader: "Link važi 30 minuta",
+      inner,
+    }),
+  };
+}
+
 /** Sent ~4h after a booking ends, asking for a Google review. */
 export function reviewNudgeToClient(
   b: Booking,

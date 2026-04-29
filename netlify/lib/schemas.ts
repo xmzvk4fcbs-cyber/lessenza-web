@@ -230,3 +230,17 @@ export const AdminAuthSchema = z.object({
   createdAt: z.string().datetime(),
 });
 export type AdminAuth = z.infer<typeof AdminAuthSchema>;
+
+export const PasswordResetTokenSchema = z.object({
+  /** Random URL-safe token (32 bytes hex). Never persisted — kept blank in storage. */
+  token: z.string().min(0).max(128),
+  /** SHA-256 hash of the token; only the hash is stored, never the raw value. */
+  tokenHash: z.string().length(64),
+  /** ISO timestamp when the token was issued. */
+  issuedAt: z.string().datetime(),
+  /** ISO timestamp when the token stops working. */
+  expiresAt: z.string().datetime(),
+  /** ISO timestamp when consumed; absent if still pending. */
+  usedAt: z.string().datetime().optional(),
+});
+export type PasswordResetToken = z.infer<typeof PasswordResetTokenSchema>;

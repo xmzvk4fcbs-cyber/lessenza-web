@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="sr-Latn">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="theme-color" content="#F9F2E5">
+  <title>Reset lozinke — L'Essenza Admin</title>
+  <meta name="robots" content="noindex,nofollow">
+  <link rel="stylesheet" href="admin.css">
+  <link rel="icon" href="/img/favicon-32.png" type="image/png" sizes="32x32">
+</head>
+<body class="admin-body">
+  <main id="app">
+    <section class="admin-view">
+      <div class="admin-card">
+        <img src="/img/logo-wordmark.png" alt="L'Essenza" class="admin-brand-logo" style="display:block;margin:0 auto 12px;max-width:180px;height:auto;">
+        <h1>Nova lozinka</h1>
+        <p>Postavi novu lozinku za admin panel.</p>
+        <form id="reset-form">
+          <div class="field">
+            <label for="new-pw">Nova lozinka (min. 8)</label>
+            <input id="new-pw" type="password" minlength="8" required autofocus autocomplete="new-password">
+          </div>
+          <button type="submit" class="btn btn-primary block">Postavi novu lozinku</button>
+          <p class="admin-error" id="reset-error" hidden></p>
+        </form>
+      </div>
+    </section>
+  </main>
+  <script>
+    (function () {
+      const params = new URLSearchParams(location.search);
+      const token = params.get("t") || "";
+      const form = document.getElementById("reset-form");
+      const err = document.getElementById("reset-error");
+
+      if (!token) {
+        err.textContent = "Link nije validan ili je istekao. Zatraži novi.";
+        err.hidden = false;
+        form.querySelector("button[type=submit]").disabled = true;
+        return;
+      }
+
+      form.addEventListener("submit", async (e) => {
+        e.preventDefault();
+        err.hidden = true;
+        const password = document.getElementById("new-pw").value;
+        const r = await fetch("/api/admin/password-reset-confirm", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ token, password }),
+        });
+        const body = await r.json().catch(() => ({}));
+        if (r.ok) {
+          location.href = "/admin/";
+        } else {
+          const reason = body.error || "";
+          const msg =
+            reason === "expired" ? "Link je istekao. Zatraži novi reset email."
+            : reason === "used" ? "Ovaj link je već iskorišćen. Zatraži novi reset email."
+            : reason === "invalid" ? "Link nije validan. Zatraži novi reset email."
+            : (body.message || "Greška. Probaj ponovo.");
+          err.textContent = msg;
+          err.hidden = false;
+        }
+      });
+    })();
+  </script>
+</body>
+</html>
