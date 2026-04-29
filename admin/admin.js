@@ -213,8 +213,26 @@ document.getElementById("login-form").addEventListener("submit", async (e) => {
   const err = document.getElementById("login-error");
   err.hidden = true;
   const password = document.getElementById("login-password").value;
-  const { ok, data } = await api("/api/admin/login", { method: "POST", body: { password } });
+  const totpField = document.getElementById("totp-field");
+  const totpEl = document.getElementById("login-totp");
+  const totp = totpEl?.value?.trim() || "";
+  const body = totp ? { password, totp } : { password };
+  const { ok, data } = await api("/api/admin/login", { method: "POST", body });
   if (!ok) {
+    if (data.error === "totp-required") {
+      // Reveal the TOTP field and let the owner submit the form again with a code.
+      if (totpField) totpField.hidden = false;
+      if (totpEl) { totpEl.value = ""; totpEl.focus(); }
+      return;
+    }
+    if (data.error === "totp-invalid") {
+      // Keep TOTP field visible; show inline error.
+      if (totpField) totpField.hidden = false;
+      err.textContent = data.message || "Pogrešan 2FA kod.";
+      err.hidden = false;
+      if (totpEl) { totpEl.value = ""; totpEl.focus(); }
+      return;
+    }
     err.textContent = data.message || "Pogrešna lozinka.";
     err.hidden = false;
     return;

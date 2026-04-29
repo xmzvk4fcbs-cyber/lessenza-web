@@ -228,6 +228,10 @@ export const AdminAuthSchema = z.object({
   passwordHash: z.string(),
   jwtSecret: z.string(),
   createdAt: z.string().datetime(),
+  /** Base32 TOTP secret. Absent until owner enables 2FA. */
+  totpSecret: z.string().optional(),
+  /** When true, TOTP code is required at login. */
+  totpEnabled: z.boolean().default(false),
 });
 export type AdminAuth = z.infer<typeof AdminAuthSchema>;
 

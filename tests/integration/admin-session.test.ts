@@ -30,7 +30,7 @@ describe("admin-session", () => {
   it("returns authenticated=false without cookie", async () => {
     const r = await sessionHandler(makeEvent({ httpMethod: "GET", path: "/api/admin/session" }), {} as never);
     expect(r?.statusCode).toBe(200);
-    expect(JSON.parse(r!.body as string)).toEqual({ authenticated: false, initialized: true });
+    expect(JSON.parse(r!.body as string)).toEqual({ authenticated: false, initialized: true, totpEnabled: false });
   });
 
   it("returns authenticated=true with valid cookie", async () => {
@@ -44,7 +44,7 @@ describe("admin-session", () => {
       {} as never
     );
     expect(r?.statusCode).toBe(200);
-    expect(JSON.parse(r!.body as string)).toEqual({ authenticated: true, initialized: true });
+    expect(JSON.parse(r!.body as string)).toEqual({ authenticated: true, initialized: true, totpEnabled: false });
   });
 });
 

@@ -1,4 +1,4 @@
-import { registerTab, must, toast, escapeHtml, confirmDialog } from "../admin.js";
+import { registerTab, must, toast, escapeHtml, confirmDialog, openModal, closeModal } from "../admin.js";
 
 const form = document.getElementById("settings-form");
 const saveBtn = document.getElementById("settings-save");
@@ -104,6 +104,7 @@ async function render() {
     `;
   }).join("");
   await renderBlocked();
+  await renderTotpCard();
 }
 
 saveBtn.addEventListener("click", async () => {
@@ -208,6 +209,105 @@ if (bpAdd) {
       await renderBlocked();
     } catch (e) { toast(e.message, "error"); }
   });
+}
+
+// ---------- 2FA (TOTP) setup card ----------
+
+async function renderTotpCard() {
+  const host = document.getElementById("totp-host");
+  if (!host) return;
+  let session;
+  try {
+    session = await must("/api/admin/session");
+  } catch {
+    return;
+  }
+  const enabled = !!session.totpEnabled;
+  host.innerHTML = enabled
+    ? `<section class="stack-card">
+         <div class="stack-card__head">
+           <div>
+             <div class="stack-card__title">2FA (Authenticator)</div>
+             <div class="stack-card__meta">Uključeno · pri svakom loginu traži 6-cifreni kod.</div>
+           </div>
+         </div>
+         <div class="stack-card__actions" style="margin-top:0.75rem;">
+           <button class="btn btn-ghost" type="button" id="totp-disable">Isključi 2FA</button>
+         </div>
+       </section>`
+    : `<section class="stack-card">
+         <div class="stack-card__head">
+           <div>
+             <div class="stack-card__title">2FA (Authenticator)</div>
+             <div class="stack-card__meta">Isključeno · samo lozinka štiti panel.</div>
+           </div>
+         </div>
+         <div class="stack-card__actions" style="margin-top:0.75rem;">
+           <button class="btn btn-primary" type="button" id="totp-setup">Uključi 2FA</button>
+         </div>
+       </section>`;
+  const setup = document.getElementById("totp-setup");
+  if (setup) setup.addEventListener("click", openTotpSetup);
+  const disable = document.getElementById("totp-disable");
+  if (disable) {
+    disable.addEventListener("click", async () => {
+      const ok = await confirmDialog({
+        title: "Isključiti 2FA?",
+        message: "Panel će biti zaštićen samo lozinkom.",
+        confirmText: "Isključi",
+        variant: "danger",
+      });
+      if (!ok) return;
+      try {
+        await must("/api/admin/totp-disable", { method: "POST", body: {} });
+        toast("2FA isključeno.", "success");
+        await renderTotpCard();
+      } catch (e) {
+        toast(e.message || "Greška", "error");
+      }
+    });
+  }
+}
+
+async function openTotpSetup() {
+  let r;
+  try {
+    r = await must("/api/admin/totp-setup", { method: "POST", body: {} });
+  } catch (e) {
+    toast(e.message || "Greška", "error");
+    return;
+  }
+  // Render QR via Google Charts (no extra dep). The user can also type the
+  // base32 secret manually if scanning fails.
+  const qrUrl = `https://chart.googleapis.com/chart?chs=240x240&cht=qr&chl=${encodeURIComponent(r.otpauthUrl)}`;
+  openModal("Uključi 2FA", `
+    <p>1. Otvori <strong>Google Authenticator</strong> ili <strong>Authy</strong> na telefonu.</p>
+    <p>2. Skeniraj QR kod ili ručno upiši tajnu.</p>
+    <p style="text-align:center;"><img src="${qrUrl}" alt="QR" style="max-width:240px;width:100%;height:auto;"></p>
+    <p style="font-family:monospace;text-align:center;font-size:0.95rem;color:var(--sage);word-break:break-all;">${escapeHtml(r.secret)}</p>
+    <div class="field">
+      <label for="totp-confirm">Unesi 6-cifreni kod iz aplikacije</label>
+      <input id="totp-confirm" type="text" inputmode="numeric" maxlength="6" pattern="\\d{6}" autofocus>
+    </div>
+    <div class="stack-card__actions">
+      <button class="btn btn-ghost" type="button" data-close="1">Nazad</button>
+      <button class="btn btn-primary" type="button" id="totp-confirm-btn">Potvrdi</button>
+    </div>
+  `);
+  const btn = document.getElementById("totp-confirm-btn");
+  if (btn) {
+    btn.addEventListener("click", async () => {
+      const code = document.getElementById("totp-confirm").value.trim();
+      try {
+        await must("/api/admin/totp-enable", { method: "POST", body: { code } });
+        closeModal();
+        toast("2FA aktivirano.", "success");
+        await renderTotpCard();
+      } catch (e) {
+        toast(e.message || "Pogrešan kod", "error");
+      }
+    });
+  }
 }
 
 registerTab("settings", render);

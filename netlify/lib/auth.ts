@@ -1,6 +1,7 @@
 import bcrypt from "bcryptjs";
 import { SignJWT, jwtVerify } from "jose";
 import { randomBytes } from "node:crypto";
+import { TOTP, Secret } from "otpauth";
 import { store } from "./blobs";
 import { AdminAuthSchema, type AdminAuth } from "./schemas";
 
@@ -21,6 +22,7 @@ function envAuth(): AdminAuth | null {
     passwordHash,
     jwtSecret,
     createdAt: new Date(0).toISOString(),
+    totpEnabled: false,
   };
 }
 
@@ -49,7 +51,12 @@ export async function setupAdmin(password: string): Promise<void> {
   }
   const passwordHash = await bcrypt.hash(password, 12);
   const jwtSecret = randomBytes(48).toString("base64url");
-  const record: AdminAuth = { passwordHash, jwtSecret, createdAt: new Date().toISOString() };
+  const record: AdminAuth = {
+    passwordHash,
+    jwtSecret,
+    createdAt: new Date().toISOString(),
+    totpEnabled: false,
+  };
   await store().setJSON(KEY_AUTH, record);
 }
 
@@ -165,9 +172,71 @@ export async function changePassword(oldPassword: string, newPassword: string): 
   const passwordHash = await bcrypt.hash(newPassword, 12);
   // Preserve JWT secret if already stored; otherwise mint a fresh one.
   const jwtSecret = existing?.jwtSecret || randomBytes(48).toString("base64url");
+  // Preserve TOTP fields so changing password doesn't disable 2FA.
   await store().setJSON(KEY_AUTH, {
     passwordHash,
     jwtSecret,
     createdAt: existing?.createdAt || new Date().toISOString(),
+    ...(existing?.totpSecret ? { totpSecret: existing.totpSecret } : {}),
+    totpEnabled: !!existing?.totpEnabled,
   });
+}
+
+// ---------- TOTP (2FA) ----------
+
+/**
+ * Returns the raw AdminAuth blob (for endpoints that need totp* fields).
+ * Falls back to env-managed auth (which by definition has no TOTP) when no
+ * Blobs record exists yet.
+ */
+export async function getAuth(): Promise<AdminAuth | null> {
+  try {
+    const raw = await store().getJSON<unknown>(KEY_AUTH);
+    if (raw != null) {
+      const r = AdminAuthSchema.safeParse(raw);
+      if (r.success) return r.data;
+    }
+  } catch {
+    // Fall through to env auth.
+  }
+  return envAuth();
+}
+
+/**
+ * Patch the persisted AdminAuth blob. Used by TOTP setup/enable/disable. If no
+ * Blobs record exists yet (env-managed auth), this seeds one from the env
+ * baseline so the owner can enable 2FA without first changing the password.
+ */
+export async function setAuth(patch: Partial<AdminAuth>): Promise<void> {
+  const cur = (await getAuth()) ?? null;
+  if (!cur) throw new Error("not-initialized");
+  const merged: Record<string, unknown> = { ...cur, ...patch };
+  // `undefined` in a patch means "clear this field" — drop the key so Zod
+  // treats it as absent rather than failing optional/string parse.
+  for (const k of Object.keys(patch) as (keyof AdminAuth)[]) {
+    if (patch[k] === undefined) delete merged[k as string];
+  }
+  const next = AdminAuthSchema.parse(merged);
+  await store().setJSON(KEY_AUTH, next);
+}
+
+export function totpVerify(secretBase32: string, code: string): boolean {
+  if (!code || code.length !== 6 || !/^\d{6}$/.test(code)) return false;
+  const totp = new TOTP({ secret: Secret.fromBase32(secretBase32), digits: 6, period: 30 });
+  // Allow ±1 window of clock skew.
+  return totp.validate({ token: code, window: 1 }) !== null;
+}
+
+export function generateTotpSecret(): string {
+  return new Secret({ size: 20 }).base32;
+}
+
+export function buildOtpauthUrl(secretBase32: string, label: string, issuer = "L'Essenza"): string {
+  return new TOTP({
+    secret: Secret.fromBase32(secretBase32),
+    label,
+    issuer,
+    digits: 6,
+    period: 30,
+  }).toString();
 }

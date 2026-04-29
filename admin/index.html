@@ -45,6 +45,10 @@
             <label for="login-password">Lozinka</label>
             <input id="login-password" name="password" type="password" required autocomplete="current-password">
           </div>
+          <div class="field" id="totp-field" hidden>
+            <label for="login-totp">2FA kod (6 cifara)</label>
+            <input id="login-totp" type="text" inputmode="numeric" maxlength="6" pattern="\d{6}" autocomplete="one-time-code">
+          </div>
           <button type="submit" class="btn btn-primary block">Prijavi se</button>
           <p style="text-align:center;margin-top:1rem;font-size:0.9rem;">
             <a href="#" id="forgot-pw-link" style="color:var(--gold,#C9A961);">Zaboravljena lozinka?</a>
@@ -392,6 +396,7 @@
                   </div>
                   <button class="btn btn-primary" type="submit">Promijeni lozinku</button>
                 </form>
+                <div id="totp-host" style="margin-top:1rem;"></div>
               </div>
             </details>
 

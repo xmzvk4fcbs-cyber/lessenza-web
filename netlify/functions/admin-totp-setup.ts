@@ -1,0 +1,24 @@
+import type { Handler } from "@netlify/functions";
+import { json, methodNotAllowed } from "../lib/http";
+import { adminGuard } from "../lib/admin-guard";
+import { generateTotpSecret, buildOtpauthUrl, getAuth, setAuth } from "../lib/auth";
+import { getSettings } from "../lib/config";
+
+const inner: Handler = async (event) => {
+  if (event.httpMethod !== "POST") return methodNotAllowed(["POST"]);
+  const auth = await getAuth();
+  if (!auth) return json({ error: "not-initialized", message: "Admin not set up" }, 409);
+  // Generate a fresh secret each time the owner clicks "Setup 2FA". Never
+  // confirmed → still rotatable. Already confirmed → next setup overwrites
+  // only on explicit owner intent (we don't auto-disable existing TOTP here).
+  const secret = generateTotpSecret();
+  await setAuth({ totpSecret: secret });
+  const settings = await getSettings();
+  const label = settings.ownerEmail || "admin@lessenza.me";
+  return json({
+    secret,
+    otpauthUrl: buildOtpauthUrl(secret, label),
+  });
+};
+
+export const handler = adminGuard(inner);

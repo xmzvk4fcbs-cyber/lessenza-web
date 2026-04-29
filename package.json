@@ -30,6 +30,7 @@
     "libphonenumber-js": "^1.11.11",
     "node-cron": "^4.2.1",
     "nodemailer": "^6.9.15",
+    "otpauth": "^9.5.1",
     "resend": "^4.0.1",
     "tsx": "^4.21.0",
     "zod": "^3.23.8"
