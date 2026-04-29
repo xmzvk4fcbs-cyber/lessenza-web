@@ -1,7 +1,7 @@
 import type { Handler } from "@netlify/functions";
 import { json, badRequest, methodNotAllowed } from "../lib/http";
 import { adminGuard } from "../lib/admin-guard";
-import { getServices, listAllNoShows } from "../lib/config";
+import { getServices, listAllNoShows, getCancellationLog } from "../lib/config";
 import { createCalendarClient, createCalendarClientAsync, type CalendarClient } from "../lib/calendar";
 import { eventToBooking } from "../lib/calendar-domain";
 import { summarizeMonth, type StatBooking, type StatNoShow } from "../lib/stats";
@@ -67,7 +67,15 @@ const inner: Handler = async (event) => {
     })
     .map((n) => ({ dateISO: n.dateISO }));
 
-  const stats = summarizeMonth(month, inMonth, before, monthNoShows, services);
+  const cancellationLog = await getCancellationLog();
+  const monthCancellations = cancellationLog
+    .filter((c) => {
+      const d = new Date(c.cancelledAt);
+      return d >= monthStart && d < monthEnd;
+    })
+    .map((c) => ({ kind: c.kind }));
+
+  const stats = summarizeMonth(month, inMonth, before, monthNoShows, monthCancellations, services);
   return json(stats);
 };
 

@@ -3,7 +3,7 @@ import { json, badRequest, notFound, methodNotAllowed, parseJson } from "../lib/
 import { adminGuard } from "../lib/admin-guard";
 import { createCalendarClient, type CalendarClient } from "../lib/calendar";
 import { getMailerAsync, type Mailer } from "../lib/mailer";
-import { getServices, getSettings } from "../lib/config";
+import { getServices, getSettings, appendCancellation } from "../lib/config";
 import { eventToBooking } from "../lib/calendar-domain";
 import { bookingCancelledToClient } from "../lib/email-templates";
 import { waLink } from "../lib/phone";
@@ -50,6 +50,25 @@ const inner: Handler = async (event) => {
   const booking = eventToBooking(target, services);
 
   await cal.deleteEvent(eventId);
+
+  // Best-effort: log cancellation. Failure must NOT abort the cancel flow —
+  // the calendar event is already gone.
+  if (booking) {
+    try {
+      await appendCancellation({
+        eventId,
+        appointmentISO: booking.startISO,
+        cancelledAt: new Date().toISOString(),
+        kind: "by-admin",
+        reason: reason || undefined,
+        name: booking.name,
+        phoneE164: booking.phoneE164,
+        serviceName: booking.serviceName,
+      });
+    } catch (e) {
+      console.error("[cancel-log]", e);
+    }
+  }
 
   let emailSent = false;
   let whatsappLink: string | null = null;

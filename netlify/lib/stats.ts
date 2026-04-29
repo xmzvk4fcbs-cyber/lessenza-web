@@ -15,6 +15,11 @@ export interface StatNoShow {
   dateISO: string;
 }
 
+export interface StatCancellation {
+  /** Discriminator. No-show is tracked separately on `noShowCount`. */
+  kind: "by-client" | "by-admin" | "rejected" | "no-show" | string;
+}
+
 export interface MonthlyStats {
   month: string;            // "YYYY-MM"
   bookingsCount: number;
@@ -25,6 +30,9 @@ export interface MonthlyStats {
   busiestHour: { hour: number; count: number } | null;                   // 0..23
   newClients: number;
   returningClients: number;
+  /** Cancellations recorded in this month, broken out by who triggered them.
+   *  No-shows are intentionally omitted here — they live on `noShowCount`. */
+  cancellationsByKind: { byAdmin: number; byClient: number; rejected: number };
 }
 
 const DOW_LABEL = ["Ponedjeljak", "Utorak", "Srijeda", "Četvrtak", "Petak", "Subota", "Nedjelja"];
@@ -45,6 +53,7 @@ export function summarizeMonth(
   bookingsInMonth: StatBooking[],
   pastBookingsBeforeMonth: StatBooking[],
   noShowsInMonth: StatNoShow[],
+  cancellationsInMonth: StatCancellation[],
   services: Service[]
 ): MonthlyStats {
   const [y, m] = monthKey.split("-").map(Number);
@@ -59,6 +68,7 @@ export function summarizeMonth(
       busiestHour: null,
       newClients: 0,
       returningClients: 0,
+      cancellationsByKind: { byAdmin: 0, byClient: 0, rejected: 0 },
     };
   }
 
@@ -136,6 +146,14 @@ export function summarizeMonth(
     else newClients++;
   }
 
+  // Cancellation breakdown by kind. No-shows are intentionally tracked on
+  // `noShowCount` instead — keep this object focused on user-driven cancels.
+  const cancellationsByKind = {
+    byAdmin: cancellationsInMonth.filter((c) => c.kind === "by-admin").length,
+    byClient: cancellationsInMonth.filter((c) => c.kind === "by-client").length,
+    rejected: cancellationsInMonth.filter((c) => c.kind === "rejected").length,
+  };
+
   return {
     month: monthKey,
     bookingsCount,
@@ -146,6 +164,7 @@ export function summarizeMonth(
     busiestHour,
     newClients,
     returningClients,
+    cancellationsByKind,
   };
 }
 

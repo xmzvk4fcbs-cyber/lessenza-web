@@ -3,7 +3,7 @@ import { json, badRequest, notFound, methodNotAllowed, parseJson, unauthorized }
 import { verifyCancelToken } from "../lib/cancel-token";
 import { createCalendarClient, createCalendarClientAsync, type CalendarClient } from "../lib/calendar";
 import { eventToBooking } from "../lib/calendar-domain";
-import { getServices, getSettings } from "../lib/config";
+import { getServices, getSettings, appendCancellation } from "../lib/config";
 import { getMailerAsync, type Mailer } from "../lib/mailer";
 import { bookingCancelledByClientToOwner } from "../lib/email-templates";
 import { formatSalon } from "../lib/time";
@@ -94,6 +94,22 @@ async function handlePost(token: string) {
   }
 
   await cal.deleteEvent(v.eventId);
+
+  // Best-effort: log client cancellation. Failure must NOT abort the cancel
+  // flow — the calendar event is already gone.
+  try {
+    await appendCancellation({
+      eventId: v.eventId,
+      appointmentISO: booking.startISO,
+      cancelledAt: new Date().toISOString(),
+      kind: "by-client",
+      name: booking.name,
+      phoneE164: booking.phoneE164,
+      serviceName: booking.serviceName,
+    });
+  } catch (e) {
+    console.error("[cancel-log]", e);
+  }
 
   // Notify owner — best effort.
   if (settings.ownerEmail) {

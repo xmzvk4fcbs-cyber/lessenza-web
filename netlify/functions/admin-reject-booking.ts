@@ -3,7 +3,7 @@ import { json, badRequest, notFound, methodNotAllowed, parseJson } from "../lib/
 import { adminGuard } from "../lib/admin-guard";
 import { createCalendarClient, type CalendarClient } from "../lib/calendar";
 import { getMailerAsync, type Mailer } from "../lib/mailer";
-import { getServices, getSettings, addBlockedPhone } from "../lib/config";
+import { getServices, getSettings, addBlockedPhone, appendCancellation } from "../lib/config";
 import { eventToBooking } from "../lib/calendar-domain";
 import { bookingRejectedToClient } from "../lib/email-templates";
 import { waLink } from "../lib/phone";
@@ -48,6 +48,23 @@ const inner: Handler = async (event) => {
   const booking = eventToBooking(target, services);
 
   await cal.deleteEvent(eventId);
+
+  // Best-effort: log rejection. Failure must NOT abort the reject flow.
+  if (booking) {
+    try {
+      await appendCancellation({
+        eventId,
+        appointmentISO: booking.startISO,
+        cancelledAt: new Date().toISOString(),
+        kind: "rejected",
+        name: booking.name,
+        phoneE164: booking.phoneE164,
+        serviceName: booking.serviceName,
+      });
+    } catch (e) {
+      console.error("[cancel-log]", e);
+    }
+  }
 
   let blocked = false;
   if (block && booking?.phoneE164) {

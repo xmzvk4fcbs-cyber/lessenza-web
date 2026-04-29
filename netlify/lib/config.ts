@@ -16,6 +16,7 @@ import {
   ClientNoteSchema,
   NoShowsSchema,
   PasswordResetTokenSchema,
+  CancellationLogSchema,
   type Service,
   type WorkingHours,
   type Settings,
@@ -30,6 +31,7 @@ import {
   type ClientNote,
   type NoShow,
   type PasswordResetToken,
+  type CancellationLogEntry,
 } from "./schemas";
 import { DEFAULT_SERVICES, DEFAULT_WORKING_HOURS, DEFAULT_PARALLEL_PAIRS } from "./defaults";
 
@@ -344,6 +346,23 @@ export async function recordNoShow(phoneE164: string, entry: NoShow): Promise<No
   const next = NoShowsSchema.parse([entry, ...filtered]);
   await store().setJSON(noShowKey(phoneE164), next);
   return next;
+}
+
+// ---------- Cancellation log (append-only history) ----------
+const KEY_CANCEL_LOG = "history/cancellations.json";
+
+export async function getCancellationLog(): Promise<CancellationLogEntry[]> {
+  const raw = await store().getJSON<unknown>(KEY_CANCEL_LOG);
+  if (!raw) return [];
+  const r = CancellationLogSchema.safeParse(raw);
+  return r.success ? r.data : [];
+}
+
+export async function appendCancellation(entry: CancellationLogEntry): Promise<void> {
+  // Cap at 5000 entries — older ones rotate out (one-person salon, ~1000/year).
+  const cur = await getCancellationLog();
+  const next = [entry, ...cur].slice(0, 5000);
+  await store().setJSON(KEY_CANCEL_LOG, CancellationLogSchema.parse(next));
 }
 
 // ---------- Review-nudge sent tracker ----------

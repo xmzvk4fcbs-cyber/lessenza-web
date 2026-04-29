@@ -10,7 +10,7 @@ const services: Service[] = [
 
 describe("summarizeMonth", () => {
   it("returns zero-shaped output for an empty month", () => {
-    const r = summarizeMonth("2026-04", [], [], [], services);
+    const r = summarizeMonth("2026-04", [], [], [], [], services);
     expect(r.bookingsCount).toBe(0);
     expect(r.topServices).toEqual([]);
     expect(r.busiestDow).toBeNull();
@@ -27,7 +27,7 @@ describe("summarizeMonth", () => {
       { startISO: "2026-04-15T11:00:00", serviceId: "pedikir", serviceName: "Pedikir", phoneE164: "+3" },
       { startISO: "2026-04-20T10:00:00", serviceId: "laser",   serviceName: "Laser",   phoneE164: "+4" },
     ];
-    const r = summarizeMonth("2026-04", b, [], [], services);
+    const r = summarizeMonth("2026-04", b, [], [], [], services);
     expect(r.bookingsCount).toBe(4);
     expect(r.topServices[0]).toEqual({ name: "Manikir", count: 2 });
     expect(r.topServices.find((x) => x.name === "Laser")?.count).toBe(1);
@@ -40,14 +40,14 @@ describe("summarizeMonth", () => {
       { startISO: "2026-04-08T09:00:00", serviceId: "pedikir" }, // 20€
       { startISO: "2026-04-09T09:00:00", serviceId: "laser"   }, // no price
     ];
-    const r = summarizeMonth("2026-04", b, [], [], services);
+    const r = summarizeMonth("2026-04", b, [], [], [], services);
     expect(r.revenueEstimate).toBe(50);
 
     // If no priced services, revenue is null (not 0).
     const onlyLaser: StatBooking[] = [
       { startISO: "2026-04-06T09:00:00", serviceId: "laser" },
     ];
-    const r2 = summarizeMonth("2026-04", onlyLaser, [], [], services);
+    const r2 = summarizeMonth("2026-04", onlyLaser, [], [], [], services);
     expect(r2.revenueEstimate).toBeNull();
   });
 
@@ -60,7 +60,7 @@ describe("summarizeMonth", () => {
       { startISO: "2026-04-20T09:00:00", serviceId: "manikir" },
       { startISO: "2026-04-07T09:00:00", serviceId: "manikir" },
     ];
-    const r = summarizeMonth("2026-04", b, [], [], services);
+    const r = summarizeMonth("2026-04", b, [], [], [], services);
     expect(r.busiestDow?.label).toBe("Ponedjeljak");
     expect(r.busiestDow?.avgPerDay).toBe(0.8); // 3 / 4 = 0.75 → rounded 0.8
   });
@@ -72,7 +72,7 @@ describe("summarizeMonth", () => {
       { startISO: "2026-04-08T09:15:00", serviceId: "manikir" }, // hour 9
       { startISO: "2026-04-09T14:00:00", serviceId: "manikir" }, // hour 14
     ];
-    const r = summarizeMonth("2026-04", b, [], [], services);
+    const r = summarizeMonth("2026-04", b, [], [], [], services);
     expect(r.busiestHour?.hour).toBe(9);
     expect(r.busiestHour?.count).toBe(3);
   });
@@ -88,7 +88,7 @@ describe("summarizeMonth", () => {
       { startISO: "2026-04-08T09:00:00", phoneE164: "+4" }, // new
       { startISO: "2026-04-09T09:00:00", phoneE164: "+1" }, // still returning (dedup)
     ];
-    const r = summarizeMonth("2026-04", month, past, [], services);
+    const r = summarizeMonth("2026-04", month, past, [], [], services);
     expect(r.returningClients).toBe(1);
     expect(r.newClients).toBe(2);
   });
@@ -98,7 +98,7 @@ describe("summarizeMonth", () => {
       { dateISO: "2026-04-05T09:00:00" },
       { dateISO: "2026-04-12T09:00:00" },
     ];
-    const r = summarizeMonth("2026-04", [], [], ns, services);
+    const r = summarizeMonth("2026-04", [], [], ns, [], services);
     expect(r.noShowCount).toBe(2);
   });
 });

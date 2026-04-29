@@ -1,7 +1,7 @@
 import type { Handler } from "@netlify/functions";
 import { json, badRequest, notFound, methodNotAllowed, parseJson } from "../lib/http";
 import { adminGuard } from "../lib/admin-guard";
-import { getServices, getNoShows, recordNoShow, getSettings } from "../lib/config";
+import { getServices, getNoShows, recordNoShow, getSettings, appendCancellation } from "../lib/config";
 import { createCalendarClient, createCalendarClientAsync, type CalendarClient } from "../lib/calendar";
 import { eventToBooking } from "../lib/calendar-domain";
 import { normalizePhone } from "../lib/phone";
@@ -53,6 +53,21 @@ const inner: Handler = async (event) => {
     name: booking.name,
     markedAt: now.toISOString(),
   });
+
+  // Best-effort: log no-show. Failure must NOT abort the no-show flow.
+  try {
+    await appendCancellation({
+      eventId,
+      appointmentISO: booking.startISO,
+      cancelledAt: now.toISOString(),
+      kind: "no-show",
+      name: booking.name,
+      phoneE164: booking.phoneE164,
+      serviceName: booking.serviceName,
+    });
+  } catch (e) {
+    console.error("[cancel-log]", e);
+  }
 
   if (shouldDelete) {
     try { await cal.deleteEvent(eventId); } catch { /* event may already be gone */ }

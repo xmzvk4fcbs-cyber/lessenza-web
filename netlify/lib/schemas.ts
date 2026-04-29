@@ -152,6 +152,26 @@ export const NoShowSchema = z.object({
 });
 export type NoShow = z.infer<typeof NoShowSchema>;
 export const NoShowsSchema = z.array(NoShowSchema);
+
+/** A single cancellation log entry. Append-only history of every booking that
+ *  was cancelled — by admin, by client, rejected, or marked no-show. */
+export const CancellationLogEntrySchema = z.object({
+  /** Google Calendar event id at the time of cancellation. */
+  eventId: z.string().min(1).max(200),
+  /** When the appointment was scheduled (its startISO). */
+  appointmentISO: z.string().datetime(),
+  /** When this cancellation was recorded. */
+  cancelledAt: z.string().datetime(),
+  /** Who triggered it. */
+  kind: z.enum(["by-client", "by-admin", "rejected", "no-show"]),
+  /** Optional human reason (admin-supplied). */
+  reason: z.string().max(200).optional(),
+  name: z.string().max(120).optional(),
+  phoneE164: z.string().max(32).optional(),
+  serviceName: z.string().max(80).optional(),
+});
+export type CancellationLogEntry = z.infer<typeof CancellationLogEntrySchema>;
+export const CancellationLogSchema = z.array(CancellationLogEntrySchema);
 export type Settings = z.infer<typeof SettingsSchema>;
 
 // ----- Gallery results (Prije / Poslije) -----
