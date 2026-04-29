@@ -48,7 +48,11 @@ app.use(compression());
 
 // Parse JSON + urlencoded bodies but hand the Netlify handler a RAW string
 // (that's what Lambda passes). We restore `req.body` as a string below.
-app.use(express.raw({ type: "*/*", limit: "10mb" })); // 10 MB accommodates base64 image-pair uploads
+// 20 MB cap on the raw HTTP body. Image uploads come as base64 data URLs in
+// JSON, so a 12 MB image (the admin-side hard cap, see netlify/lib/image-process.ts)
+// inflates ~33% in transport — 20 MB leaves headroom for that + JSON envelope.
+// nginx in front enforces 12 MB on the raw multipart side.
+app.use(express.raw({ type: "*/*", limit: "20mb" }));
 app.use((req, _res, next) => {
   if (Buffer.isBuffer(req.body) && req.body.length > 0) {
     req.body = req.body.toString("utf8");

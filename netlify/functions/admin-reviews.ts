@@ -5,31 +5,13 @@ import type { Handler } from "@netlify/functions";
 import { json, badRequest, notFound, methodNotAllowed, parseJson } from "../lib/http";
 import { adminGuard } from "../lib/admin-guard";
 import { getReviews, saveReviews, REVIEW_TRASH_DAYS } from "../lib/config";
+import { processUploadDataUrl } from "../lib/image-process";
 import type { Review } from "../lib/schemas";
 
 const UPLOAD_DIR = path.resolve(process.cwd(), "uploads", "reviews");
 const PUBLIC_PREFIX = "/uploads/reviews/";
 
-const MAX_IMAGE_BYTES = 2 * 1024 * 1024;
 const MAX_ITEMS = 200;
-
-function decodeImage(input: string): { buf: Buffer; ext: string } | null {
-  const m = /^data:(image\/(jpeg|jpg|png|webp));base64,(.+)$/i.exec(input.trim());
-  let b64: string;
-  let ext = "jpg";
-  if (m) {
-    const mime = m[1]!.toLowerCase();
-    ext = mime.includes("png") ? "png" : mime.includes("webp") ? "webp" : "jpg";
-    b64 = m[3]!;
-  } else {
-    b64 = input.trim();
-  }
-  try {
-    const buf = Buffer.from(b64, "base64");
-    if (!buf.length || buf.length > MAX_IMAGE_BYTES) return null;
-    return { buf, ext };
-  } catch { return null; }
-}
 
 function writeImage(buf: Buffer, ext: string): string {
   fs.mkdirSync(UPLOAD_DIR, { recursive: true });
@@ -102,9 +84,9 @@ const inner: Handler = async (event) => {
 
     let photoUrl: string | undefined;
     if (typeof body.photo === "string" && body.photo.length > 0) {
-      const img = decodeImage(body.photo);
-      if (!img) return badRequest("bad-image", "Slika nevažeća ili > 2 MB");
-      photoUrl = writeImage(img.buf, img.ext);
+      const result = await processUploadDataUrl(body.photo);
+      if (!result.ok) return badRequest(result.error.kind, result.error.message);
+      photoUrl = writeImage(result.image.buf, result.image.ext);
     }
 
     const ratingNum = typeof body.rating === "number" ? body.rating : undefined;
@@ -138,10 +120,10 @@ const inner: Handler = async (event) => {
     else if (body.rating === null) item.rating = undefined;
     if (typeof body.published === "boolean") item.published = body.published;
     if (typeof body.photo === "string" && body.photo.length > 0) {
-      const img = decodeImage(body.photo);
-      if (!img) return badRequest("bad-image", "Slika nevažeća ili > 2 MB");
+      const result = await processUploadDataUrl(body.photo);
+      if (!result.ok) return badRequest(result.error.kind, result.error.message);
       unlinkIfLocal(item.photoUrl);
-      item.photoUrl = writeImage(img.buf, img.ext);
+      item.photoUrl = writeImage(result.image.buf, result.image.ext);
     } else if (body.photo === null) {
       unlinkIfLocal(item.photoUrl);
       item.photoUrl = undefined;

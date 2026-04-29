@@ -5,31 +5,13 @@ import type { Handler } from "@netlify/functions";
 import { json, badRequest, notFound, methodNotAllowed, parseJson } from "../lib/http";
 import { adminGuard } from "../lib/admin-guard";
 import { getGalleryResults, saveGalleryResults, GALLERY_TRASH_DAYS, getSettings, setSettings } from "../lib/config";
+import { processUploadDataUrl } from "../lib/image-process";
 import type { GalleryResult } from "../lib/schemas";
 
 const UPLOAD_DIR = path.resolve(process.cwd(), "uploads", "gallery");
 const PUBLIC_PREFIX = "/uploads/gallery/";
 
-const MAX_IMAGE_BYTES = 3 * 1024 * 1024;
 const MAX_PAIRS = 60;
-
-function decodeImage(input: string): { buf: Buffer; ext: string } | null {
-  const m = /^data:(image\/(jpeg|jpg|png|webp));base64,(.+)$/i.exec(input.trim());
-  let b64: string;
-  let ext = "jpg";
-  if (m) {
-    const mime = m[1]!.toLowerCase();
-    ext = mime.includes("png") ? "png" : mime.includes("webp") ? "webp" : "jpg";
-    b64 = m[3]!;
-  } else {
-    b64 = input.trim();
-  }
-  try {
-    const buf = Buffer.from(b64, "base64");
-    if (!buf.length || buf.length > MAX_IMAGE_BYTES) return null;
-    return { buf, ext };
-  } catch { return null; }
-}
 
 function ensureUploadDir(): void {
   fs.mkdirSync(UPLOAD_DIR, { recursive: true });
@@ -96,18 +78,18 @@ const inner: Handler = async (event) => {
     if (typeof body.before !== "string" || typeof body.after !== "string") {
       return badRequest("missing-images", "Need both before+after as base64 image data URL");
     }
-    const before = decodeImage(body.before);
-    const after = decodeImage(body.after);
-    if (!before) return badRequest("bad-before", "Pre image invalid or > 3 MB");
-    if (!after)  return badRequest("bad-after", "Post image invalid or > 3 MB");
+    const before = await processUploadDataUrl(body.before);
+    if (!before.ok) return badRequest(`before-${before.error.kind}`, `Pre slika: ${before.error.message}`);
+    const after = await processUploadDataUrl(body.after);
+    if (!after.ok)  return badRequest(`after-${after.error.kind}`, `Post slika: ${after.error.message}`);
 
     const activeCount = all.filter((r) => !r.deletedAt).length;
     if (activeCount >= MAX_PAIRS) {
       return badRequest("limit-reached", `Maksimalno ${MAX_PAIRS} aktivnih rezultata`);
     }
 
-    const beforeUrl = writeImage(before.buf, before.ext);
-    const afterUrl  = writeImage(after.buf, after.ext);
+    const beforeUrl = writeImage(before.image.buf, before.image.ext);
+    const afterUrl  = writeImage(after.image.buf, after.image.ext);
     const entry: GalleryResult = {
       id: randomUUID(),
       beforeUrl,

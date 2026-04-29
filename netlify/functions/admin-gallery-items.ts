@@ -6,31 +6,13 @@ import { json, badRequest, notFound, methodNotAllowed, parseJson } from "../lib/
 import { adminGuard } from "../lib/admin-guard";
 import { getGalleryItems, saveGalleryItems, GALLERY_TRASH_DAYS } from "../lib/config";
 import { ensureGallerySeeded } from "../lib/gallery-seed";
+import { processUploadDataUrl } from "../lib/image-process";
 import type { GalleryItem } from "../lib/schemas";
 
 const UPLOAD_DIR = path.resolve(process.cwd(), "uploads", "gallery");
 const PUBLIC_PREFIX = "/uploads/gallery/";
 
-const MAX_IMAGE_BYTES = 3 * 1024 * 1024;
 const MAX_ITEMS = 120;
-
-function decodeImage(input: string): { buf: Buffer; ext: string } | null {
-  const m = /^data:(image\/(jpeg|jpg|png|webp));base64,(.+)$/i.exec(input.trim());
-  let b64: string;
-  let ext = "jpg";
-  if (m) {
-    const mime = m[1]!.toLowerCase();
-    ext = mime.includes("png") ? "png" : mime.includes("webp") ? "webp" : "jpg";
-    b64 = m[3]!;
-  } else {
-    b64 = input.trim();
-  }
-  try {
-    const buf = Buffer.from(b64, "base64");
-    if (!buf.length || buf.length > MAX_IMAGE_BYTES) return null;
-    return { buf, ext };
-  } catch { return null; }
-}
 
 function writeImage(buf: Buffer, ext: string): string {
   fs.mkdirSync(UPLOAD_DIR, { recursive: true });
@@ -92,15 +74,15 @@ const inner: Handler = async (event) => {
     if (typeof body.image !== "string") {
       return badRequest("missing-image", "Need `image` as base64 data URL");
     }
-    const img = decodeImage(body.image);
-    if (!img) return badRequest("bad-image", "Slika nevažeća ili > 3 MB");
+    const result = await processUploadDataUrl(body.image);
+    if (!result.ok) return badRequest(result.error.kind, result.error.message);
 
     const activeCount = all.filter((r) => !r.deletedAt).length;
     if (activeCount >= MAX_ITEMS) {
       return badRequest("limit-reached", `Maksimalno ${MAX_ITEMS} aktivnih slika`);
     }
 
-    const url = writeImage(img.buf, img.ext);
+    const url = writeImage(result.image.buf, result.image.ext);
     const entry: GalleryItem = {
       id: randomUUID(),
       url,
