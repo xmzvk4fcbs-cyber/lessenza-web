@@ -888,3 +888,26 @@ Start with `p=quarantine` for the first 2 weeks; tighten to `p=reject` after mon
 2. Send a test booking confirmation to a Gmail address.
 3. Open the message → "Show original" → check `Authentication-Results: ... spf=pass dkim=pass dmarc=pass`.
 4. Or run https://www.mail-tester.com — paste the address it gives you, send from booking flow, check the score (target ≥ 9 / 10).
+
+## 18. VAPID keys for push notifications
+
+The PWA push channel (owner gets a notification on every new booking) needs
+one pair of VAPID keys. Generate once on any machine:
+
+```bash
+npx web-push generate-vapid-keys
+```
+
+Add to `/opt/lessenza/app/.env`:
+
+```
+VAPID_PUBLIC_KEY=<BBxxx...>
+VAPID_PRIVATE_KEY=<xxx...>
+VAPID_SUBJECT=mailto:info@lessenza.me
+```
+
+Then `systemctl restart lessenza`. Open `/admin/` on the phone (install the
+PWA via Safari/Chrome "Add to Home Screen"), go to Podešavanja → Promjena
+lozinke (the same accordion holds 2FA + push), tap "Uključi notifikacije" and
+allow the browser permission prompt. Stale subscriptions (browser
+uninstalled, permission revoked) are auto-cleaned on the next failed send.

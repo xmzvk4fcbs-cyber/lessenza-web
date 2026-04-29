@@ -1,7 +1,8 @@
 import { randomUUID } from "node:crypto";
 import type { Handler } from "@netlify/functions";
+import webpush from "web-push";
 import { json, badRequest, notFound, methodNotAllowed, parseJson, serverError } from "../lib/http";
-import { getServices, getWorkingHours, getParallelPairs, getBlocks, getSettings, isPhoneBlocked } from "../lib/config";
+import { getServices, getWorkingHours, getParallelPairs, getBlocks, getSettings, isPhoneBlocked, getPushSubscriptions, removePushSubscription } from "../lib/config";
 import { computeSlots } from "../lib/slots";
 import { createCalendarClient, createCalendarClientAsync, type CalendarClient } from "../lib/calendar";
 import { bookingToEvent, type Booking } from "../lib/calendar-domain";
@@ -179,6 +180,41 @@ export const handler: Handler = async (event) => {
     );
   }
   await Promise.all(sends);
+
+  // Best-effort PWA push to the salon owner's subscribed devices. Wrapped so
+  // any failure (missing keys, dead endpoints, network) never breaks booking.
+  if (process.env.VAPID_PUBLIC_KEY && process.env.VAPID_PRIVATE_KEY) {
+    try {
+      webpush.setVapidDetails(
+        process.env.VAPID_SUBJECT || "mailto:info@lessenza.me",
+        process.env.VAPID_PUBLIC_KEY,
+        process.env.VAPID_PRIVATE_KEY,
+      );
+      const subs = await getPushSubscriptions();
+      const payload = JSON.stringify({
+        title: "Novi termin",
+        body: `${booking.serviceName} — ${booking.name}, ${formatSalon(new Date(booking.startISO), "dd.MM. 'u' HH:mm")}`,
+        url: "/admin/",
+      });
+      for (const s of subs) {
+        try {
+          await webpush.sendNotification(
+            { endpoint: s.endpoint, keys: s.keys },
+            payload,
+          );
+        } catch (e: unknown) {
+          const err = e as { statusCode?: number };
+          if (err.statusCode === 404 || err.statusCode === 410) {
+            await removePushSubscription(s.endpoint);
+          } else {
+            console.error("[push] send failed:", (e as Error).message);
+          }
+        }
+      }
+    } catch (e) {
+      console.error("[push] notify failed:", (e as Error).message);
+    }
+  }
 
   return json({
     ok: true,

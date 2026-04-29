@@ -105,6 +105,7 @@ async function render() {
   }).join("");
   await renderBlocked();
   await renderTotpCard();
+  await renderPushCard();
 }
 
 saveBtn.addEventListener("click", async () => {
@@ -308,6 +309,122 @@ async function openTotpSetup() {
       }
     });
   }
+}
+
+// ---------- Web push (PWA notifications) ----------
+
+function urlBase64ToUint8Array(base64String) {
+  // VAPID server keys are base64url; SubscribeOptions.applicationServerKey
+  // wants a Uint8Array of the raw bytes. Pad + swap URL-safe chars first.
+  const padding = "=".repeat((4 - (base64String.length % 4)) % 4);
+  const base64 = (base64String + padding).replace(/-/g, "+").replace(/_/g, "/");
+  const rawData = atob(base64);
+  const out = new Uint8Array(rawData.length);
+  for (let i = 0; i < rawData.length; i++) out[i] = rawData.charCodeAt(i);
+  return out;
+}
+
+async function renderPushCard() {
+  const host = document.getElementById("push-host");
+  if (!host) return;
+  const supported = "serviceWorker" in navigator && "PushManager" in window;
+  if (!supported) {
+    host.innerHTML = `
+      <section class="stack-card">
+        <div class="stack-card__head">
+          <div>
+            <div class="stack-card__title">Push notifikacije (PWA)</div>
+            <div class="stack-card__meta">Tvoj browser ne podržava push notifikacije. Probaj iz "instalirane" PWA verzije ili noviji Chrome / Edge / Safari.</div>
+          </div>
+        </div>
+      </section>`;
+    return;
+  }
+
+  let reg = null;
+  let sub = null;
+  try {
+    reg = await navigator.serviceWorker.ready;
+    sub = await reg.pushManager.getSubscription();
+  } catch (e) {
+    host.innerHTML = `
+      <section class="stack-card">
+        <div class="stack-card__head">
+          <div>
+            <div class="stack-card__title">Push notifikacije (PWA)</div>
+            <div class="stack-card__meta">Service worker nije aktivan: ${escapeHtml(e.message || "greška")}</div>
+          </div>
+        </div>
+      </section>`;
+    return;
+  }
+
+  const isSubscribed = !!sub;
+  host.innerHTML = `
+    <section class="stack-card">
+      <div class="stack-card__head">
+        <div>
+          <div class="stack-card__title">Push notifikacije (PWA)</div>
+          <div class="stack-card__meta">${
+            isSubscribed
+              ? "Uključeno · ovaj uređaj dobija zvučnu notifikaciju za svaki novi termin."
+              : "Isključeno · uključi da dobijaš notifikaciju za svaki novi termin čim klijentkinja zakaže."
+          }</div>
+        </div>
+      </div>
+      <div class="stack-card__actions" style="margin-top:0.75rem;">
+        <button class="btn ${isSubscribed ? "btn-ghost" : "btn-primary"}" type="button" id="push-toggle">
+          ${isSubscribed ? "Isključi notifikacije" : "Uključi notifikacije"}
+        </button>
+      </div>
+    </section>`;
+
+  const btn = document.getElementById("push-toggle");
+  if (!btn) return;
+  btn.addEventListener("click", async () => {
+    btn.disabled = true;
+    try {
+      if (isSubscribed && sub) {
+        // Unsubscribe locally first, then tell the server to drop the record.
+        const endpoint = sub.endpoint;
+        await sub.unsubscribe();
+        try {
+          await must("/api/admin/push-unsubscribe", { method: "POST", body: { endpoint } });
+        } catch (e) {
+          // Server failure is non-fatal — local sub is gone, server may have a stale row.
+          console.warn("[push] unsubscribe server reject:", e.message);
+        }
+        toast("Push notifikacije isključene.", "success");
+      } else {
+        const perm = await Notification.requestPermission();
+        if (perm !== "granted") {
+          toast("Notifikacije nisu dozvoljene u browseru.", "error");
+          btn.disabled = false;
+          return;
+        }
+        const { publicKey } = await must("/api/admin/push-public-key");
+        if (!publicKey) {
+          toast("Server nema VAPID ključ — dodaj ga u .env i restartuj.", "error");
+          btn.disabled = false;
+          return;
+        }
+        const newSub = await reg.pushManager.subscribe({
+          userVisibleOnly: true,
+          applicationServerKey: urlBase64ToUint8Array(publicKey),
+        });
+        const json = newSub.toJSON();
+        await must("/api/admin/push-subscribe", {
+          method: "POST",
+          body: { endpoint: json.endpoint, keys: json.keys },
+        });
+        toast("Push notifikacije uključene.", "success");
+      }
+      await renderPushCard();
+    } catch (e) {
+      toast(e.message || "Greška pri promjeni pretplate.", "error");
+      btn.disabled = false;
+    }
+  });
 }
 
 // ---------- Data export ----------

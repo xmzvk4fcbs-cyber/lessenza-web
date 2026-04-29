@@ -255,6 +255,15 @@ export const AdminAuthSchema = z.object({
 });
 export type AdminAuth = z.infer<typeof AdminAuthSchema>;
 
+// ----- Web push (PWA notifications to the salon owner) -----
+export const PushSubscriptionSchema = z.object({
+  endpoint: z.string().url(),
+  keys: z.object({ p256dh: z.string(), auth: z.string() }),
+  createdAt: z.string().datetime(),
+});
+export type PushSubscription = z.infer<typeof PushSubscriptionSchema>;
+export const PushSubscriptionsSchema = z.array(PushSubscriptionSchema);
+
 export const PasswordResetTokenSchema = z.object({
   /** Random URL-safe token (32 bytes hex). Never persisted — kept blank in storage. */
   token: z.string().min(0).max(128),

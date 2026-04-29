@@ -1,7 +1,7 @@
 /* L'Essenza Service Worker — minimalan offline shell.
    Strategija: SWR za HTML stranice, cache-first za statik (img/css/js),
    nikad ne diraj /api/ ni /admin/. */
-const VERSION = "v4";
+const VERSION = "v5";
 const CACHE_STATIC = `lessenza-static-${VERSION}`;
 const CACHE_HTML = `lessenza-html-${VERSION}`;
 
@@ -94,6 +94,40 @@ self.addEventListener("fetch", (event) => {
         }
         return res;
       });
+    })
+  );
+});
+
+// --- Web push (PWA notifications for the salon owner) ---
+// Payload is JSON: { title, body, url }. Sent by netlify/functions/book.ts
+// after every successful booking. Only the owner subscribes — clients never
+// see this prompt because the subscribe button lives in /admin/Podešavanja.
+self.addEventListener("push", (event) => {
+  let data = {};
+  try {
+    data = event.data ? event.data.json() : {};
+  } catch {
+    data = {};
+  }
+  event.waitUntil(
+    self.registration.showNotification(data.title || "L'Essenza", {
+      body: data.body || "",
+      icon: "/img/icon-192.png",
+      badge: "/img/icon-192.png",
+      data: { url: data.url || "/admin/" },
+    })
+  );
+});
+
+self.addEventListener("notificationclick", (event) => {
+  event.notification.close();
+  const url = (event.notification.data && event.notification.data.url) || "/admin/";
+  event.waitUntil(
+    self.clients.matchAll({ type: "window", includeUncontrolled: true }).then((list) => {
+      for (const c of list) {
+        if (c.url.includes(url)) return c.focus();
+      }
+      return self.clients.openWindow(url);
     })
   );
 });

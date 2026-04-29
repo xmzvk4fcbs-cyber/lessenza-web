@@ -17,6 +17,8 @@ import {
   NoShowsSchema,
   PasswordResetTokenSchema,
   CancellationLogSchema,
+  PushSubscriptionsSchema,
+  type PushSubscription,
   type Service,
   type WorkingHours,
   type Settings,
@@ -386,6 +388,32 @@ export async function markReviewNudgeSent(eventId: string): Promise<void> {
   }
   next[eventId] = new Date(now).toISOString();
   await store().setJSON(KEY_REVIEW_NUDGES_SENT, next);
+}
+
+// ---------- Web push subscriptions (owner's PWA endpoints) ----------
+const KEY_PUSH_SUBS = "auth/push-subscriptions.json";
+
+export async function getPushSubscriptions(): Promise<PushSubscription[]> {
+  const raw = await store().getJSON<unknown>(KEY_PUSH_SUBS);
+  if (!raw) return [];
+  const r = PushSubscriptionsSchema.safeParse(raw);
+  return r.success ? r.data : [];
+}
+
+export async function addPushSubscription(sub: PushSubscription): Promise<PushSubscription[]> {
+  const current = await getPushSubscriptions();
+  // Dedupe by endpoint — same browser re-subscribing replaces its old record.
+  const filtered = current.filter((s) => s.endpoint !== sub.endpoint);
+  const next = PushSubscriptionsSchema.parse([...filtered, sub]);
+  await store().setJSON(KEY_PUSH_SUBS, next);
+  return next;
+}
+
+export async function removePushSubscription(endpoint: string): Promise<PushSubscription[]> {
+  const current = await getPushSubscriptions();
+  const next = current.filter((s) => s.endpoint !== endpoint);
+  await store().setJSON(KEY_PUSH_SUBS, PushSubscriptionsSchema.parse(next));
+  return next;
 }
 
 // ---------- Password reset token (single-use, 30min TTL) ----------
