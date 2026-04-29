@@ -8,6 +8,7 @@
 // only process you need behind nginx.
 
 import "./env-check"; // ensure required env vars are present before booting
+import * as Sentry from "@sentry/node";
 import express from "express";
 import compression from "compression";
 import * as fs from "node:fs";
@@ -19,6 +20,16 @@ import type { Handler } from "@netlify/functions";
 import { setStore } from "../netlify/lib/blobs";
 import { SqliteStore, resolveDbPath } from "./storage-sqlite";
 import { toExpress } from "./adapter";
+
+// --- 0. Error monitoring (optional, no-op if SENTRY_DSN not set) ---
+if (process.env.SENTRY_DSN) {
+  Sentry.init({
+    dsn: process.env.SENTRY_DSN,
+    environment: process.env.NODE_ENV || "production",
+    tracesSampleRate: 0.1, // 10% of requests
+  });
+  console.log("[sentry] error monitoring enabled");
+}
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -186,6 +197,16 @@ async function main(): Promise<void> {
   for (const m of mounted) console.log(`  ${m.urlPath.padEnd(40)} ← ${m.file}`);
 
   mountStatic();
+
+  // --- Error middleware (must be last, after all routes/static) ---
+  if (process.env.SENTRY_DSN) {
+    app.use((err: unknown, _req: import("express").Request, res: import("express").Response, next: import("express").NextFunction) => {
+      Sentry.captureException(err);
+      if (res.headersSent) return next(err);
+      res.status(500).json({ error: "internal", message: "Greška na serveru" });
+    });
+  }
+
   await scheduleCrons(mounted);
 
   const port = Number(process.env.PORT ?? 3000);

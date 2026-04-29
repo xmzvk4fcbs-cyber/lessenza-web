@@ -262,6 +262,20 @@ ls -la /opt/lessenza/app/.env
 # expected: -rw------- 1 lessenza lessenza  ...  .env
 ```
 
+### Optional: Sentry error monitoring
+
+If you want emails when something crashes in production:
+
+1. Sign up at https://sentry.io (free tier: 5k errors/month).
+2. Create a project → "Node.js" → copy the DSN.
+3. Add to `/opt/lessenza/app/.env`:
+   ```
+   SENTRY_DSN=https://abc123@o123456.ingest.sentry.io/789
+   ```
+4. `systemctl restart lessenza`.
+
+In Sentry → Alerts → set up a rule: "When new issue → email me".
+
 ---
 
 ## 6. Data migration (OPTIONAL — skip for a clean start)

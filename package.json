@@ -19,6 +19,7 @@
   "dependencies": {
     "@netlify/blobs": "^8.1.0",
     "@netlify/functions": "^2.8.0",
+    "@sentry/node": "^10.51.0",
     "bcryptjs": "^2.4.3",
     "better-sqlite3": "^12.9.0",
     "compression": "^1.8.1",
