@@ -48,82 +48,85 @@
   </div>
 
   <section class="page-hero">
-    <div class="page-hero__inner">
-      <span class="section-label">Pravni dokument</span>
-      <h1 class="page-hero__title">Politika privatnosti</h1>
-      <p class="page-hero__subtitle">Posljednja izmjena: april 2026.</p>
-    </div>
-  </section>
+  <div class="page-hero__inner">
+    <span class="section-label">Pravna obavještenja</span>
+    <h1 class="page-hero__title">Politika privatnosti</h1>
+    <p class="page-hero__subtitle">Posljednje ažurirano: 28. april 2026.</p>
+  </div>
+</section>
 
-  <section class="section">
-    <div class="section__inner" style="max-width: 820px;">
-      <div class="legal-doc">
-        <h2>1. Ko prikuplja podatke</h2>
-        <p>Podatke prikupljene putem sajta <strong>lessenza.me</strong> obrađuje <strong>L'Essenza Beauty Salon</strong>, Bajova 22, Cetinje, Crna Gora (u daljem tekstu: "Salon"). Kontakt: <a href="mailto:info@lessenza.me">info@lessenza.me</a>.</p>
+<section class="section">
+  <div class="section__inner" style="max-width:760px;">
 
-        <h2>2. Koje podatke prikupljamo</h2>
-        <p>Kada zakažete termin ili pošaljete upit, prikupljamo sljedeće lične podatke:</p>
-        <ul>
-          <li><strong>Ime i prezime</strong> — da znamo koga očekujemo</li>
-          <li><strong>Broj telefona</strong> — za potvrdu ili hitne izmjene termina</li>
-          <li><strong>Email adresa</strong> (opciono) — za email potvrde i podsjetnike</li>
-          <li><strong>Napomene</strong> koje unesete pri rezervaciji (npr. zdravstvene osobenosti relevantne za tretman)</li>
-          <li><strong>Metapodaci</strong>: datum i tip rezervisane usluge, vrijeme zakazivanja</li>
-        </ul>
-        <p>Ne koristimo trackere treće strane (bez Google Analytics, bez Facebook Pixel-a). Sajt koristi samo tehnički neophodne kolačiće za admin sesiju (ne za klijente).</p>
+    <h2>1. Ko smo</h2>
+    <p>L'Essenza Beauty Salon, Bajova 22, Cetinje. Kontakt: <a href="mailto:info@lessenza.me">info@lessenza.me</a>.</p>
 
-        <h2>3. Svrha obrade</h2>
-        <p>Vaše podatke koristimo isključivo za:</p>
-        <ul>
-          <li>Zakazivanje, izmjene i otkazivanje termina</li>
-          <li>Slanje email potvrda, podsjetnika i obavještenja vezanih za vaš termin</li>
-          <li>Vođenje interne evidencije termina u Google Calendaru Salona</li>
-          <li>Obradu zdravstveno relevantnih napomena za bezbjedno izvođenje tretmana</li>
-        </ul>
-        <p>Vaše podatke <strong>NE</strong> prodajemo trećim licima, <strong>NE</strong> koristimo za marketing trećih strana, i <strong>NE</strong> dijelimo sa reklamnim mrežama.</p>
+    <h2>2. Koje podatke prikupljamo</h2>
+    <p>Pri online rezervaciji termina (na <a href="zakazivanje.html">/zakazivanje</a>):</p>
+    <ul>
+      <li><strong>Ime i prezime</strong> — da znamo koga čekamo.</li>
+      <li><strong>Broj telefona</strong> — obavezno, za potvrdu, izmjene termina, podsjetnik.</li>
+      <li><strong>Email</strong> — opcionalno, za potvrdu emailom + opciono otkazivanje preko linka.</li>
+      <li><strong>Napomena</strong> — opcionalno, ako želite dodati zahtjev (npr. „alergična sam na…").</li>
+      <li><strong>IP adresa</strong> — privremeno, samo za rate-limiting (sprečavanje spam rezervacija). Briše se posle 24 sata.</li>
+    </ul>
 
-        <h2>4. Pravni osnov</h2>
-        <p>Obrada se vrši na osnovu:</p>
-        <ul>
-          <li><strong>Izvršenja ugovora</strong> (čl. 10 st. 1 tačka 2 Zakona o zaštiti podataka o ličnosti Crne Gore) — za podatke neophodne za zakazivanje i realizaciju usluge</li>
-          <li><strong>Vaše saglasnosti</strong> (čl. 10 st. 1 tačka 1) — za slanje email podsjetnika ako ste ostavili email adresu</li>
-        </ul>
+    <h2>3. Gdje se podaci čuvaju</h2>
+    <ul>
+      <li><strong>Termini</strong> — u Google Calendar nalogu salona (Google LLC, Mountain View, USA — pod GDPR Standard Contractual Clauses).</li>
+      <li><strong>Privatne napomene koje vlasnica salona pravi</strong> — na našem serveru (Hetzner, Njemačka, EU) u SQLite bazi. Klijenti ih nikad ne vide.</li>
+      <li><strong>Email-ovi</strong> — šalju se preko PrivateEmail (Namecheap, USA — DPA potpisan).</li>
+    </ul>
 
-        <h2>5. Koliko dugo čuvamo podatke</h2>
-        <p>Podaci o terminu se čuvaju 12 mjeseci od datuma tretmana radi eventualnog praćenja rezultata i ponovnih tretmana. Nakon tog perioda se automatski brišu iz naše evidencije.</p>
-        <p>Upite koji nisu prihvaćeni brišemo 3 mjeseca nakon slanja.</p>
+    <h2>4. Koliko dugo čuvamo</h2>
+    <ul>
+      <li><strong>Aktivni termini</strong> — dok god su u Google Calendar-u (vlasnica može obrisati u svako doba).</li>
+      <li><strong>Istorija termina</strong> — neograničeno (Google Calendar ne briše prošle event-e).</li>
+      <li><strong>Otkazani termini (cancellation log)</strong> — 5000 zadnjih, oko 5–10 godina za prosječan salon.</li>
+      <li><strong>Privatne napomene</strong> — dok god vlasnica ne obriše ručno ili dok ne zatražite brisanje.</li>
+      <li><strong>Blokirani brojevi</strong> — neograničeno, dok ih vlasnica ne odblokira.</li>
+      <li><strong>Upiti (inquiries)</strong> — 60 dana, zatim se brišu automatski.</li>
+    </ul>
 
-        <h2>6. S kim dijelimo podatke</h2>
-        <p>Vaše podatke čuvamo na:</p>
-        <ul>
-          <li><strong>Hetzner Online GmbH</strong> (Njemačka) — hosting naše baze podataka. Provjereni partner za obradu podataka unutar EU</li>
-          <li><strong>Google Workspace</strong> (Irska / EU) — email infrastruktura i Google Calendar za vođenje termina</li>
-          <li><strong>Private Email (Namecheap)</strong> — email servis za <code>info@lessenza.me</code></li>
-        </ul>
-        <p>Svi navedeni su nezavisni obrađivači sa odgovarajućim ugovorima i certifikatima za EU zaštitu podataka.</p>
+    <h2>5. S kim dijelimo podatke</h2>
+    <p>Sa nikim. Ne prodajemo i ne dijelimo podatke trećim licima u marketinške svrhe. Tehnički, podaci prolaze kroz:</p>
+    <ul>
+      <li>Google (Calendar API) — neophodno za rad sistema.</li>
+      <li>PrivateEmail (Namecheap) — slanje email-ova.</li>
+      <li>Hetzner Cloud — naš server (EU).</li>
+    </ul>
+    <p>Sve troje su pod GDPR-compatible obradama podataka (DPA potpisan za sve gdje je primjenjivo).</p>
 
-        <h2>7. Vaša prava</h2>
-        <p>U skladu sa Zakonom o zaštiti podataka o ličnosti Crne Gore (i analogno GDPR-u) imate pravo da:</p>
-        <ul>
-          <li>Zatražite uvid u podatke koje posjedujemo o vama</li>
-          <li>Tražite ispravku netačnih podataka</li>
-          <li>Tražite brisanje vaših podataka ("pravo da budem zaboravljen/a")</li>
-          <li>Povučete saglasnost za slanje emailova u bilo kom trenutku</li>
-          <li>Podnesete pritužbu Agenciji za zaštitu ličnih podataka Crne Gore</li>
-        </ul>
-        <p>Zahtjev pošaljite na <a href="mailto:info@lessenza.me">info@lessenza.me</a>. Odgovorićemo u roku od 30 dana.</p>
+    <h2>6. Vaša prava</h2>
+    <p>U skladu sa GDPR-om i Zakonom o zaštiti podataka o ličnosti Crne Gore, imate pravo da:</p>
+    <ul>
+      <li><strong>Vidite</strong> sve podatke koje držimo o vama.</li>
+      <li><strong>Ispravite</strong> netačne podatke.</li>
+      <li><strong>Obrišete</strong> sve svoje podatke ("pravo na zaborav").</li>
+      <li><strong>Prenesete</strong> svoje podatke u mašinski čitljivom formatu (data portability).</li>
+      <li><strong>Povučete pristanak</strong> i prestanete primati emailove (svaki email ima link).</li>
+    </ul>
+    <p>Za bilo koji od ovih zahtjeva — pošaljite email na <a href="mailto:info@lessenza.me">info@lessenza.me</a> sa naslovom „GDPR zahtjev". Odgovaramo u roku od 30 dana.</p>
 
-        <h2>8. Sigurnost</h2>
-        <p>Sajt koristi HTTPS šifrovanje (Let's Encrypt). Podaci su pohranjeni u lokalnoj bazi na server Hetzner-a uz enkripciju u tranzitu. Pristup admin panelu zaštićen je snažnom lozinkom i JWT sesijom.</p>
+    <h2>7. Kolačići (cookies)</h2>
+    <p>Javni sajt ne koristi tracking cookies. Admin panel koristi jedan session cookie (HttpOnly, Secure) — samo za prijavljenu vlasnicu. Bez third-party tracking pixela, bez Facebook/Google Analytics-a (osim ako vlasnica eksplicitno uključi privacy-friendly analitiku poput Plausible u Podešavanjima — u tom slučaju, info ovdje se ažurira).</p>
 
-        <h2>9. Izmjene</h2>
-        <p>Salon zadržava pravo da izmijeni ovu politiku. Izmjene stupaju na snagu objavom na ovoj stranici. Datum posljednje izmjene je naveden na vrhu dokumenta.</p>
+    <h2>8. Sigurnost</h2>
+    <ul>
+      <li>HTTPS svuda (Let's Encrypt).</li>
+      <li>Lozinka admin panela: bcrypt hash (nikad u plain text-u).</li>
+      <li>Otkazivanje termina: HMAC-potpisani token, niko ne može pogađati linkove.</li>
+      <li>Dnevni backup na Hetzner Storage Box (EU).</li>
+    </ul>
 
-        <h2>10. Kontakt</h2>
-        <p>Za sva pitanja vezana za obradu ličnih podataka pišite na <a href="mailto:info@lessenza.me">info@lessenza.me</a>.</p>
-      </div>
-    </div>
-  </section>
+    <h2>9. Promjene politike</h2>
+    <p>Datum „Posljednje ažurirano" na vrhu stranice se mijenja kad nešto izmijenimo. Materijalne promjene najavićemo u email-u stalnih klijentkinja.</p>
+
+    <h2>10. Pitanja</h2>
+    <p>Za sve što vas interesuje: <a href="mailto:info@lessenza.me">info@lessenza.me</a>.</p>
+
+  </div>
+</section>
 
   <footer class="footer">
     <div class="footer__inner">
