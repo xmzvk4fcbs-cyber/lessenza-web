@@ -36,6 +36,10 @@ function makeFutureEvent(id: string, daysAhead: number) {
 }
 
 describe("/api/public-cancel", () => {
+  // Far-future expiry so signed tokens never trip the expiry check inside
+  // these handler-level tests; we exercise expiry directly in the unit suite.
+  const farFuture = new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString();
+
   beforeEach(async () => {
     process.env.JWT_SECRET = "test-secret";
     resetStoreForTests(new InMemoryStore());
@@ -57,7 +61,7 @@ describe("/api/public-cancel", () => {
       makeCalendar: () => ({ async listEvents() { return []; }, async insertEvent(e) { return e; }, async deleteEvent() {}, async patchEvent(_id, e) { return e; } }),
       makeMailer: () => createLogMailer(),
     });
-    const goodToken = makeCancelToken("evt-1");
+    const goodToken = makeCancelToken("evt-1", { expiresAtISO: farFuture });
     const tampered = goodToken.slice(0, -3) + "AAA";
     const r = await handler(ev("GET", { token: tampered }), {} as never);
     expect(r?.statusCode).toBe(401);
@@ -68,7 +72,7 @@ describe("/api/public-cancel", () => {
       makeCalendar: () => ({ async listEvents() { return []; }, async insertEvent(e) { return e; }, async deleteEvent() {}, async patchEvent(_id, e) { return e; } }),
       makeMailer: () => createLogMailer(),
     });
-    const t = makeCancelToken("evt-missing");
+    const t = makeCancelToken("evt-missing", { expiresAtISO: farFuture });
     const r = await handler(ev("GET", { token: t }), {} as never);
     expect(r?.statusCode).toBe(404);
   });
@@ -79,7 +83,7 @@ describe("/api/public-cancel", () => {
       makeCalendar: () => ({ async listEvents() { return [evt as never]; }, async insertEvent(e) { return e; }, async deleteEvent() {}, async patchEvent(_id, e) { return e; } }),
       makeMailer: () => createLogMailer(),
     });
-    const t = makeCancelToken("evt-1");
+    const t = makeCancelToken("evt-1", { expiresAtISO: farFuture });
     const r = await handler(ev("GET", { token: t }), {} as never);
     expect(r?.statusCode).toBe(200);
     const body = JSON.parse(r!.body as string);
@@ -94,7 +98,7 @@ describe("/api/public-cancel", () => {
       makeCalendar: () => ({ async listEvents() { return [evt as never]; }, async insertEvent(e) { return e; }, async deleteEvent() {}, async patchEvent(_id, e) { return e; } }),
       makeMailer: () => createLogMailer(),
     });
-    const t = makeCancelToken("evt-soon");
+    const t = makeCancelToken("evt-soon", { expiresAtISO: farFuture });
     const r = await handler(ev("GET", { token: t }), {} as never);
     expect(r?.statusCode).toBe(409);
     expect(JSON.parse(r!.body as string).error).toBe("too-late");
@@ -113,7 +117,7 @@ describe("/api/public-cancel", () => {
       }),
       makeMailer: () => mailer,
     });
-    const t = makeCancelToken("evt-go");
+    const t = makeCancelToken("evt-go", { expiresAtISO: farFuture });
     const r = await handler(ev("POST", { token: t, body: { t } }), {} as never);
     expect(r?.statusCode).toBe(200);
     expect(deleted).toEqual(["evt-go"]);
@@ -135,7 +139,7 @@ describe("/api/public-cancel", () => {
       }),
       makeMailer: () => mailer,
     });
-    const t = makeCancelToken("evt-soon2");
+    const t = makeCancelToken("evt-soon2", { expiresAtISO: farFuture });
     const r = await handler(ev("POST", { token: t, body: { t } }), {} as never);
     expect(r?.statusCode).toBe(409);
     expect(deleted).toEqual([]);

@@ -145,7 +145,11 @@ export const handler: Handler = async (event) => {
   if (booking.calendarEventId) {
     try {
       const siteUrl = (process.env.SITE_URL || "https://lessenza.me").replace(/\/$/, "");
-      const t = makeCancelToken(booking.calendarEventId);
+      // Token expires 24h after the appointment ends — defense-in-depth so a
+      // leaked email link can't be replayed indefinitely.
+      const eventEndMs = new Date(booking.endISO).getTime();
+      const expiresAtISO = new Date(eventEndMs + 24 * 60 * 60 * 1000).toISOString();
+      const t = makeCancelToken(booking.calendarEventId, { expiresAtISO });
       cancelUrl = `${siteUrl}/cancel.html?t=${encodeURIComponent(t)}`;
     } catch (e) {
       console.warn("[book][cancel-token] not generated:", (e as Error).message);

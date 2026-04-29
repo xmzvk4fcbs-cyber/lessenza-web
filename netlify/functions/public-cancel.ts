@@ -28,6 +28,7 @@ async function handleGet(token: string) {
   const v = verifyCancelToken(token);
   if (!v.ok) {
     if (v.reason === "malformed") return badRequest("malformed", "Token format invalid");
+    if (v.reason === "expired") return unauthorized("expired");
     return unauthorized("bad-signature");
   }
   const cal = await getCal();
@@ -66,6 +67,7 @@ async function handlePost(token: string) {
   const v = verifyCancelToken(token);
   if (!v.ok) {
     if (v.reason === "malformed") return badRequest("malformed", "Token format invalid");
+    if (v.reason === "expired") return unauthorized("expired");
     return unauthorized("bad-signature");
   }
 
