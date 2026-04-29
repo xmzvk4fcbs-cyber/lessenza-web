@@ -310,4 +310,21 @@ async function openTotpSetup() {
   }
 }
 
+// ---------- Data export ----------
+
+(function attachExportButton() {
+  const bpListEl = document.getElementById("bp-list");
+  if (!bpListEl) return;
+  const exportBtn = document.createElement("button");
+  exportBtn.type = "button";
+  exportBtn.className = "btn btn-ghost block";
+  exportBtn.style.marginTop = "1rem";
+  exportBtn.textContent = "📥 Preuzmi sve podatke (JSON)";
+  exportBtn.addEventListener("click", () => {
+    // Direct navigation triggers the attachment download via the cookie session.
+    window.location.href = "/api/admin/export-data";
+  });
+  bpListEl.parentNode.appendChild(exportBtn);
+})();
+
 registerTab("settings", render);
