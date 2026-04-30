@@ -1457,6 +1457,41 @@ html { scroll-behavior: smooth; scroll-padding-top: 88px; -webkit-font-smoothing
 .rv-card__actions { display: flex; flex-wrap: wrap; gap: 6px; }
 .rv-card__actions .btn { padding: 6px 12px; font-size: 0.82rem; min-height: 36px; }
 
+/* === Stagger reveal — list items fade-up on render === */
+.stagger-in > * {
+  animation: stagger-up 0.55s cubic-bezier(0.16, 1, 0.3, 1) both;
+  opacity: 0;
+}
+.stagger-in > *:nth-child(1) { animation-delay: 0.04s; }
+.stagger-in > *:nth-child(2) { animation-delay: 0.10s; }
+.stagger-in > *:nth-child(3) { animation-delay: 0.16s; }
+.stagger-in > *:nth-child(4) { animation-delay: 0.22s; }
+.stagger-in > *:nth-child(5) { animation-delay: 0.28s; }
+.stagger-in > *:nth-child(6) { animation-delay: 0.34s; }
+.stagger-in > *:nth-child(7) { animation-delay: 0.40s; }
+.stagger-in > *:nth-child(8) { animation-delay: 0.46s; }
+.stagger-in > *:nth-child(n+9) { animation-delay: 0.50s; }
+@keyframes stagger-up {
+  from { opacity: 0; transform: translateY(10px); filter: blur(2px); }
+  to   { opacity: 1; transform: translateY(0);    filter: blur(0); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .stagger-in > * { animation: none; opacity: 1; }
+}
+
+/* Refined tap feedback — anything tappable shows it's pressed */
+.btn:active,
+.chip:active,
+.bottom-nav__btn:active,
+.mb-slot-btn:active,
+.appt-card:active,
+.stack-card:active,
+.acc > summary:active {
+  filter: brightness(0.97);
+}
+.appt-card:active { transform: translateY(0) scale(0.995); }
+.stack-card:active { transform: translateY(0) scale(0.995); }
+
 /* === Skeleton loaders === */
 .skel {
   background: linear-gradient(
@@ -1488,6 +1523,14 @@ html { scroll-behavior: smooth; scroll-padding-top: 88px; -webkit-font-smoothing
 .skel-card__line--short { width: 55%; }
 .skel-card__actions { display: flex; gap: 8px; margin-top: 14px; }
 .skel-card__btn { height: 32px; width: 80px; border-radius: 6px; }
+
+.appt-card--skel {
+  pointer-events: none;
+  border-style: dashed;
+  border-color: rgba(217, 192, 154, 0.35);
+  box-shadow: none;
+}
+.appt-card--skel::before { background: rgba(217, 192, 154, 0.4); }
 
 @media (prefers-reduced-motion: reduce) {
   .skel { animation: none; background: rgba(217, 192, 154, 0.28); }

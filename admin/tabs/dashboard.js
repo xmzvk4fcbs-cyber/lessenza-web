@@ -195,8 +195,26 @@ if (noteInput) {
   noteInput.addEventListener("blur", saveTodayNote);
 }
 
+function skelAppts(n = 2) {
+  const card = `<div class="appt-card appt-card--skel">
+    <div class="appt-card__time">
+      <span class="skel" style="width:42px;height:24px;display:block;margin-bottom:8px;"></span>
+      <span class="skel" style="width:34px;height:8px;display:block;"></span>
+    </div>
+    <div class="appt-card__body">
+      <span class="skel" style="width:60%;height:18px;display:block;margin-bottom:8px;"></span>
+      <span class="skel" style="width:40%;height:11px;display:block;margin-bottom:14px;"></span>
+      <span class="skel" style="width:80%;height:10px;display:block;"></span>
+    </div>
+  </div>`;
+  return `<div class="skel-stack">${card.repeat(n)}</div>`;
+}
+
 async function render() {
   renderGreeting();
+  if (listEl) listEl.innerHTML = skelAppts(2);
+  if (statToday) statToday.innerHTML = `<span class="skel" style="width:28px;height:28px;display:inline-block;"></span>`;
+  if (statWeek)  statWeek.innerHTML  = `<span class="skel" style="width:28px;height:28px;display:inline-block;"></span>`;
 
   const today = todayKey();
   const weekEnd = plusDays(today, 6);
@@ -220,6 +238,7 @@ async function render() {
     renderNextCard(next);
 
     if (!todayApps.length) {
+      listEl.classList.remove("stagger-in");
       listEl.innerHTML = `
         <div class="empty-state">
           <span class="empty-state__icon">☕</span>
@@ -228,7 +247,13 @@ async function render() {
         </div>
       `;
     } else {
+      listEl.classList.remove("stagger-in");
+      // Reflow trick — strip then re-add the class so the animation re-runs
+      // each time the list re-renders, not just on first paint.
+      // eslint-disable-next-line no-unused-expressions
+      void listEl.offsetWidth;
       listEl.innerHTML = todayApps.map(renderAppointmentCard).join("");
+      listEl.classList.add("stagger-in");
     }
   } catch (e) {
     nextCard.innerHTML = `<p class="hero-card__meta">Greška: ${escapeHtml(e.message)}</p>`;
