@@ -491,7 +491,7 @@ function renderCard(a) {
   const mm = String(start.getMinutes()).padStart(2, "0");
   const dateLabel = start.toLocaleDateString("sr-Latn", { weekday: "short", day: "numeric", month: "short" });
   return `
-    <article class="appt-card appt-card--manage" data-event-id="${escapeHtml(a.calendarEventId)}" data-name="${escapeHtml(a.name)}" data-phone="${phone}" data-service="${escapeHtml(a.serviceName)}" data-start="${escapeHtml(a.startISO)}">
+    <article class="appt-card appt-card--manage" data-event-id="${escapeHtml(a.calendarEventId)}" data-service-id="${escapeHtml(a.serviceId || "")}" data-name="${escapeHtml(a.name)}" data-phone="${phone}" data-service="${escapeHtml(a.serviceName)}" data-start="${escapeHtml(a.startISO)}" data-end="${escapeHtml(a.endISO)}">
       <div class="appt-card__time">
         <span class="appt-card__day">${escapeHtml(dateLabel)}</span>
         <span class="appt-card__hh">${hh}</span><span class="appt-card__sep">:</span><span class="appt-card__mm">${mm}</span>
@@ -525,7 +525,9 @@ async function onAction(e) {
   const name = card.dataset.name;
   const phone = card.dataset.phone;
   const service = card.dataset.service;
+  const serviceId = card.dataset.serviceId || "";
   const start = card.dataset.start;
+  const end = card.dataset.end || "";
 
   if (action === "wa") {
     const when = fmtDateTime(start);
@@ -615,34 +617,7 @@ async function onAction(e) {
   }
 
   if (action === "reschedule") {
-    const curLocal = new Date(start).toISOString().slice(0, 16);
-    openModal("Pomjeri termin", `
-      <div id="kk-host-reschedule"></div>
-      <p><strong>${escapeHtml(service)}</strong> — ${escapeHtml(name)}<br><span class="muted">Trenutno: ${fmtDateTime(start)}</span></p>
-      <div class="field">
-        <label for="new-start">Novo vrijeme</label>
-        <input id="new-start" type="datetime-local" value="${curLocal}" required>
-      </div>
-      <div class="stack-card__actions">
-        <button class="btn btn-ghost" type="button" data-close="1">Nazad</button>
-        <button class="btn btn-primary" type="button" id="confirm-reschedule">Pomjeri</button>
-      </div>
-    `);
-    renderClientCard(document.getElementById("kk-host-reschedule"), { phone, fallbackName: name, suppressIfMissing: true });
-    document.getElementById("confirm-reschedule").addEventListener("click", async () => {
-      const local = document.getElementById("new-start").value;
-      if (!local) return;
-      const iso = new Date(local).toISOString();
-      try {
-        const r = await must("/api/admin/reschedule-booking", { method: "POST", body: { eventId, newStartISO: iso } });
-        closeModal();
-        toast("Termin pomjeren.", "success");
-        if (r.message) showMessageActions("Obavijesti klijentkinju", r.message, r.whatsappLink, r.viberLink);
-        await renderList();
-      } catch (err) {
-        toast(err.message, "error");
-      }
-    });
+    await openRescheduleModal({ eventId, serviceId, name, phone, service, start, end });
     return;
   }
 
@@ -673,6 +648,243 @@ async function onAction(e) {
     });
     return;
   }
+}
+
+async function openRescheduleModal({ eventId, serviceId, name, phone, service, start, end }) {
+  // Compute duration from existing appointment so we can fetch matching slots.
+  const durMs = end && start ? Math.max(0, new Date(end) - new Date(start)) : 60 * 60_000;
+  const durMin = Math.max(15, Math.round(durMs / 60_000));
+  // Look up serviceId by service name if missing — needed for slots endpoint.
+  let sid = serviceId;
+  if (!sid) {
+    try {
+      const services = await getServices();
+      const match = services.find((s) => s.name === service);
+      if (match) sid = match.id;
+    } catch { /* fallthrough */ }
+  }
+  const startD = new Date(start);
+  const defaultDate = `${startD.getFullYear()}-${String(startD.getMonth() + 1).padStart(2, "0")}-${String(startD.getDate()).padStart(2, "0")}`;
+
+  openModal("Pomjeri termin", `
+    <div class="mb">
+      <div class="rs-current">
+        <span class="rs-current__label">Trenutni termin</span>
+        <div class="rs-current__main">
+          <strong>${escapeHtml(service)}</strong> — ${escapeHtml(name)}<br>
+          <span class="muted">${fmtDateTime(start)}</span>
+        </div>
+      </div>
+
+      <div class="field mb__date-field">
+        <label for="rs-date">Novi datum</label>
+        <button type="button" id="rs-date-trigger" class="mb-date-trigger">
+          <span class="mb-date-trigger__icon">📅</span>
+          <span class="mb-date-trigger__text" id="rs-date-text">—</span>
+          <span class="mb-date-trigger__chev">▾</span>
+        </button>
+        <input id="rs-date" type="date" value="${defaultDate}" required class="mb-date-native">
+        <div class="mb-date-shortcuts">
+          <button type="button" class="chip" data-quick="today">Danas</button>
+          <button type="button" class="chip" data-quick="tomorrow">Sjutra</button>
+          <button type="button" class="chip" data-quick="+2">+2 dana</button>
+          <button type="button" class="chip" data-quick="+7">+7 dana</button>
+        </div>
+      </div>
+
+      <div class="mb__day-glance">
+        <div class="mb__glance-head">
+          <span class="mb__glance-title">Dan u pregledu</span>
+          <span class="mb__glance-meta" id="rs-glance-meta"></span>
+        </div>
+        <div id="rs-timeline" class="mb-timeline">
+          <div class="muted" style="padding:0.5rem 0;">Učitavanje…</div>
+        </div>
+      </div>
+
+      <details class="mb__manual" id="rs-manual">
+        <summary class="mb__manual-summary">
+          <span>Unesi vrijeme ručno</span>
+          <span class="muted" style="font-size:0.78rem;">(van rasporeda — npr. ako klijentkinja traži van standarda)</span>
+        </summary>
+        <div class="mb__manual-body">
+          <input id="rs-start" type="datetime-local">
+          <div id="rs-conflict-live" class="mb-conflict-live" hidden></div>
+        </div>
+      </details>
+
+      <input type="hidden" id="rs-chosen-iso">
+      <div class="mb__chosen" id="rs-chosen-banner" hidden></div>
+
+      <div id="rs-error" class="mb-conflict-banner" hidden></div>
+
+      <div class="mb__actions">
+        <button class="btn btn-ghost" type="button" data-close="1">Nazad</button>
+        <button class="btn btn-primary" type="button" id="rs-save" disabled>Pomjeri termin</button>
+      </div>
+    </div>
+  `);
+
+  const dateEl = document.getElementById("rs-date");
+  const dateText = document.getElementById("rs-date-text");
+  const dateTrigger = document.getElementById("rs-date-trigger");
+  const timelineEl = document.getElementById("rs-timeline");
+  const glanceMetaEl = document.getElementById("rs-glance-meta");
+  const manualInput = document.getElementById("rs-start");
+  const conflictLive = document.getElementById("rs-conflict-live");
+  const chosenIso = document.getElementById("rs-chosen-iso");
+  const chosenBanner = document.getElementById("rs-chosen-banner");
+  const saveBtn = document.getElementById("rs-save");
+  const errorBox = document.getElementById("rs-error");
+  let dayCache = null;
+
+  function fmtDatePretty(yyyymmdd) {
+    if (!yyyymmdd) return "—";
+    const [y, m, d] = yyyymmdd.split("-").map(Number);
+    return new Date(y, m - 1, d).toLocaleDateString("sr-Latn", { weekday: "long", day: "numeric", month: "long", year: "numeric" });
+  }
+  function syncDateLabel() { dateText.textContent = fmtDatePretty(dateEl.value); }
+  function openDatePicker() {
+    if (dateEl.showPicker) { try { dateEl.showPicker(); return; } catch {} }
+    dateEl.focus(); dateEl.click();
+  }
+  dateTrigger.addEventListener("click", openDatePicker);
+  dateEl.addEventListener("change", () => { syncDateLabel(); refresh(); });
+
+  document.querySelectorAll("#rs-date-trigger ~ .mb-date-shortcuts .chip").forEach((c) => {
+    c.addEventListener("click", () => {
+      const q = c.dataset.quick;
+      const base = new Date();
+      if (q === "tomorrow") base.setDate(base.getDate() + 1);
+      else if (q === "+2") base.setDate(base.getDate() + 2);
+      else if (q === "+7") base.setDate(base.getDate() + 7);
+      dateEl.value = `${base.getFullYear()}-${String(base.getMonth() + 1).padStart(2, "0")}-${String(base.getDate()).padStart(2, "0")}`;
+      syncDateLabel(); refresh();
+    });
+  });
+  syncDateLabel();
+
+  function setChosen(iso, label) {
+    chosenIso.value = iso || "";
+    if (!iso) { chosenBanner.hidden = true; saveBtn.disabled = true; return; }
+    chosenBanner.hidden = false;
+    chosenBanner.innerHTML = `<span class="mb__chosen-icon">✓</span><div><div class="mb__chosen-label">${escapeHtml(label)}</div><div class="mb__chosen-meta">Novi termin</div></div>`;
+    saveBtn.disabled = false;
+  }
+  function timeKey(iso) {
+    const d = new Date(iso);
+    return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
+  }
+  function localToISO(dateKey, hhmm) {
+    const [y, m, d] = dateKey.split("-").map(Number);
+    const [h, min] = hhmm.split(":").map(Number);
+    return new Date(y, m - 1, d, h, min, 0).toISOString();
+  }
+
+  function pickSlot(hhmm) {
+    setChosen(localToISO(dateEl.value, hhmm), `${hhmm} · ${fmtDatePretty(dateEl.value)}`);
+    manualInput.value = "";
+    conflictLive.hidden = true;
+    timelineEl.querySelectorAll(".mb-slot-btn").forEach((b) => b.classList.toggle("is-selected", b.dataset.hhmm === hhmm));
+  }
+
+  function renderTimeline(slots, day) {
+    const items = [];
+    for (const s of slots) items.push({ kind: "free", t: s, sortKey: s });
+    for (const a of (day?.appointments || [])) {
+      // Skip the appointment we're rescheduling — it's "freeable" from its perspective.
+      if (a.calendarEventId === eventId) continue;
+      const t = timeKey(a.startISO);
+      items.push({ kind: "busy", t, sortKey: t, label: a.name, sub: a.serviceName });
+    }
+    for (const b of (day?.blocks || [])) {
+      const t = timeKey(b.startISO);
+      items.push({ kind: "block", t, sortKey: t, label: b.reason || "Pauza" });
+    }
+    items.sort((a, b) => a.sortKey.localeCompare(b.sortKey));
+    if (!items.length) {
+      timelineEl.innerHTML = `<div class="mb-timeline__empty">${day && !day.isOpen ? "Salon ne radi tog dana." : "Nema dostupnih termina."}</div>`;
+      return;
+    }
+    timelineEl.innerHTML = items.map((it) => {
+      if (it.kind === "free") {
+        return `<button type="button" class="mb-slot-btn" data-hhmm="${escapeHtml(it.t)}"><span class="mb-slot-btn__time">${escapeHtml(it.t)}</span><span class="mb-slot-btn__tag">slobodno</span></button>`;
+      }
+      const cls = it.kind === "busy" ? "is-busy" : it.kind === "block" ? "is-block" : "is-raw";
+      const sub = it.sub ? ` · ${escapeHtml(it.sub)}` : "";
+      return `<div class="mb-occ ${cls}"><span class="mb-occ__time">${escapeHtml(it.t)}</span><span class="mb-occ__icon">${it.kind === "busy" ? "●" : "⏸"}</span><span class="mb-occ__label">${escapeHtml(it.label)}${sub}</span></div>`;
+    }).join("");
+    timelineEl.querySelectorAll(".mb-slot-btn").forEach((btn) => btn.addEventListener("click", () => pickSlot(btn.dataset.hhmm)));
+  }
+
+  async function refresh() {
+    setChosen("", "");
+    const date = dateEl.value;
+    if (!date) return;
+    timelineEl.innerHTML = `<div class="muted" style="padding:0.5rem 0;">Učitavanje…</div>`;
+    glanceMetaEl.textContent = "";
+    try {
+      const slotsP = sid
+        ? must(`/api/admin/slots?serviceId=${encodeURIComponent(sid)}&date=${encodeURIComponent(date)}`)
+        : Promise.resolve({ slots: [] });
+      const [slotsRes, dayRes] = await Promise.all([
+        slotsP,
+        must(`/api/admin/day-view?date=${encodeURIComponent(date)}`).catch(() => null),
+      ]);
+      dayCache = dayRes;
+      const slots = Array.isArray(slotsRes.slots) ? slotsRes.slots : [];
+      const busyCount = (dayRes?.appointments?.length || 0) + (dayRes?.blocks?.length || 0);
+      glanceMetaEl.textContent = dayRes?.isOpen ? `${slots.length} slobodnih · ${busyCount} zauzetih` : "Salon ne radi";
+      renderTimeline(slots, dayRes);
+    } catch (e) {
+      timelineEl.innerHTML = `<div class="muted">Ne mogu učitati: ${escapeHtml(e.message)}</div>`;
+    }
+  }
+
+  manualInput.addEventListener("input", () => {
+    if (!manualInput.value) { setChosen("", ""); conflictLive.hidden = true; return; }
+    const iso = new Date(manualInput.value).toISOString();
+    setChosen(iso, fmtDateTime(iso));
+    timelineEl.querySelectorAll(".mb-slot-btn").forEach((b) => b.classList.remove("is-selected"));
+    // Live conflict check
+    const ms = new Date(iso).getTime();
+    const newEnd = ms + durMin * 60_000;
+    const conflicts = [];
+    for (const a of (dayCache?.appointments || [])) {
+      if (a.calendarEventId === eventId) continue;
+      const aS = new Date(a.startISO).getTime(), aE = new Date(a.endISO).getTime();
+      if (ms < aE && newEnd > aS) conflicts.push(`${timeKey(a.startISO)} · ${a.name}`);
+    }
+    if (conflicts.length) {
+      conflictLive.hidden = false;
+      conflictLive.className = "mb-conflict-live";
+      conflictLive.innerHTML = `⚠️ Poklapa se s: <strong>${escapeHtml(conflicts[0])}</strong>`;
+    } else {
+      conflictLive.hidden = false;
+      conflictLive.className = "mb-conflict-live mb-conflict-live--ok";
+      conflictLive.innerHTML = "✓ Slobodno je u to vrijeme.";
+    }
+  });
+
+  refresh();
+
+  saveBtn.addEventListener("click", async () => {
+    const iso = chosenIso.value;
+    if (!iso) return;
+    saveBtn.disabled = true;
+    errorBox.hidden = true;
+    try {
+      const r = await must("/api/admin/reschedule-booking", { method: "POST", body: { eventId, newStartISO: iso } });
+      closeModal();
+      toast("Termin pomjeren.", "success");
+      if (r.message) showMessageActions("Obavijesti klijentkinju", r.message, r.whatsappLink, r.viberLink);
+      await renderList();
+    } catch (err) {
+      saveBtn.disabled = false;
+      errorBox.hidden = false;
+      errorBox.innerHTML = `<strong>⚠️ Ne mogu pomjeriti</strong><br>${escapeHtml(err.message)}`;
+    }
+  });
 }
 
 async function openSwapModal({ eventId, name: oldName, phone: oldPhone, service: oldServiceName, start: oldStart }) {

@@ -3034,6 +3034,52 @@ html { scroll-behavior: smooth; scroll-padding-top: 88px; -webkit-font-smoothing
   .mb__row { grid-template-columns: 1fr 1fr; }
 }
 
+/* Reschedule modal — current appointment banner */
+.rs-current {
+  background: linear-gradient(135deg, #FBF6EB 0%, #F1E5CC 100%);
+  border: 1px solid rgba(217, 192, 154, 0.55);
+  border-radius: 12px;
+  padding: 0.85rem 1rem;
+  margin-bottom: 0.85rem;
+  position: relative;
+  overflow: hidden;
+}
+.rs-current::before {
+  content: '';
+  position: absolute;
+  left: 0; top: 0; bottom: 0;
+  width: 3px;
+  background: var(--gold, #C9A961);
+  opacity: 0.7;
+}
+.rs-current__label {
+  display: block;
+  font-family: 'Outfit', sans-serif;
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--gold, #C9A961);
+  margin-bottom: 4px;
+}
+.rs-current__main {
+  font-family: 'Cormorant Garamond', Georgia, serif;
+  font-style: italic;
+  font-size: 1.05rem;
+  color: var(--text, #4A4238);
+  line-height: 1.5;
+}
+.rs-current__main strong {
+  font-style: normal;
+  font-family: 'Outfit', sans-serif;
+  font-size: 0.85rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--sage, #6B6F4F);
+  margin-right: 4px;
+}
+
 /* Date trigger — modern pill that opens native picker */
 .mb__date-field { position: relative; }
 .mb-date-trigger {
