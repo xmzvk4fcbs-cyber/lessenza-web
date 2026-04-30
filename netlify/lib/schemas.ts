@@ -265,8 +265,6 @@ export type PushSubscription = z.infer<typeof PushSubscriptionSchema>;
 export const PushSubscriptionsSchema = z.array(PushSubscriptionSchema);
 
 export const PasswordResetTokenSchema = z.object({
-  /** Random URL-safe token (32 bytes hex). Never persisted — kept blank in storage. */
-  token: z.string().min(0).max(128),
   /** SHA-256 hash of the token; only the hash is stored, never the raw value. */
   tokenHash: z.string().length(64),
   /** ISO timestamp when the token was issued. */

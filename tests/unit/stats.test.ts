@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { summarizeMonth, type StatBooking, type StatNoShow } from "../../netlify/lib/stats";
+import { summarizeMonth, type StatBooking, type StatNoShow, type StatCancellation } from "../../netlify/lib/stats";
 import type { Service } from "../../netlify/lib/schemas";
 
 const services: Service[] = [
@@ -100,5 +100,16 @@ describe("summarizeMonth", () => {
     ];
     const r = summarizeMonth("2026-04", [], [], ns, [], services);
     expect(r.noShowCount).toBe(2);
+  });
+
+  it("breaks down cancellations by kind", () => {
+    const cancellations: StatCancellation[] = [
+      { kind: "by-admin" }, { kind: "by-admin" },
+      { kind: "by-client" },
+      { kind: "rejected" },
+      { kind: "no-show" }, // intentionally excluded from cancellationsByKind
+    ];
+    const r = summarizeMonth("2026-04", [], [], [], cancellations, services);
+    expect(r.cancellationsByKind).toEqual({ byAdmin: 2, byClient: 1, rejected: 1 });
   });
 });

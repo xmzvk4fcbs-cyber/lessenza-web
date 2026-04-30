@@ -115,20 +115,21 @@ export function escapeHtml(s) {
   return String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
 }
 
+function pad2(n) { return String(n).padStart(2, "0"); }
+
+export function fmtDate(iso) {
+  const d = new Date(iso);
+  return `${pad2(d.getDate())}.${pad2(d.getMonth() + 1)}.${d.getFullYear()}.`;
+}
+
 export function fmtDateTime(iso) {
   const d = new Date(iso);
-  return d.toLocaleString("sr-Latn", {
-    weekday: "short",
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
+  return `${pad2(d.getDate())}.${pad2(d.getMonth() + 1)}.${d.getFullYear()}. u ${pad2(d.getHours())}:${pad2(d.getMinutes())}`;
 }
 
 export function fmtTime(iso) {
-  return new Date(iso).toLocaleTimeString("sr-Latn", { hour: "2-digit", minute: "2-digit" });
+  const d = new Date(iso);
+  return `${pad2(d.getHours())}:${pad2(d.getMinutes())}`;
 }
 
 // Format a Date as YYYY-MM-DD in LOCAL time, not UTC. Critical — using

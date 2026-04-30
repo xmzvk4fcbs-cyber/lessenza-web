@@ -1084,22 +1084,37 @@ async function openManualBookingModal() {
       </button>`;
     }).join("");
     suggestEl.querySelectorAll(".mb-suggest__item").forEach((el) => {
-      el.addEventListener("click", () => {
+      // Use mousedown — fires before the input's blur, so we can intercept
+      // and prevent the blur from killing the click. Also lets us skip the
+      // refocus dance that was re-opening the dropdown after a pick.
+      el.addEventListener("mousedown", (e) => {
+        e.preventDefault(); // keep input focus where it was
         nameInput.value = el.dataset.name || "";
         phoneInput.value = el.dataset.phone || "";
         if (el.dataset.email) emailInput.value = el.dataset.email;
         suggestEl.hidden = true;
-        nameInput.focus();
+        suggestSuppressUntil = Date.now() + 600;
+        // Move focus forward so user can keep typing details / hit submit
+        if (manualInput) {
+          // If a time is already chosen, jump to phone (next missing) or to submit
+          if (chosenIso.value) saveBtn.focus();
+          else phoneInput.focus();
+        } else {
+          phoneInput.focus();
+        }
       });
     });
   }
 
   let acTimer = null;
+  let suggestSuppressUntil = 0;
   nameInput.addEventListener("input", () => {
     if (acTimer) clearTimeout(acTimer);
+    if (Date.now() < suggestSuppressUntil) return;
     const q = nameInput.value.trim().toLowerCase();
     if (q.length < 2) { suggestEl.hidden = true; return; }
     acTimer = setTimeout(async () => {
+      if (Date.now() < suggestSuppressUntil) return;
       const list = await loadClients();
       const matches = list.filter((c) =>
         (c.name && c.name.toLowerCase().includes(q)) ||
@@ -1109,10 +1124,8 @@ async function openManualBookingModal() {
     }, 120);
   });
   nameInput.addEventListener("blur", () => {
-    setTimeout(() => { suggestEl.hidden = true; }, 180);
-  });
-  nameInput.addEventListener("focus", () => {
-    if (nameInput.value.trim().length >= 2) nameInput.dispatchEvent(new Event("input"));
+    // Only hide; don't re-show on refocus unless the user actually edits.
+    setTimeout(() => { suggestEl.hidden = true; }, 200);
   });
 }
 

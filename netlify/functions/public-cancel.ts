@@ -1,5 +1,5 @@
 import type { Handler } from "@netlify/functions";
-import { json, badRequest, notFound, methodNotAllowed, parseJson, unauthorized } from "../lib/http";
+import { json, badRequest, notFound, methodNotAllowed, parseJson } from "../lib/http";
 import { verifyCancelToken } from "../lib/cancel-token";
 import { createCalendarClient, createCalendarClientAsync, type CalendarClient } from "../lib/calendar";
 import { eventToBooking } from "../lib/calendar-domain";
@@ -28,8 +28,9 @@ async function handleGet(token: string) {
   const v = verifyCancelToken(token);
   if (!v.ok) {
     if (v.reason === "malformed") return badRequest("malformed", "Token format invalid");
-    if (v.reason === "expired") return unauthorized("expired");
-    return unauthorized("bad-signature");
+    if (v.reason === "expired") return json({ error: "expired", message: "Link je istekao" }, 401);
+    if (v.reason === "bad-signature") return json({ error: "bad-signature", message: "Neispravan link" }, 401);
+    return json({ error: "malformed", message: "Neispravan link" }, 401);
   }
   const cal = await getCal();
   const services = await getServices();
@@ -67,8 +68,9 @@ async function handlePost(token: string) {
   const v = verifyCancelToken(token);
   if (!v.ok) {
     if (v.reason === "malformed") return badRequest("malformed", "Token format invalid");
-    if (v.reason === "expired") return unauthorized("expired");
-    return unauthorized("bad-signature");
+    if (v.reason === "expired") return json({ error: "expired", message: "Link je istekao" }, 401);
+    if (v.reason === "bad-signature") return json({ error: "bad-signature", message: "Neispravan link" }, 401);
+    return json({ error: "malformed", message: "Neispravan link" }, 401);
   }
 
   const cal = await getCal();

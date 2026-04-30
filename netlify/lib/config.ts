@@ -161,6 +161,21 @@ export async function setDayNote(dateKey: string, text: string): Promise<void> {
   await store().setJSON(`${DAY_NOTE_PREFIX}${dateKey}.json`, { text: trimmed });
 }
 
+/** Walk every day-note file and return [{ dateKey, text }]. Used by GDPR data export. */
+export async function listAllDayNotes(): Promise<Array<{ dateKey: string; text: string }>> {
+  const keys = await store().list(DAY_NOTE_PREFIX);
+  const out: Array<{ dateKey: string; text: string }> = [];
+  for (const k of keys) {
+    const raw = await store().getJSON<{ text?: string }>(k);
+    if (!raw) continue;
+    // key is "day-notes/YYYY-MM-DD.json" → strip prefix + suffix
+    const dateKey = k.slice(DAY_NOTE_PREFIX.length).replace(/\.json$/, "");
+    if (!dateKey) continue;
+    out.push({ dateKey, text: (raw.text ?? "").toString() });
+  }
+  return out.sort((a, b) => a.dateKey.localeCompare(b.dateKey));
+}
+
 // --- Blocked phones ---
 
 export async function getBlockedPhones(): Promise<BlockedPhone[]> {
@@ -291,6 +306,19 @@ export async function getClientNote(phoneE164: string): Promise<ClientNote | nul
   if (!raw) return null;
   const r = ClientNoteSchema.safeParse(raw);
   return r.success ? r.data : null;
+}
+
+/** Walk every per-phone client-note file and return the flat list. Used by GDPR data export. */
+export async function listAllClientNotes(): Promise<ClientNote[]> {
+  const keys = await store().list(CLIENT_NOTE_PREFIX);
+  const out: ClientNote[] = [];
+  for (const k of keys) {
+    const raw = await store().getJSON<unknown>(k);
+    if (!raw) continue;
+    const r = ClientNoteSchema.safeParse(raw);
+    if (r.success) out.push(r.data);
+  }
+  return out.sort((a, b) => a.updatedAt.localeCompare(b.updatedAt));
 }
 
 export async function setClientNote(phoneE164: string, text: string): Promise<ClientNote> {
@@ -434,7 +462,6 @@ export async function savePasswordResetToken(
 ): Promise<PasswordResetToken> {
   const now = new Date();
   const persisted: PasswordResetToken = {
-    token: "", // raw token never persisted
     tokenHash: hashToken(token),
     issuedAt: now.toISOString(),
     expiresAt: new Date(now.getTime() + ttlMinutes * 60 * 1000).toISOString(),

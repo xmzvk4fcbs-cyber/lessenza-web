@@ -5,15 +5,24 @@ import {
   getServices, getWorkingHours, getSettings, getParallelPairs, getBlocks,
   listInquiries, getBlockedPhones, getCancellationLog,
   listAllNoShows, getDismissedSuggestions,
+  listAllClientNotes, listAllDayNotes,
+  getGalleryItems, getGalleryResults, getReviews,
 } from "../lib/config";
 
 const inner: Handler = async (event) => {
   if (event.httpMethod !== "GET") return methodNotAllowed(["GET"]);
 
-  const [services, hours, settings, pairs, blocks, inquiries, blockedPhones, cancellations, noShows, dismissed] = await Promise.all([
+  const [
+    services, hours, settings, pairs, blocks,
+    inquiries, blockedPhones, cancellations, noShows, dismissed,
+    clientNotes, dayNotes,
+    galleryItems, galleryResults, reviews,
+  ] = await Promise.all([
     getServices(), getWorkingHours(), getSettings(), getParallelPairs(),
     getBlocks(), listInquiries(), getBlockedPhones(), getCancellationLog(),
     listAllNoShows(), getDismissedSuggestions(),
+    listAllClientNotes(), listAllDayNotes(),
+    getGalleryItems(), getGalleryResults(), getReviews(),
   ]);
 
   const dump = {
@@ -29,6 +38,10 @@ const inner: Handler = async (event) => {
     cancellations,
     noShows,
     dismissedSuggestions: dismissed,
+    clientNotes,
+    dayNotes,
+    gallery: { items: galleryItems, results: galleryResults },
+    reviews,
     note: "Termini se vode u Google Calendar-u i tu su autoritativni — eksport bookings-a iz kalendara: https://calendar.google.com/calendar/u/0/r/settings/export",
   };
 

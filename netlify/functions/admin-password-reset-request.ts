@@ -41,12 +41,19 @@ export const handler: Handler = async (event) => {
   const siteUrl = (process.env.SITE_URL || "https://lessenza.me").replace(/\/$/, "");
   const resetUrl = `${siteUrl}/admin/reset.html?t=${encodeURIComponent(raw)}`;
 
-  try {
-    const mailer = await getMailerAsync(settings);
-    await mailer.send(passwordResetEmail({ to: settings.ownerEmail!, resetUrl }));
-  } catch (e) {
-    // Log only — never surface mailer state to the caller (still leaks).
-    console.error("[password-reset] email send failed:", (e as Error).message);
-  }
+  // Fire-and-forget the mailer call so the matched-email response time
+  // doesn't reveal the match via timing oracle. Note: on serverless platforms
+  // the runtime may kill the worker after `return`, so this is best-effort —
+  // on the self-hosted Hetzner Express server it always completes.
+  const ownerEmail = settings.ownerEmail!;
+  const sendInBackground = async () => {
+    try {
+      const mailer = await getMailerAsync(settings);
+      await mailer.send(passwordResetEmail({ to: ownerEmail, resetUrl }));
+    } catch (e) {
+      console.error("[password-reset] email send failed:", (e as Error).message);
+    }
+  };
+  void sendInBackground();
   return json({ ok: true });
 };

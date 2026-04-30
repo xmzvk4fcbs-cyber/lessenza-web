@@ -107,10 +107,23 @@ function renderNextCard(appointment) {
   const service = escapeHtml(appointment.serviceName || "");
   const phone = escapeHtml(appointment.phoneE164 || "");
   const note = appointment.note ? `<p class="hero-card__meta">📝 ${escapeHtml(appointment.note)}</p>` : "";
+  const start = new Date(appointment.startISO);
+  const today = new Date();
+  const isToday = start.toDateString() === today.toDateString();
+  const tomorrow = new Date(today); tomorrow.setDate(tomorrow.getDate() + 1);
+  const isTomorrow = start.toDateString() === tomorrow.toDateString();
+  const dayLabel = isToday ? "Danas"
+    : isTomorrow ? "Sjutra"
+    : start.toLocaleDateString("sr-Latn", { weekday: "long", day: "numeric", month: "long" });
   nextCard.innerHTML = `
     <span class="hero-card__eyebrow">Sljedeći termin</span>
     <h3 class="hero-card__title"><em>${service}</em> — ${name}</h3>
-    <p class="hero-card__time"><strong>${fmtTime(appointment.startISO)}</strong><span data-countdown>${humanUntil(secs)}</span></p>
+    <p class="hero-card__when">
+      <span class="hero-card__day">${dayLabel}</span>
+      <span class="hero-card__dot">·</span>
+      <span class="hero-card__hour"><strong>${fmtTime(appointment.startISO)}</strong></span>
+      <span class="hero-card__cd" data-countdown>${humanUntil(secs)}</span>
+    </p>
     ${phone ? `<p class="hero-card__meta">📞 ${phone}</p>` : ""}
     ${note}
     <div class="hero-card__actions">

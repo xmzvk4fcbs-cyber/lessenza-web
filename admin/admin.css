@@ -3190,6 +3190,50 @@ html { scroll-behavior: smooth; scroll-padding-top: 88px; -webkit-font-smoothing
 /* Body when modal open — prevent background scroll */
 body.modal-open { overflow: hidden; }
 
+/* Hero card "when" line — Danas · 14:00 + countdown */
+.hero-card__when {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin: 0.4rem 0 0.55rem;
+  font-family: 'Cormorant Garamond', Georgia, serif;
+  font-style: italic;
+  color: var(--text, #4A4238);
+  font-size: 1.15rem;
+}
+.hero-card__day {
+  text-transform: capitalize;
+  font-style: normal;
+  font-family: 'Outfit', sans-serif;
+  font-size: 0.72rem;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--gold, #C9A961);
+  font-weight: 700;
+  padding: 3px 10px;
+  background: rgba(201, 169, 97, 0.15);
+  border-radius: 999px;
+}
+.hero-card__hour strong {
+  font-style: normal;
+  font-family: 'Outfit', sans-serif;
+  font-weight: 600;
+  color: var(--gold, #C9A961);
+  font-size: 1rem;
+  letter-spacing: 0.04em;
+}
+.hero-card__dot { color: var(--text-light, #6B5F52); opacity: 0.4; }
+.hero-card__cd {
+  font-family: 'Outfit', sans-serif;
+  font-style: normal;
+  font-size: 0.85rem;
+  color: var(--gold, #C9A961);
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  margin-left: auto;
+}
+
 /* === Appointment card — calendar-ticket aesthetic === */
 .appt-card {
   display: grid;

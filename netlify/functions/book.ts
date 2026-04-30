@@ -14,6 +14,16 @@ import { isHoneypotTriggered } from "../lib/honeypot";
 import { rateLimitAllow, clientIP } from "../lib/rate-limit";
 import { makeCancelToken } from "../lib/cancel-token";
 
+// Module-load: configure VAPID once if keys are present. setVapidDetails is
+// idempotent but doing it per-request inflates handler latency by a few ms.
+if (process.env.VAPID_PUBLIC_KEY && process.env.VAPID_PRIVATE_KEY) {
+  webpush.setVapidDetails(
+    process.env.VAPID_SUBJECT || "mailto:info@lessenza.me",
+    process.env.VAPID_PUBLIC_KEY,
+    process.env.VAPID_PRIVATE_KEY,
+  );
+}
+
 interface Deps {
   makeCalendar: () => CalendarClient;
   makeMailer: () => Mailer;
@@ -185,11 +195,6 @@ export const handler: Handler = async (event) => {
   // any failure (missing keys, dead endpoints, network) never breaks booking.
   if (process.env.VAPID_PUBLIC_KEY && process.env.VAPID_PRIVATE_KEY) {
     try {
-      webpush.setVapidDetails(
-        process.env.VAPID_SUBJECT || "mailto:info@lessenza.me",
-        process.env.VAPID_PUBLIC_KEY,
-        process.env.VAPID_PRIVATE_KEY,
-      );
       const subs = await getPushSubscriptions();
       const payload = JSON.stringify({
         title: "Novi termin",
