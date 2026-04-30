@@ -482,30 +482,37 @@ function renderCard(a) {
     `;
   }
   const phone = escapeHtml(a.phoneE164 || "");
-  const emailLine = a.email ? `<div>📧 ${escapeHtml(a.email)}</div>` : "";
-  const noteLine = a.note ? `<div>📝 ${escapeHtml(a.note)}</div>` : "";
+  const emailLine = a.email ? `<p class="appt-card__email">📧 ${escapeHtml(a.email)}</p>` : "";
+  const noteLine = a.note ? `<p class="appt-card__note">📝 ${escapeHtml(a.note)}</p>` : "";
+  const start = new Date(a.startISO);
+  const end = new Date(a.endISO);
+  const dur = Math.max(0, Math.round((end - start) / 60000));
+  const hh = String(start.getHours()).padStart(2, "0");
+  const mm = String(start.getMinutes()).padStart(2, "0");
+  const dateLabel = start.toLocaleDateString("sr-Latn", { weekday: "short", day: "numeric", month: "short" });
   return `
-    <article class="stack-card" data-event-id="${escapeHtml(a.calendarEventId)}" data-name="${escapeHtml(a.name)}" data-phone="${phone}" data-service="${escapeHtml(a.serviceName)}" data-start="${escapeHtml(a.startISO)}">
-      <div class="stack-card__head">
-        <div>
-          <div class="stack-card__title">${escapeHtml(a.serviceName)} — ${escapeHtml(a.name)}</div>
-          <div class="stack-card__meta">${fmtDateTime(a.startISO)}</div>
-        </div>
+    <article class="appt-card appt-card--manage" data-event-id="${escapeHtml(a.calendarEventId)}" data-name="${escapeHtml(a.name)}" data-phone="${phone}" data-service="${escapeHtml(a.serviceName)}" data-start="${escapeHtml(a.startISO)}">
+      <div class="appt-card__time">
+        <span class="appt-card__day">${escapeHtml(dateLabel)}</span>
+        <span class="appt-card__hh">${hh}</span><span class="appt-card__sep">:</span><span class="appt-card__mm">${mm}</span>
+        <span class="appt-card__dur">${dur} min</span>
       </div>
-      <div class="stack-card__details">
-        <div>📞 ${phone}</div>
+      <div class="appt-card__body">
+        <div class="appt-card__name">${escapeHtml(a.name)}</div>
+        <div class="appt-card__service">${escapeHtml(a.serviceName)}</div>
+        ${phone ? `<div class="appt-card__phone">📞 ${phone}</div>` : ""}
         ${emailLine}
         ${noteLine}
-      </div>
-      <div class="stack-card__actions">
-        <a class="btn btn-ghost" href="tel:${phone}">📞 Pozovi</a>
-        <a class="btn btn-ghost" data-action="wa">📱 WA</a>
-        <a class="btn btn-ghost" data-action="viber">💜 Viber</a>
-        <button class="btn btn-ghost" type="button" data-action="reschedule">✏️ Pomjeri</button>
-        <button class="btn btn-ghost" type="button" data-action="swap">🔄 Zamijeni</button>
-        <button class="btn btn-ghost" type="button" data-action="noshow">⊘ Nije došla</button>
-        <button class="btn btn-ghost" type="button" data-action="reject">🚫 Odbij</button>
-        <button class="btn btn-danger" type="button" data-action="cancel">✕ Otkaži</button>
+        <div class="appt-card__actions appt-card__actions--manage">
+          ${phone ? `<a class="btn btn-ghost" href="tel:${phone}" title="Pozovi">📞</a>` : ""}
+          ${phone ? `<a class="btn btn-ghost" data-action="wa" title="WhatsApp">📱</a>` : ""}
+          ${phone ? `<a class="btn btn-ghost" data-action="viber" title="Viber">💜</a>` : ""}
+          <button class="btn btn-ghost" type="button" data-action="reschedule">Pomjeri</button>
+          <button class="btn btn-ghost" type="button" data-action="swap">Zamijeni</button>
+          <button class="btn btn-ghost" type="button" data-action="noshow">Nije došla</button>
+          <button class="btn btn-ghost" type="button" data-action="reject">Odbij</button>
+          <button class="btn btn-danger" type="button" data-action="cancel">Otkaži</button>
+        </div>
       </div>
     </article>
   `;
@@ -513,7 +520,7 @@ function renderCard(a) {
 
 async function onAction(e) {
   const action = e.currentTarget.dataset.action;
-  const card = e.currentTarget.closest(".stack-card");
+  const card = e.currentTarget.closest(".appt-card, .stack-card");
   const eventId = card.dataset.eventId;
   const name = card.dataset.name;
   const phone = card.dataset.phone;
