@@ -83,9 +83,10 @@ describe("TOTP 2FA", () => {
     );
     expect(withCode?.statusCode).toBe(200);
 
-    // Disable clears both flag and secret
+    // Disable clears both flag and secret. Requires fresh proof — pass a
+    // valid current TOTP code so the request is accepted.
     const off = await disableHandler(
-      ev("/api/admin/totp-disable", "POST", {}, tok),
+      ev("/api/admin/totp-disable", "POST", { code: totpFor(secret) }, tok),
       {} as never
     );
     expect(off?.statusCode).toBe(200);
@@ -110,5 +111,51 @@ describe("TOTP 2FA", () => {
     const auth = await getAuth();
     // Secret was set by setup but enabled flag stays false until verified.
     expect(auth?.totpEnabled).toBe(false);
+  });
+
+  it("setup refuses when TOTP already enabled", async () => {
+    const { tok, secret } = await bootstrap();
+    const code = totpFor(secret);
+    await enableHandler(ev("/api/admin/totp-enable", "POST", { code }, tok), {} as never);
+    const setup2 = await setupHandler(ev("/api/admin/totp-setup", "POST", {}, tok), {} as never);
+    expect(setup2?.statusCode).toBe(409);
+    expect(JSON.parse(setup2!.body as string).error).toBe("already-enabled");
+  });
+
+  it("disable requires proof (TOTP code or password)", async () => {
+    const { tok, secret } = await bootstrap();
+    await enableHandler(
+      ev("/api/admin/totp-enable", "POST", { code: totpFor(secret) }, tok),
+      {} as never
+    );
+    const noProof = await disableHandler(
+      ev("/api/admin/totp-disable", "POST", {}, tok),
+      {} as never
+    );
+    expect(noProof?.statusCode).toBe(400);
+    const bad = await disableHandler(
+      ev("/api/admin/totp-disable", "POST", { code: "000000" }, tok),
+      {} as never
+    );
+    expect(bad?.statusCode).toBe(401);
+    const ok = await disableHandler(
+      ev("/api/admin/totp-disable", "POST", { code: totpFor(secret) }, tok),
+      {} as never
+    );
+    expect(ok?.statusCode).toBe(200);
+    // password fallback: re-setup, re-enable, then disable with password
+    const sec2 = JSON.parse(
+      (await setupHandler(ev("/api/admin/totp-setup", "POST", {}, tok), {} as never))!
+        .body as string
+    ).secret;
+    await enableHandler(
+      ev("/api/admin/totp-enable", "POST", { code: totpFor(sec2) }, tok),
+      {} as never
+    );
+    const pwOk = await disableHandler(
+      ev("/api/admin/totp-disable", "POST", { password: "pw-12345678" }, tok),
+      {} as never
+    );
+    expect(pwOk?.statusCode).toBe(200);
   });
 });

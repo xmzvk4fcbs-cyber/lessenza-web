@@ -142,25 +142,19 @@ export async function requireAdmin(cookieHeader: string | undefined): Promise<Se
  */
 export async function forceSetPassword(newPassword: string): Promise<void> {
   if (newPassword.length < 8) throw new Error("password-too-short");
-  if (envAuth() && !(await store().getJSON(KEY_AUTH))) {
-    // Env-only auth (no Blobs override yet): writing a Blobs record is the
-    // intended outcome — Blobs entry takes precedence over env, so the owner
-    // can recover even when the env hash is unknown to her.
-  }
-  const existing = await store().getJSON<unknown>(KEY_AUTH).catch(() => null);
-  let parsed: AdminAuth | null = null;
-  if (existing) {
-    const r = AdminAuthSchema.safeParse(existing);
-    if (r.success) parsed = r.data;
-  }
+  const existing = await getAuth();
   const passwordHash = await bcrypt.hash(newPassword, 12);
   // Preserve the JWT secret so existing sessions (if any) keep working until
   // they naturally expire — same policy as `changePassword`.
-  const jwtSecret = parsed?.jwtSecret || randomBytes(48).toString("base64url");
+  const jwtSecret = existing?.jwtSecret || randomBytes(48).toString("base64url");
+  // Preserve TOTP fields so resetting the password doesn't silently disable
+  // 2FA — otherwise anyone with email access could bypass the second factor.
   await store().setJSON(KEY_AUTH, {
     passwordHash,
     jwtSecret,
-    createdAt: parsed?.createdAt || new Date().toISOString(),
+    createdAt: existing?.createdAt || new Date().toISOString(),
+    ...(existing?.totpSecret ? { totpSecret: existing.totpSecret } : {}),
+    totpEnabled: !!existing?.totpEnabled,
   });
 }
 

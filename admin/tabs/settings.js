@@ -259,12 +259,24 @@ async function renderTotpCard() {
         variant: "danger",
       });
       if (!ok) return;
+      // Disabling a security factor requires fresh proof — accept either the
+      // current 6-digit TOTP code or the admin password. Stolen cookies alone
+      // are no longer enough.
+      const proof = prompt("Unesi trenutni 6-cifreni 2FA kod (ili ostavi prazno i unesi lozinku):");
+      let body;
+      if (proof && /^\d{6}$/.test(proof.trim())) {
+        body = { code: proof.trim() };
+      } else {
+        const pw = prompt("Unesi admin lozinku:");
+        if (!pw) return;
+        body = { password: pw };
+      }
       try {
-        await must("/api/admin/totp-disable", { method: "POST", body: {} });
+        await must("/api/admin/totp-disable", { method: "POST", body });
         toast("2FA isključeno.", "success");
         await renderTotpCard();
       } catch (e) {
-        toast(e.message || "Greška", "error");
+        toast(e?.message || "Greška", "error");
       }
     });
   }

@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach } from "vitest";
 import type { HandlerEvent } from "@netlify/functions";
 import { InMemoryStore, resetStoreForTests } from "../../netlify/lib/blobs";
-import { setupAdmin, verifyPassword } from "../../netlify/lib/auth";
+import { setupAdmin, verifyPassword, setAuth, getAuth } from "../../netlify/lib/auth";
 import { setSettings, savePasswordResetToken } from "../../netlify/lib/config";
 import { handler as requestHandler } from "../../netlify/functions/admin-password-reset-request";
 import { handler as confirmHandler } from "../../netlify/functions/admin-password-reset-confirm";
@@ -76,5 +76,33 @@ describe("password reset", () => {
     );
     expect(reuse?.statusCode).toBe(401);
     expect(JSON.parse(reuse!.body as string).error).toBe("used");
+  });
+
+  it("preserves TOTP secret + totpEnabled across reset", async () => {
+    await setAuth({ totpSecret: "JBSWY3DPEHPK3PXP", totpEnabled: true });
+
+    const raw = "d".repeat(64);
+    await savePasswordResetToken(raw);
+    const r = await confirmHandler(
+      ev("/api/admin/password-reset-confirm", { token: raw, password: "newpw1234" }),
+      {} as never
+    );
+    expect(r?.statusCode).toBe(200);
+
+    const auth = await getAuth();
+    expect(auth?.totpEnabled).toBe(true);
+    expect(auth?.totpSecret).toBe("JBSWY3DPEHPK3PXP");
+  });
+
+  it("returns invalid for unknown token even when a real one exists", async () => {
+    const real = "e".repeat(64);
+    await savePasswordResetToken(real);
+    const junk = "0".repeat(64);
+    const r = await confirmHandler(
+      ev("/api/admin/password-reset-confirm", { token: junk, password: "newpw1234" }),
+      {} as never
+    );
+    expect(r?.statusCode).toBe(401);
+    expect(JSON.parse(r!.body as string).error).toBe("invalid");
   });
 });

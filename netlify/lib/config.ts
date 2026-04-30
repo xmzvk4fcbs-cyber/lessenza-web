@@ -458,9 +458,13 @@ export async function consumePasswordResetToken(
   const r = PasswordResetTokenSchema.safeParse(raw);
   if (!r.success) return { ok: false, reason: "invalid" };
   const rec = r.data;
+  // Hash-check FIRST so an attacker without the real token can never learn
+  // whether a reset is in flight, when it expires, or that it was consumed.
+  // Only a caller who proves possession of the raw token sees the more
+  // specific "used" / "expired" reasons.
+  if (rec.tokenHash !== hashToken(token)) return { ok: false, reason: "invalid" };
   if (rec.usedAt) return { ok: false, reason: "used" };
   if (Date.now() > new Date(rec.expiresAt).getTime()) return { ok: false, reason: "expired" };
-  if (rec.tokenHash !== hashToken(token)) return { ok: false, reason: "invalid" };
   // Mark used (preserve TTL but stamp usedAt so re-use yields { reason: "used" }).
   await store().setJSON(
     KEY_PASSWORD_RESET,
