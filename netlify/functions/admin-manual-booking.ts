@@ -3,7 +3,7 @@ import type { Handler } from "@netlify/functions";
 import { json, badRequest, notFound, methodNotAllowed, parseJson, serverError } from "../lib/http";
 import { adminGuard } from "../lib/admin-guard";
 import { createCalendarClient, createCalendarClientAsync, type CalendarClient } from "../lib/calendar";
-import { getServices, getSettings } from "../lib/config";
+import { getServices, getSettings, appendAudit } from "../lib/config";
 import { bookingToEvent, type Booking } from "../lib/calendar-domain";
 import { normalizePhone } from "../lib/phone";
 
@@ -99,6 +99,11 @@ const inner: Handler = async (event) => {
     return serverError(`Calendar insert failed: ${(e as Error).message}`);
   }
   booking.calendarEventId = inserted.id ?? undefined;
+  await appendAudit({
+    kind: "booking.created",
+    summary: `Dodat termin ručno: ${booking.serviceName} — ${booking.name} (${new Date(booking.startISO).toLocaleString("sr-Latn", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" })})`,
+    meta: { eventId: booking.calendarEventId ?? "", phone: booking.phoneE164 ?? "" },
+  });
   return json({ ok: true, booking });
 };
 

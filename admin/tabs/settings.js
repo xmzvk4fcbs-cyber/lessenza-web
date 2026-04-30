@@ -165,6 +165,40 @@ async function render() {
   await renderBlocked();
   await renderTotpCard();
   await renderPushCard();
+  await renderAuditCard();
+}
+
+// ---------- Audit log card ----------
+const AUDIT_KIND_ICONS = {
+  "booking.created":     "➕",
+  "booking.cancelled":   "✕",
+  "booking.rescheduled": "↻",
+  "settings.updated":    "⚙",
+};
+async function renderAuditCard() {
+  const host = document.getElementById("audit-list");
+  if (!host) return;
+  host.innerHTML = `<p class="muted">Učitavanje…</p>`;
+  try {
+    const { events } = await must("/api/admin/audit?limit=50");
+    if (!events.length) {
+      host.innerHTML = `<p class="muted">Još nema zapisa.</p>`;
+      return;
+    }
+    host.innerHTML = events.map((e) => {
+      const icon = AUDIT_KIND_ICONS[e.kind] || "•";
+      const when = new Date(e.at).toLocaleString("sr-Latn", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" });
+      return `<article class="audit-item">
+        <span class="audit-item__icon">${icon}</span>
+        <div class="audit-item__body">
+          <div class="audit-item__summary">${escapeHtml(e.summary)}</div>
+          <div class="audit-item__meta">${escapeHtml(when)} · <code>${escapeHtml(e.kind)}</code></div>
+        </div>
+      </article>`;
+    }).join("");
+  } catch (e) {
+    host.innerHTML = `<p class="muted">Ne mogu učitati: ${escapeHtml(e.message)}</p>`;
+  }
 }
 
 function wireSettingsTabs() {

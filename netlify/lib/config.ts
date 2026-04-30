@@ -291,6 +291,48 @@ export async function saveReviews(list: Review[]): Promise<Review[]> {
   return validated;
 }
 
+// ---------- Audit log (admin actions) ----------
+const AUDIT_PREFIX = "audit-log/";
+const AUDIT_MAX_PER_MONTH = 1000; // soft cap per file
+const AUDIT_RETENTION_MONTHS = 12;
+
+function auditMonthKey(d = new Date()): string {
+  const yyyy = d.getFullYear();
+  const mm = String(d.getMonth() + 1).padStart(2, "0");
+  return `${AUDIT_PREFIX}${yyyy}-${mm}.json`;
+}
+
+export async function appendAudit(input: { kind: string; summary: string; meta?: Record<string, string | number | boolean | null> }): Promise<void> {
+  const key = auditMonthKey();
+  const raw = await store().getJSON<unknown>(key);
+  const list = Array.isArray(raw) ? (raw as Array<{ id: string; at: string; kind: string; summary: string; meta?: Record<string, string | number | boolean | null> }>) : [];
+  list.unshift({
+    id: randomUUID(),
+    at: new Date().toISOString(),
+    kind: input.kind.slice(0, 80),
+    summary: input.summary.slice(0, 400),
+    meta: input.meta,
+  });
+  if (list.length > AUDIT_MAX_PER_MONTH) list.length = AUDIT_MAX_PER_MONTH;
+  await store().setJSON(key, list);
+}
+
+/** Read most-recent N audit events across the last N months. Newest first. */
+export async function listAudit(limit = 100): Promise<Array<{ id: string; at: string; kind: string; summary: string; meta?: Record<string, string | number | boolean | null> }>> {
+  const out: Array<{ id: string; at: string; kind: string; summary: string; meta?: Record<string, string | number | boolean | null> }> = [];
+  const now = new Date();
+  for (let i = 0; i < AUDIT_RETENTION_MONTHS && out.length < limit; i++) {
+    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    const raw = await store().getJSON<unknown>(auditMonthKey(d));
+    if (!Array.isArray(raw)) continue;
+    for (const ev of raw) {
+      out.push(ev);
+      if (out.length >= limit) break;
+    }
+  }
+  return out;
+}
+
 // ---------- Client notes (owner-only, never sent to clients) ----------
 const CLIENT_NOTE_PREFIX = "client-notes/";
 

@@ -188,6 +188,20 @@ export const GalleryResultSchema = z.object({
 export type GalleryResult = z.infer<typeof GalleryResultSchema>;
 export const GalleryResultsSchema = z.array(GalleryResultSchema);
 
+// ----- Audit log (admin actions) -----
+export const AuditEventSchema = z.object({
+  id: z.string().min(1).max(64),
+  at: z.string().datetime(),
+  /** What happened — short verb-noun ("booking.created", "booking.cancelled", "settings.updated"…). */
+  kind: z.string().min(1).max(80),
+  /** Free-text human-readable summary. */
+  summary: z.string().max(400),
+  /** Optional structured details (booking id, fields changed, etc.). Kept tiny. */
+  meta: z.record(z.string(), z.union([z.string(), z.number(), z.boolean(), z.null()])).optional(),
+});
+export type AuditEvent = z.infer<typeof AuditEventSchema>;
+export const AuditEventsSchema = z.array(AuditEventSchema);
+
 // ----- Reviews (recenzije klijenata) -----
 export const ReviewSchema = z.object({
   id: z.string().min(1).max(64),

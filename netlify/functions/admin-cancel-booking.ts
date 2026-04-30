@@ -3,7 +3,7 @@ import { json, badRequest, notFound, methodNotAllowed, parseJson } from "../lib/
 import { adminGuard } from "../lib/admin-guard";
 import { createCalendarClient, type CalendarClient } from "../lib/calendar";
 import { getMailerAsync, type Mailer } from "../lib/mailer";
-import { getServices, getSettings, appendCancellation } from "../lib/config";
+import { getServices, getSettings, appendCancellation, appendAudit } from "../lib/config";
 import { eventToBooking } from "../lib/calendar-domain";
 import { bookingCancelledToClient } from "../lib/email-templates";
 import { waLink } from "../lib/phone";
@@ -96,6 +96,15 @@ const inner: Handler = async (event) => {
       whatsappLink = waLink(booking.phoneE164, message);
       viberLink = `viber://chat?number=${encodeURIComponent(booking.phoneE164)}`;
     }
+  }
+  if (booking) {
+    await appendAudit({
+      kind: "booking.cancelled",
+      summary: `Otkazan termin: ${booking.serviceName} — ${booking.name} (${formatSalon(new Date(booking.startISO), "dd.MM.yyyy. HH:mm")})${reason ? ` · razlog: ${reason}` : ""}`,
+      meta: { eventId: booking.calendarEventId ?? "", phone: booking.phoneE164 ?? "" },
+    });
+  } else {
+    await appendAudit({ kind: "booking.cancelled", summary: `Otkazan event ${eventId}${reason ? ` · razlog: ${reason}` : ""}`, meta: { eventId } });
   }
   return json({ ok: true, emailSent, whatsappLink, viberLink, message });
 };

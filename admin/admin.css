@@ -3034,6 +3034,51 @@ html { scroll-behavior: smooth; scroll-padding-top: 88px; -webkit-font-smoothing
   .mb__row { grid-template-columns: 1fr 1fr; }
 }
 
+/* === Audit log items === */
+.audit-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 10px 12px;
+  border: 1px solid rgba(217, 192, 154, 0.4);
+  border-radius: 10px;
+  background: #fff;
+  margin-bottom: 6px;
+  transition: border-color 0.2s;
+}
+.audit-item:hover { border-color: rgba(201, 169, 97, 0.55); }
+.audit-item__icon {
+  flex: 0 0 28px;
+  width: 28px; height: 28px;
+  display: inline-flex;
+  align-items: center; justify-content: center;
+  border-radius: 50%;
+  background: rgba(201, 169, 97, 0.14);
+  color: var(--gold, #C9A961);
+  font-size: 0.85rem;
+}
+.audit-item__body { flex: 1; min-width: 0; }
+.audit-item__summary {
+  font-size: 0.92rem;
+  color: var(--text, #4A4238);
+  line-height: 1.4;
+  word-break: break-word;
+}
+.audit-item__meta {
+  font-size: 0.75rem;
+  color: var(--text-light, #6B5F52);
+  margin-top: 3px;
+  font-family: 'Outfit', sans-serif;
+}
+.audit-item__meta code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.7rem;
+  background: var(--cream-soft, #F9F2E5);
+  padding: 1px 5px;
+  border-radius: 4px;
+  color: var(--gold, #C9A961);
+}
+
 /* === Settings — sticky section tabs + scroll-spy === */
 .st-tabs {
   position: sticky;

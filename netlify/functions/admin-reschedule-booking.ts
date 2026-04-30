@@ -3,7 +3,7 @@ import { json, badRequest, notFound, methodNotAllowed, parseJson } from "../lib/
 import { adminGuard } from "../lib/admin-guard";
 import { createCalendarClient, type CalendarClient } from "../lib/calendar";
 import { getMailerAsync, type Mailer } from "../lib/mailer";
-import { getServices, getSettings } from "../lib/config";
+import { getServices, getSettings, appendAudit } from "../lib/config";
 import { eventToBooking, type Booking } from "../lib/calendar-domain";
 import { bookingRescheduledToClient } from "../lib/email-templates";
 import { TZ } from "../lib/time";
@@ -88,6 +88,11 @@ const inner: Handler = async (event) => {
     whatsappLink = waLink(updated.phoneE164, msg);
     viberLink = `viber://chat?number=${encodeURIComponent(updated.phoneE164)}`;
   }
+  await appendAudit({
+    kind: "booking.rescheduled",
+    summary: `Pomjeren termin: ${updated.serviceName} — ${updated.name} → ${newLine}`,
+    meta: { eventId: updated.calendarEventId ?? "" },
+  });
   return json({ ok: true, emailSent, whatsappLink, viberLink, message: msg, booking: updated });
 };
 
