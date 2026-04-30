@@ -3034,6 +3034,98 @@ html { scroll-behavior: smooth; scroll-padding-top: 88px; -webkit-font-smoothing
   .mb__row { grid-template-columns: 1fr 1fr; }
 }
 
+/* === Settings — sticky section tabs + scroll-spy === */
+.st-tabs {
+  position: sticky;
+  /* Sit just under the topbar (~50px) */
+  top: calc(env(safe-area-inset-top, 0px) + 50px);
+  z-index: 18;
+  display: flex;
+  gap: 4px;
+  margin: -16px -16px 1.25rem;
+  padding: 10px 16px 10px;
+  background: rgba(253, 250, 244, 0.94);
+  backdrop-filter: blur(20px) saturate(1.4);
+  -webkit-backdrop-filter: blur(20px) saturate(1.4);
+  border-bottom: 1px solid rgba(217, 192, 154, 0.5);
+  overflow-x: auto;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+  scroll-padding: 16px;
+}
+.st-tabs::-webkit-scrollbar { display: none; }
+.st-tab {
+  appearance: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex: 0 0 auto;
+  padding: 8px 14px;
+  border: 1px solid rgba(217, 192, 154, 0.5);
+  background: #fff;
+  color: var(--text-light, #6B5F52);
+  font-family: 'Outfit', sans-serif;
+  font-size: 0.78rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  border-radius: 999px;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  -webkit-tap-highlight-color: transparent;
+  white-space: nowrap;
+  min-height: 36px;
+}
+.st-tab:hover {
+  background: var(--cream-soft, #F9F2E5);
+  border-color: var(--gold, #C9A961);
+  color: var(--text, #4A4238);
+}
+.st-tab.is-active {
+  background: linear-gradient(135deg, #D4B575 0%, #C9A961 50%, #B89856 100%);
+  color: #fff;
+  border-color: var(--gold, #C9A961);
+  box-shadow: 0 4px 12px rgba(201, 169, 97, 0.3);
+}
+.st-tab__icon {
+  font-size: 0.95rem;
+  line-height: 1;
+  letter-spacing: 0;
+}
+.st-tab__label { letter-spacing: 0.08em; }
+
+.st-section {
+  scroll-margin-top: 140px;
+  padding: 1.25rem 0 1.5rem;
+  border-bottom: 1px solid rgba(217, 192, 154, 0.3);
+}
+.st-section:last-child { border-bottom: 0; }
+.st-section__head {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  margin-bottom: 0.75rem;
+}
+.st-section__icon {
+  font-size: 1.1rem;
+  color: var(--gold, #C9A961);
+}
+.st-section__title {
+  margin: 0;
+  font-family: 'Cormorant Garamond', Georgia, serif;
+  font-style: italic;
+  font-weight: 500;
+  font-size: 1.45rem;
+  color: var(--sage, #6B6F4F);
+  letter-spacing: -0.01em;
+}
+.st-section__note {
+  margin: 0 0 1rem;
+  font-size: 0.86rem;
+  line-height: 1.55;
+  color: #6B5F52;
+}
+
 /* Inline field validation (used in modals + settings) */
 .field__status {
   font-size: 0.82rem;

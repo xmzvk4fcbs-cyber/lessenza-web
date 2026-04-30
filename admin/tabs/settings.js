@@ -4,108 +4,200 @@ const form = document.getElementById("settings-form");
 const saveBtn = document.getElementById("settings-save");
 const pwForm = document.getElementById("password-form");
 
-const FIELDS = [
-  // --- Javni podaci (prikazuju se na sajtu) ---
-  ["salonAddress", "Ulica i broj (javno)", "text", {}],
-  ["salonCity", "Grad (javno)", "text", {}],
-  ["mapQuery", "Mapa — pretraga (npr. 'Bajova 22, Cetinje, Montenegro')", "text", {}],
-  ["publicPhone", "Javni telefon (prikazuje se na sajtu)", "tel", {}],
-  ["publicEmail", "Javni email (prikazuje se na sajtu)", "email", {}],
-  ["whatsappPhone", "WhatsApp broj (npr. +38269123456)", "tel", {}],
-  ["instagramUrl", "Instagram link", "url", {}],
-  ["tagline", "Tagline u hero sekciji", "text", {}],
-  ["displayHoursOverride", "Radno vrijeme za prikaz na sajtu (opciono). Npr. 'Pon–Pet 09:00–20:00, Sub 09:00–15:00'. Ako ostaviš prazno, radno vrijeme se NE prikazuje klijentima.", "textarea", {}],
-
-  // --- Cijene (javno) ---
-  ["showPrices", "Prikazuj cijene usluga na sajtu (Usluge + Zakazivanje)", "checkbox", {}],
-  ["priceCurrency", "Oznaka valute (npr. €)", "text", { maxlength: 4 }],
-
-  // --- Galerija ---
-  ["showBeforeAfter", "Prikazuj tab 'Prije / Poslije' na galeriji", "checkbox", {}],
-
-  // --- Rezervacije ---
-  ["bookingWindowDays", "Prozor rezervacije (dana unaprijed)", "number", { min: 1, max: 365 }],
-  ["minLeadHours", "Minimalno vrijeme unaprijed (sati)", "number", { min: 0, max: 168, step: 0.5 }],
-  ["bufferMinutes", "Razmak između termina (min)", "number", { min: 0, max: 120 }],
-  ["slotGranularityMinutes", "Razmak slotova (min)", "number", { min: 5, max: 60 }],
-  ["defaultCountryCode", "Default pozivni broj", "text", { pattern: "\\+\\d{1,4}" }],
-
-  // --- Notifikacije (interno) ---
-  ["ownerEmail", "Email vlasnice (za notifikacije)", "email", {}],
-  ["ownerPhone", "Telefon vlasnice (interno)", "tel", {}],
-  ["mailer", "Provajder za email", "select", { options: [["resend", "Resend"], ["gmail", "Gmail"]] }],
-  ["reminderEmailEnabled", "Slati podsjetnik klijentu dan prije", "checkbox", {}],
-  ["dailyDigestEnabled", "Slati dnevni pregled vlasnici u 20h", "checkbox", {}],
-
-  // --- Tekst poruka klijentu (opciono — prazno = default tekst) ---
-  ["emailGreeting", "Pozdrav u potvrdi (npr. 'Hvala što ste odabrali L'Essenza. Vaš termin je potvrđen.')", "textarea", { maxlength: 500, rows: 2, placeholder: "Hvala što ste odabrali L'Essenza. Vaš termin je potvrđen." }],
-  ["emailClosing", "Završna poruka (npr. 'Radujemo se vašem dolasku.')", "textarea", { maxlength: 500, rows: 2, placeholder: "Radujemo se vašem dolasku." }],
-  ["emailSignature", "Potpis (npr. 'L'Essenza' ili 'Marija — L'Essenza')", "text", { maxlength: 200, placeholder: "L'Essenza" }],
-
-  // --- Banner za akcije / poruke (na vrhu javnih stranica) ---
-  ["bannerText", "Banner tekst (npr. 'Laser -20% do kraja maja') — prazno = nema banner-a", "textarea", { maxlength: 200, rows: 2, placeholder: "Laser -20% do kraja maja" }],
-  ["bannerLinkText", "Tekst dugmeta u banneru (opciono)", "text", { maxlength: 40, placeholder: "Saznaj više" }],
-  ["bannerLinkUrl", "Link iz banner-a (opciono)", "url", { placeholder: "https://lessenza.me/usluge.html#laser" }],
-
-  // --- Google recenzije (auto-zahtjev nakon termina) ---
-  ["reviewNudgeEnabled", "Slati klijentkinji link za Google recenziju 4h nakon termina", "checkbox", {}],
-  ["reviewLinkUrl", "Google review link (https://g.page/r/... ili Maps short link)", "url", { placeholder: "https://g.page/r/CXXXXXXXXXXXX/review" }],
-
-  // --- Analytics (opciono) ---
-  ["analyticsScript", "Analytics skripta (zalijepi <script> iz Plausible / Cloudflare / Umami — prazno = bez praćenja)", "textarea", { maxlength: 2000, rows: 4, placeholder: '<script defer data-domain="lessenza.me" src="https://plausible.io/js/script.js"></script>' }],
-
-  // --- Pametni predlozi (dashboard) ---
-  ["suggestLapsedRegulars", "Predlozi: klijentkinje koje dugo nisu bile", "checkbox", {}],
-  ["suggestSparseDays", "Predlozi: slabo popunjeni predstojeći dani", "checkbox", {}],
-  ["suggestFutureGaps", "Predlozi: rupe u narednim danima", "checkbox", {}],
-  ["suggestInquiryMatches", "Predlozi: upiti koji čekaju odgovor", "checkbox", {}],
+const SECTIONS = [
+  {
+    id: "javno", label: "Javno", icon: "🌿",
+    note: "Šta se prikazuje na sajtu klijentkinjama.",
+    fields: [
+      ["salonAddress", "Ulica i broj (javno)", "text", {}],
+      ["salonCity", "Grad (javno)", "text", {}],
+      ["mapQuery", "Mapa — pretraga (npr. 'Bajova 22, Cetinje, Montenegro')", "text", {}],
+      ["publicPhone", "Javni telefon (prikazuje se na sajtu)", "tel", {}],
+      ["publicEmail", "Javni email (prikazuje se na sajtu)", "email", {}],
+      ["whatsappPhone", "WhatsApp broj (npr. +38269123456)", "tel", {}],
+      ["instagramUrl", "Instagram link", "url", {}],
+      ["tagline", "Tagline u hero sekciji", "text", {}],
+      ["displayHoursOverride", "Radno vrijeme za prikaz na sajtu (opciono). Npr. 'Pon–Pet 09:00–20:00, Sub 09:00–15:00'. Ako ostaviš prazno, radno vrijeme se NE prikazuje klijentima.", "textarea", {}],
+    ],
+  },
+  {
+    id: "cijene", label: "Cijene", icon: "€",
+    note: "Da li se cijene prikazuju klijentkinjama na javnim stranicama.",
+    fields: [
+      ["showPrices", "Prikazuj cijene usluga na sajtu (Usluge + Zakazivanje)", "checkbox", {}],
+      ["priceCurrency", "Oznaka valute (npr. €)", "text", { maxlength: 4 }],
+    ],
+  },
+  {
+    id: "galerija", label: "Galerija", icon: "✦",
+    fields: [
+      ["showBeforeAfter", "Prikazuj tab 'Prije / Poslije' na galeriji", "checkbox", {}],
+    ],
+  },
+  {
+    id: "rezervacije", label: "Rezervacije", icon: "🗓",
+    note: "Pravila zakazivanja preko sajta.",
+    fields: [
+      ["bookingWindowDays", "Prozor rezervacije (dana unaprijed)", "number", { min: 1, max: 365 }],
+      ["minLeadHours", "Minimalno vrijeme unaprijed (sati)", "number", { min: 0, max: 168, step: 0.5 }],
+      ["bufferMinutes", "Razmak između termina (min)", "number", { min: 0, max: 120 }],
+      ["slotGranularityMinutes", "Razmak slotova (min)", "number", { min: 5, max: 60 }],
+      ["defaultCountryCode", "Default pozivni broj", "text", { pattern: "\\+\\d{1,4}" }],
+    ],
+  },
+  {
+    id: "email", label: "Email", icon: "✉",
+    note: "Notifikacije i tekst koji se šalje klijentkinjama.",
+    fields: [
+      ["ownerEmail", "Email vlasnice (za notifikacije)", "email", {}],
+      ["ownerPhone", "Telefon vlasnice (interno)", "tel", {}],
+      ["mailer", "Provajder za email", "select", { options: [["resend", "Resend"], ["gmail", "Gmail"]] }],
+      ["reminderEmailEnabled", "Slati podsjetnik klijentu dan prije", "checkbox", {}],
+      ["dailyDigestEnabled", "Slati dnevni pregled vlasnici u 20h", "checkbox", {}],
+      ["emailGreeting", "Pozdrav u potvrdi", "textarea", { maxlength: 500, rows: 2, placeholder: "Hvala što ste odabrali L'Essenza. Vaš termin je potvrđen." }],
+      ["emailClosing", "Završna poruka", "textarea", { maxlength: 500, rows: 2, placeholder: "Radujemo se vašem dolasku." }],
+      ["emailSignature", "Potpis", "text", { maxlength: 200, placeholder: "L'Essenza" }],
+    ],
+  },
+  {
+    id: "banner", label: "Banner", icon: "🎀",
+    note: "Promo strip na vrhu javnih stranica. Prazno = nema banner-a.",
+    fields: [
+      ["bannerText", "Banner tekst", "textarea", { maxlength: 200, rows: 2, placeholder: "Laser -20% do kraja maja" }],
+      ["bannerLinkText", "Tekst dugmeta (opciono)", "text", { maxlength: 40, placeholder: "Saznaj više" }],
+      ["bannerLinkUrl", "Link (opciono)", "url", { placeholder: "https://lessenza.me/usluge.html#laser" }],
+    ],
+  },
+  {
+    id: "recenzije", label: "Recenzije", icon: "★",
+    note: "Auto-zahtjev za Google recenzijom 4h nakon termina.",
+    fields: [
+      ["reviewNudgeEnabled", "Slati klijentkinji link za Google recenziju 4h nakon termina", "checkbox", {}],
+      ["reviewLinkUrl", "Google review link (https://g.page/r/... ili Maps short link)", "url", { placeholder: "https://g.page/r/CXXXXXXXXXXXX/review" }],
+    ],
+  },
+  {
+    id: "analytics", label: "Analytics", icon: "📊",
+    fields: [
+      ["analyticsScript", "Analytics skripta (Plausible / Cloudflare / Umami — prazno = bez praćenja)", "textarea", { maxlength: 2000, rows: 4, placeholder: '<script defer data-domain="lessenza.me" src="https://plausible.io/js/script.js"></script>' }],
+    ],
+  },
+  {
+    id: "predlozi", label: "Predlozi", icon: "✦",
+    note: "Pametni predlozi koji se prikazuju na dashboardu.",
+    fields: [
+      ["suggestLapsedRegulars", "Klijentkinje koje dugo nisu bile", "checkbox", {}],
+      ["suggestSparseDays", "Slabo popunjeni predstojeći dani", "checkbox", {}],
+      ["suggestFutureGaps", "Rupe u narednim danima", "checkbox", {}],
+      ["suggestInquiryMatches", "Upiti koji čekaju odgovor", "checkbox", {}],
+    ],
+  },
 ];
 
-async function render() {
-  const { settings } = await must("/api/admin/settings");
-  form.innerHTML = FIELDS.map(([key, label, type, opts]) => {
-    const value = settings[key];
-    if (type === "checkbox") {
-      return `
-        <article class="stack-card">
-          <label class="check-row" for="st-${key}">
-            <input id="st-${key}" type="checkbox" ${value ? "checked" : ""}>
-            <span>${label}</span>
-          </label>
-        </article>
-      `;
-    }
-    if (type === "select") {
-      const optsHtml = opts.options.map(([v, l]) => `<option value="${v}" ${v === value ? "selected" : ""}>${l}</option>`).join("");
-      return `
-        <div class="field">
-          <label for="st-${key}">${label}</label>
-          <select id="st-${key}">${optsHtml}</select>
-        </div>
-      `;
-    }
-    if (type === "textarea") {
-      const max = opts.maxlength ?? 500;
-      const rows = opts.rows ?? 3;
-      const ph = opts.placeholder ? ` placeholder="${escapeHtml(opts.placeholder)}"` : "";
-      return `
-        <div class="field">
-          <label for="st-${key}">${label}</label>
-          <textarea id="st-${key}" rows="${rows}" maxlength="${max}"${ph}>${(value ?? "").replace(/</g, "&lt;")}</textarea>
-        </div>
-      `;
-    }
-    const attrs = Object.entries(opts).map(([k, v]) => `${k}="${v}"`).join(" ");
+// Flat field list for save loop + strip-empty logic.
+const FIELDS = SECTIONS.flatMap((s) => s.fields);
+
+function renderField(settings, [key, label, type, opts]) {
+  const value = settings[key];
+  if (type === "checkbox") {
+    return `
+      <article class="stack-card">
+        <label class="check-row" for="st-${key}">
+          <input id="st-${key}" type="checkbox" ${value ? "checked" : ""}>
+          <span>${label}</span>
+        </label>
+      </article>
+    `;
+  }
+  if (type === "select") {
+    const optsHtml = opts.options.map(([v, l]) => `<option value="${v}" ${v === value ? "selected" : ""}>${l}</option>`).join("");
     return `
       <div class="field">
         <label for="st-${key}">${label}</label>
-        <input id="st-${key}" type="${type}" ${attrs} value="${value ?? ""}">
+        <select id="st-${key}">${optsHtml}</select>
       </div>
     `;
-  }).join("");
+  }
+  if (type === "textarea") {
+    const max = opts.maxlength ?? 500;
+    const rows = opts.rows ?? 3;
+    const ph = opts.placeholder ? ` placeholder="${escapeHtml(opts.placeholder)}"` : "";
+    return `
+      <div class="field">
+        <label for="st-${key}">${label}</label>
+        <textarea id="st-${key}" rows="${rows}" maxlength="${max}"${ph}>${(value ?? "").replace(/</g, "&lt;")}</textarea>
+      </div>
+    `;
+  }
+  const attrs = Object.entries(opts).map(([k, v]) => `${k}="${v}"`).join(" ");
+  return `
+    <div class="field">
+      <label for="st-${key}">${label}</label>
+      <input id="st-${key}" type="${type}" ${attrs} value="${value ?? ""}">
+    </div>
+  `;
+}
+
+async function render() {
+  const { settings } = await must("/api/admin/settings");
+  // Sticky horizontal tab nav + scroll-spy linked to sectioned form.
+  const tabs = SECTIONS.map((s) => `
+    <button type="button" class="st-tab" data-target="st-sec-${s.id}">
+      <span class="st-tab__icon">${s.icon}</span>
+      <span class="st-tab__label">${escapeHtml(s.label)}</span>
+    </button>
+  `).join("");
+  const sections = SECTIONS.map((s) => `
+    <section class="st-section" id="st-sec-${s.id}">
+      <header class="st-section__head">
+        <span class="st-section__icon">${s.icon}</span>
+        <h3 class="st-section__title">${escapeHtml(s.label)}</h3>
+      </header>
+      ${s.note ? `<p class="st-section__note">${escapeHtml(s.note)}</p>` : ""}
+      ${s.fields.map((f) => renderField(settings, f)).join("")}
+    </section>
+  `).join("");
+  form.innerHTML = `
+    <nav class="st-tabs" aria-label="Sekcije podešavanja">${tabs}</nav>
+    <div class="st-sections">${sections}</div>
+  `;
+  wireSettingsTabs();
   await renderBlocked();
   await renderTotpCard();
   await renderPushCard();
+}
+
+function wireSettingsTabs() {
+  const tabs = form.querySelectorAll(".st-tab");
+  const sections = form.querySelectorAll(".st-section");
+  if (!tabs.length || !sections.length) return;
+
+  // Click → smooth scroll to section
+  tabs.forEach((tab) => {
+    tab.addEventListener("click", () => {
+      const target = document.getElementById(tab.dataset.target);
+      if (!target) return;
+      const top = target.getBoundingClientRect().top + window.scrollY - 120;
+      window.scrollTo({ top, behavior: "smooth" });
+    });
+  });
+
+  // Scroll-spy: highlight the tab whose section is closest to the top
+  const setActive = (id) => {
+    tabs.forEach((t) => t.classList.toggle("is-active", t.dataset.target === id));
+    // Auto-scroll the tabs strip so the active one is visible
+    const active = form.querySelector(".st-tab.is-active");
+    if (active) active.scrollIntoView({ block: "nearest", inline: "center", behavior: "smooth" });
+  };
+  if ("IntersectionObserver" in window) {
+    const obs = new IntersectionObserver((entries) => {
+      const visible = entries.filter((e) => e.isIntersecting).sort((a, b) => a.boundingClientRect.top - b.boundingClientRect.top);
+      if (visible.length) setActive(visible[0].target.id);
+    }, { rootMargin: "-160px 0px -55% 0px", threshold: 0 });
+    sections.forEach((s) => obs.observe(s));
+  }
+  // First tab active by default
+  if (tabs[0]) tabs[0].classList.add("is-active");
 }
 
 saveBtn.addEventListener("click", async () => {
