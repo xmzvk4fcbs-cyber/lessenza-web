@@ -315,12 +315,35 @@
 .field__hint { margin-top: 0.25rem; font-size: 0.8rem; color: var(--text-light); }
 .field__status {
   font-size: 0.82rem;
-  margin: 0.25rem 0 0;
+  margin: 0.3rem 0 0;
+  line-height: 1.5;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-wrap: wrap;
 }
 .field__status--ok { color: #3e7a4a; }
 .field__status--bad { color: #8B3A3E; }
-.field.has-error input[type="tel"] { border-color: #8B3A3E; }
-.field.is-valid input[type="tel"] { border-color: #3e7a4a; }
+.field__status--warn { color: #B8860B; }
+.field__suggest {
+  appearance: none;
+  border: 1px dashed #B8860B;
+  background: rgba(184, 134, 11, 0.08);
+  color: #B8860B;
+  font: inherit;
+  padding: 1px 8px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 600;
+}
+.field__suggest:hover { background: rgba(184, 134, 11, 0.18); }
+
+.field.has-error input,
+.field.has-error textarea,
+.field.has-error select { border-color: #8B3A3E; box-shadow: 0 0 0 3px rgba(139, 58, 62, 0.10); }
+.field.is-valid input,
+.field.is-valid textarea { border-color: #3e7a4a; }
+.field.is-warn input { border-color: #B8860B; }
 
 .phone-field { display: flex; gap: 0.5rem; }
 .phone-field select {

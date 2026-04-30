@@ -203,12 +203,70 @@ function attachPhoneValidation(inputId, statusId, dialValueId, submitBtnGetter) 
 
 // --- Email pre-submit validation (UX only; server still authoritative) ---
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
+const EMAIL_TYPOS = {
+  "gmial.com": "gmail.com", "gmai.com": "gmail.com", "gnail.com": "gmail.com", "gmail.co": "gmail.com", "gmail.cmo": "gmail.com",
+  "hotmial.com": "hotmail.com", "hotnail.com": "hotmail.com", "hotmal.com": "hotmail.com", "hotmail.co": "hotmail.com",
+  "yaho.com": "yahoo.com", "yahho.com": "yahoo.com", "yhoo.com": "yahoo.com",
+  "outlok.com": "outlook.com", "outloo.com": "outlook.com", "outluk.com": "outlook.com",
+  "icloud.co": "icloud.com", "iclud.com": "icloud.com",
+};
+function emailTypoSuggestion(raw) {
+  const at = raw.lastIndexOf("@");
+  if (at < 0) return null;
+  const domain = raw.slice(at + 1).toLowerCase().trim();
+  if (EMAIL_TYPOS[domain]) return raw.slice(0, at + 1) + EMAIL_TYPOS[domain];
+  return null;
+}
 function validateEmailLocal(raw) {
   const v = (raw || "").trim();
   if (!v) return { state: "empty" }; // optional field — empty is OK
   if (v.length > 200) return { state: "bad", label: "predugačak" };
   if (!EMAIL_RE.test(v)) return { state: "bad", label: "fali @ ili domen" };
+  const typo = emailTypoSuggestion(v);
+  if (typo) return { state: "typo", suggestion: typo };
   return { state: "ok" };
+}
+
+// --- Name validation: min 2 chars, not all digits/punct, max 120 ---
+function validateNameLocal(raw) {
+  const v = (raw || "").trim();
+  if (!v) return { state: "empty" };
+  if (v.length < 2) return { state: "bad", label: "prekratko" };
+  if (v.length > 120) return { state: "bad", label: "predugačko" };
+  if (!/[A-Za-zĆčĐšžŠŽĐČĆ]/.test(v)) return { state: "bad", label: "treba bar jedno slovo" };
+  return { state: "ok" };
+}
+function attachNameValidation(inputId) {
+  const input = document.getElementById(inputId);
+  if (!input) return;
+  const field = input.closest(".field");
+  let status = field?.querySelector(".field__status");
+  if (field && !status) {
+    status = document.createElement("p");
+    status.className = "field__status";
+    status.hidden = true;
+    field.appendChild(status);
+  }
+  let timer = null;
+  function run() {
+    const r = validateNameLocal(input.value);
+    if (!field || !status) return;
+    field.classList.toggle("has-error", r.state === "bad");
+    field.classList.toggle("is-valid", r.state === "ok");
+    if (r.state === "bad") {
+      status.hidden = false;
+      status.textContent = `Ime ${r.label}.`;
+      status.className = "field__status field__status--bad";
+    } else {
+      status.hidden = true;
+      status.className = "field__status";
+    }
+  }
+  input.addEventListener("input", () => {
+    if (timer) clearTimeout(timer);
+    timer = setTimeout(run, 250);
+  });
+  input.addEventListener("blur", run);
 }
 function attachEmailValidation(inputId) {
   const input = document.getElementById(inputId);
@@ -228,6 +286,7 @@ function attachEmailValidation(inputId) {
     if (!field || !status) return;
     field.classList.toggle("has-error", r.state === "bad");
     field.classList.toggle("is-valid", r.state === "ok");
+    field.classList.toggle("is-warn", r.state === "typo");
     if (r.state === "ok") {
       status.hidden = false;
       status.textContent = "✓ Email izgleda ispravno";
@@ -236,6 +295,12 @@ function attachEmailValidation(inputId) {
       status.hidden = false;
       status.textContent = `Email nije ispravan (${r.label}).`;
       status.className = "field__status field__status--bad";
+    } else if (r.state === "typo") {
+      status.hidden = false;
+      status.innerHTML = `Da li si htjela <button type="button" class="field__suggest" data-suggest="${r.suggestion.replace(/"/g, "&quot;")}">${r.suggestion}</button>?`;
+      status.className = "field__status field__status--warn";
+      const btn = status.querySelector(".field__suggest");
+      if (btn) btn.addEventListener("click", () => { input.value = btn.dataset.suggest; run(); input.focus(); });
     } else {
       status.hidden = true;
       status.textContent = "";
@@ -585,3 +650,5 @@ attachPhoneValidation("f-phone", "f-phone-status", "f-dial", () => ui.navNext);
 attachPhoneValidation("i-phone", "i-phone-status", "i-dial", () => ui.navNext);
 attachEmailValidation("f-email");
 attachEmailValidation("i-email");
+attachNameValidation("f-name");
+attachNameValidation("i-name");

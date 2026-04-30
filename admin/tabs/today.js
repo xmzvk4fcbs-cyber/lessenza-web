@@ -1346,6 +1346,64 @@ async function openManualBookingModal() {
     // Only hide; don't re-show on refocus unless the user actually edits.
     setTimeout(() => { suggestEl.hidden = true; }, 200);
   });
+
+  // --- Inline validation for name + phone + email (admin manual booking) ---
+  attachInlineValidation(nameInput, validateNameAdmin, "Ime");
+  attachInlineValidation(phoneInput, validatePhoneAdmin, "Telefon");
+  attachInlineValidation(emailInput, validateEmailAdmin, "Email");
+}
+
+// --- Inline validation helpers (admin) ---
+function validateNameAdmin(v) {
+  v = (v || "").trim();
+  if (!v) return { state: "empty" };
+  if (v.length < 2) return { state: "bad", msg: "prekratko" };
+  if (v.length > 120) return { state: "bad", msg: "predugačko" };
+  if (!/[A-Za-zĆčĐšžŠŽĐČĆ]/.test(v)) return { state: "bad", msg: "treba bar jedno slovo" };
+  return { state: "ok" };
+}
+function validatePhoneAdmin(v) {
+  v = (v || "").trim();
+  if (!v) return { state: "empty" }; // optional
+  const digits = v.replace(/\D+/g, "");
+  if (digits.length < 6) return { state: "bad", msg: "broj prekratak" };
+  if (digits.length > 15) return { state: "bad", msg: "broj predugačak" };
+  return { state: "ok" };
+}
+function validateEmailAdmin(v) {
+  v = (v || "").trim();
+  if (!v) return { state: "empty" };
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(v)) return { state: "bad", msg: "fali @ ili domen" };
+  if (v.length > 200) return { state: "bad", msg: "predugačak" };
+  return { state: "ok" };
+}
+function attachInlineValidation(input, validator, label) {
+  if (!input) return;
+  const field = input.closest(".field");
+  if (!field) return;
+  let status = field.querySelector(".field__status");
+  if (!status) {
+    status = document.createElement("p");
+    status.className = "field__status";
+    status.hidden = true;
+    field.appendChild(status);
+  }
+  let timer = null;
+  function run() {
+    const r = validator(input.value);
+    field.classList.toggle("has-error", r.state === "bad");
+    field.classList.toggle("is-valid", r.state === "ok");
+    if (r.state === "bad") {
+      status.hidden = false;
+      status.textContent = `${label} — ${r.msg}.`;
+      status.className = "field__status field__status--bad";
+    } else {
+      status.hidden = true;
+      status.className = "field__status";
+    }
+  }
+  input.addEventListener("input", () => { if (timer) clearTimeout(timer); timer = setTimeout(run, 250); });
+  input.addEventListener("blur", run);
 }
 
 function localToISO(dateKey, hhmm) {

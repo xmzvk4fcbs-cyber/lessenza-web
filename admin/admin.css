@@ -3034,6 +3034,28 @@ html { scroll-behavior: smooth; scroll-padding-top: 88px; -webkit-font-smoothing
   .mb__row { grid-template-columns: 1fr 1fr; }
 }
 
+/* Inline field validation (used in modals + settings) */
+.field__status {
+  font-size: 0.82rem;
+  margin: 0.3rem 0 0;
+  line-height: 1.5;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+.field__status--ok { color: #4F6B41; }
+.field__status--bad { color: #8B3A3E; }
+.field__status--warn { color: #B8860B; }
+.field.has-error input,
+.field.has-error select,
+.field.has-error textarea {
+  border-color: #8B3A3E !important;
+  box-shadow: 0 0 0 3px rgba(139, 58, 62, 0.10) inset;
+}
+.field.is-valid input,
+.field.is-valid textarea { border-color: #4F6B41; }
+
 /* Reschedule modal — current appointment banner */
 .rs-current {
   background: linear-gradient(135deg, #FBF6EB 0%, #F1E5CC 100%);
