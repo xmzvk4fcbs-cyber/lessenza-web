@@ -377,4 +377,12 @@ async function initAdmin() {
 
 export { api, must };
 
+// Register the service worker from admin too, so push notifications work even
+// if the owner opens admin directly without having visited the public site first.
+if ("serviceWorker" in navigator) {
+  navigator.serviceWorker.register("/sw.js", { scope: "/" }).catch((e) => {
+    console.warn("[admin] SW registration failed:", e);
+  });
+}
+
 boot().catch((e) => console.error(e));

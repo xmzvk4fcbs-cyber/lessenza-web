@@ -202,14 +202,14 @@ async function main(): Promise<void> {
 
   mountStatic();
 
-  // --- Error middleware (must be last, after all routes/static) ---
-  if (process.env.SENTRY_DSN) {
-    app.use((err: unknown, _req: import("express").Request, res: import("express").Response, next: import("express").NextFunction) => {
-      Sentry.captureException(err);
-      if (res.headersSent) return next(err);
-      res.status(500).json({ error: "internal", message: "Greška na serveru" });
-    });
-  }
+  // Always-on error middleware: returns sanitized JSON 500 instead of Express's
+  // default HTML stack page. Sentry capture is conditional on SENTRY_DSN.
+  app.use((err: unknown, _req: import("express").Request, res: import("express").Response, next: import("express").NextFunction) => {
+    if (process.env.SENTRY_DSN) Sentry.captureException(err);
+    console.error("[server-error]", err);
+    if (res.headersSent) return next(err);
+    res.status(500).json({ error: "internal", message: "Greška na serveru" });
+  });
 
   await scheduleCrons(mounted);
 

@@ -325,6 +325,15 @@ async function openTotpSetup() {
 
 // ---------- Web push (PWA notifications) ----------
 
+// Races navigator.serviceWorker.ready against a timeout so renderPushCard never
+// hangs forever when the SW hasn't been registered yet.
+function readyWithTimeout(ms) {
+  return Promise.race([
+    navigator.serviceWorker.ready,
+    new Promise((_, reject) => setTimeout(() => reject(new Error("sw-not-ready")), ms)),
+  ]);
+}
+
 function urlBase64ToUint8Array(base64String) {
   // VAPID server keys are base64url; SubscribeOptions.applicationServerKey
   // wants a Uint8Array of the raw bytes. Pad + swap URL-safe chars first.
@@ -356,18 +365,22 @@ async function renderPushCard() {
   let reg = null;
   let sub = null;
   try {
-    reg = await navigator.serviceWorker.ready;
+    reg = await readyWithTimeout(3000);
     sub = await reg.pushManager.getSubscription();
   } catch (e) {
-    host.innerHTML = `
-      <section class="stack-card">
-        <div class="stack-card__head">
-          <div>
-            <div class="stack-card__title">Push notifikacije (PWA)</div>
-            <div class="stack-card__meta">Service worker nije aktivan: ${escapeHtml(e.message || "greška")}</div>
+    if (e.message === "sw-not-ready") {
+      host.innerHTML = `<div class="muted">Service worker nije aktivan. Osvježi stranicu pa probaj ponovo.</div>`;
+    } else {
+      host.innerHTML = `
+        <section class="stack-card">
+          <div class="stack-card__head">
+            <div>
+              <div class="stack-card__title">Push notifikacije (PWA)</div>
+              <div class="stack-card__meta">Service worker nije aktivan: ${escapeHtml(e.message || "greška")}</div>
+            </div>
           </div>
-        </div>
-      </section>`;
+        </section>`;
+    }
     return;
   }
 

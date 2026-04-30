@@ -431,7 +431,8 @@ server {
 
     # Hardening
     server_tokens off;
-    client_max_body_size 2m;
+    # 20m to accommodate base64-inflated 12 MB binary uploads (~16 MB JSON + headroom)
+    client_max_body_size 20m;
     add_header X-Content-Type-Options nosniff always;
     add_header X-Frame-Options SAMEORIGIN always;
     add_header Referrer-Policy strict-origin-when-cross-origin always;
