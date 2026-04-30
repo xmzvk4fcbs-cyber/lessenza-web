@@ -34,10 +34,33 @@ fi
   AFTER=$(git rev-parse HEAD)
   echo "moved $BEFORE -> $AFTER"
 
+  CHANGED=$(git diff --name-only "$BEFORE" "$AFTER")
+
   # Only npm install if dependency files changed in this update.
-  if git diff --name-only "$BEFORE" "$AFTER" | grep -qE '^(package\.json|package-lock\.json)$'; then
+  if echo "$CHANGED" | grep -qE '^(package\.json|package-lock\.json)$'; then
     echo "dependencies changed — running npm install"
     npm install --omit=dev --no-audit --no-fund 2>&1 | tail -5
+    # Native deps (sharp) must be built for the local Linux x64 host —
+    # the npm cache may carry macOS binaries pushed from the dev machine.
+    npm rebuild sharp 2>&1 | tail -3 || echo "[warn] sharp rebuild non-fatal"
+  fi
+
+  # Reload nginx if its config changed in this update.
+  if echo "$CHANGED" | grep -qE '^deploy/nginx-lessenza\.conf$'; then
+    echo "nginx config changed — copying + reloading"
+    sudo -n /bin/cp "$APP_DIR/deploy/nginx-lessenza.conf" /etc/nginx/sites-available/lessenza
+    if sudo -n /usr/sbin/nginx -t 2>&1 | tail -2; then
+      sudo -n /bin/systemctl reload nginx && echo "nginx reloaded"
+    else
+      echo "[warn] nginx -t failed — config NOT applied"
+    fi
+  fi
+
+  # Warn (don't fail) if push-notification env is missing — owner sets once.
+  if grep -q "^VAPID_PUBLIC_KEY=." "$APP_DIR/.env" 2>/dev/null; then
+    echo "VAPID: configured"
+  else
+    echo "[info] VAPID env missing — push notifications disabled until set in .env"
   fi
 
   # Restart the Node process (scoped NOPASSWD).
