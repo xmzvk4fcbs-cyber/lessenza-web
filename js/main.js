@@ -190,6 +190,64 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
+  // --- FAQ (dynamic from /api/faq, falls back to hardcoded if request fails) ---
+  const faqHost = document.getElementById("faq-host");
+  if (faqHost) {
+    fetch("/api/faq", { cache: "no-store" })
+      .then((r) => r.json())
+      .then((data) => {
+        const items = Array.isArray(data.items) ? data.items : [];
+        if (!items.length) return; // keep hardcoded fallback
+        const escFaq = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
+        // Render dynamic FAQ + matching JSON-LD
+        faqHost.innerHTML = items.map((it) => `
+          <details class="faq__item reveal" itemscope itemprop="mainEntity" itemtype="https://schema.org/Question">
+            <summary class="faq__q" itemprop="name">${escFaq(it.question)}</summary>
+            <div class="faq__a" itemscope itemprop="acceptedAnswer" itemtype="https://schema.org/Answer">
+              <div itemprop="text">${escFaq(it.answer)}</div>
+            </div>
+          </details>
+        `).join("");
+        // Inject FAQPage JSON-LD for rich snippets
+        if (!document.getElementById("faq-jsonld")) {
+          const ld = document.createElement("script");
+          ld.id = "faq-jsonld";
+          ld.type = "application/ld+json";
+          ld.textContent = JSON.stringify({
+            "@context": "https://schema.org",
+            "@type": "FAQPage",
+            mainEntity: items.map((i) => ({
+              "@type": "Question",
+              name: i.question,
+              acceptedAnswer: { "@type": "Answer", text: i.answer },
+            })),
+          });
+          document.head.appendChild(ld);
+        }
+        if (window.__observeReveals) window.__observeReveals();
+      })
+      .catch(() => { /* keep fallback */ });
+  }
+
+  // --- About text (dynamic) ---
+  const aboutHost = document.querySelector("[data-about-text]");
+  const missionHost = document.querySelector("[data-about-mission]");
+  if (aboutHost || missionHost) {
+    // Read from already-loaded site settings if available, else fetch
+    const apply = (s) => {
+      if (aboutHost && s.aboutText && s.aboutText.trim()) {
+        const paragraphs = s.aboutText.split(/\n{2,}/).map((p) => p.trim()).filter(Boolean);
+        const escAbout = (x) => String(x).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
+        aboutHost.innerHTML = paragraphs.map((p) => `<p class="about-preview__text">${escAbout(p)}</p>`).join("");
+      }
+      if (missionHost && s.aboutMission && s.aboutMission.trim()) {
+        missionHost.textContent = `"${s.aboutMission.trim()}"`;
+      }
+    };
+    if (window.__siteSettings) apply(window.__siteSettings);
+    else fetch("/api/public-settings", { cache: "no-store" }).then((r) => r.json()).then(apply).catch(() => {});
+  }
+
   // --- Testimonials (recenzije) — fetched from /api/reviews if any exist,
   //     otherwise the static fallback baked into the HTML stays put. ---
   const testimonialsEl = document.getElementById("testimonials");

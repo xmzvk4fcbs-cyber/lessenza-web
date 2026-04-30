@@ -76,12 +76,14 @@
         <div class="about-preview__image reveal">
           <img loading="lazy" decoding="async" src="img/owner.jpg" alt="Vlasnica salona L'Essenza" width="1280" height="1280" style="width:100%; height:100%; object-fit:cover;">
         </div>
-        <div class="about-preview__content reveal">
+        <div class="about-preview__content reveal" data-about-host>
           <span class="section-label">Kako je sve počelo</span>
           <h2 class="section-title">L'Essenza znači<br><em>suština</em></h2>
-          <p class="about-preview__text">Nakon dugih godina planiranja, maštanja i stvaranja vizije o svom salonu, dugo sam razmišljala o imenu. U početku je to bilo "Essenze", ali osjećaj mi je govorio da mora biti više od toga — nešto što zvuči snažnije, elegantnije i nosi svoju priču.</p>
-          <p class="about-preview__text">Tako je nastala L'Essenza — naziv koji u sebi nosi suštinu svega što želim da moj salon predstavlja.</p>
-          <p class="about-preview__text" style="margin-top: 16px;">L'Essenza nije samo mjesto za tretmane — to je prostor u kojem se čuva ono najvažnije: suština. I to je ono što svakoj klijentkinji želim da pružim.</p>
+          <div data-about-text>
+            <p class="about-preview__text">Nakon dugih godina planiranja, maštanja i stvaranja vizije o svom salonu, dugo sam razmišljala o imenu. U početku je to bilo "Essenze", ali osjećaj mi je govorio da mora biti više od toga — nešto što zvuči snažnije, elegantnije i nosi svoju priču.</p>
+            <p class="about-preview__text">Tako je nastala L'Essenza — naziv koji u sebi nosi suštinu svega što želim da moj salon predstavlja.</p>
+            <p class="about-preview__text" style="margin-top: 16px;">L'Essenza nije samo mjesto za tretmane — to je prostor u kojem se čuva ono najvažnije: suština. I to je ono što svakoj klijentkinji želim da pružim.</p>
+          </div>
         </div>
       </div>
     </div>
@@ -120,7 +122,7 @@
     <div class="section__inner" style="text-align:center; max-width:800px;">
       <div class="reveal">
         <span class="section-label">Misija</span>
-        <h2 style="font-size: clamp(1.8rem, 3.5vw, 2.8rem); font-style:italic; font-weight:300; line-height:1.5; color: var(--cream);">
+        <h2 style="font-size: clamp(1.8rem, 3.5vw, 2.8rem); font-style:italic; font-weight:300; line-height:1.5; color: var(--cream);" data-about-mission>
           "Ja sam suština L'Essenze — moj rad, moja posvećenost, moj stil i moja potreba za savršenim tretmanom."
         </h2>
         <p style="margin: 30px auto 0; color: var(--gold); font-family: var(--font-display); font-size: 1.2rem; font-style:italic;">L'Essenza</p>
@@ -135,7 +137,7 @@
         <span class="section-label">Često pitanja</span>
         <h2 class="section-title">Pitanja i odgovori</h2>
       </div>
-      <div class="faq" itemscope itemtype="https://schema.org/FAQPage">
+      <div id="faq-host" class="faq" itemscope itemtype="https://schema.org/FAQPage">
         <details class="faq__item reveal" itemscope itemprop="mainEntity" itemtype="https://schema.org/Question">
           <summary class="faq__q" itemprop="name">Koliko dugo traje pojedinačni tretman?</summary>
           <div class="faq__a" itemscope itemprop="acceptedAnswer" itemtype="https://schema.org/Answer">

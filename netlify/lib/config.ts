@@ -12,6 +12,7 @@ import {
   GalleryResultsSchema,
   GalleryItemsSchema,
   ReviewsSchema,
+  FaqItemsSchema,
   DismissedSuggestionsSchema,
   ClientNoteSchema,
   NoShowsSchema,
@@ -29,6 +30,7 @@ import {
   type GalleryResult,
   type GalleryItem,
   type Review,
+  type FaqItem,
   type DismissedSuggestion,
   type ClientNote,
   type NoShow,
@@ -288,6 +290,32 @@ export async function getReviews(): Promise<Review[]> {
 export async function saveReviews(list: Review[]): Promise<Review[]> {
   const validated = ReviewsSchema.parse(list);
   await store().setJSON(KEY_REVIEWS, validated);
+  return validated;
+}
+
+// ---------- FAQ items ----------
+const KEY_FAQ = "config/faq.json";
+
+const DEFAULT_FAQ: FaqItem[] = [
+  { id: "trajanje", question: "Koliko dugo traje pojedinačni tretman?", answer: "Trajanje zavisi od usluge: manikir oko 45 minuta, pedikir oko 60 minuta, laserska epilacija između 15 i 40 minuta (zavisno od zone), Body Sculpt 60 minuta. Svaki termin uključuje pripremu, sam tretman i kratke savjete za kućnu njegu.", order: 10, published: true },
+  { id: "priprema", question: "Kako se pripremam za tretman?", answer: "Za laser: koža treba da bude obrijana (ne depilirana voskom), bez sunčanja i kremi za sunčanje 2 sedmice prije. Za Body Sculpt: obroci lagani, hidriranost važna. Za manikir/pedikir: dođite sa čistim noktima. Detalje dobijate u email potvrdi termina.", order: 20, published: true },
+  { id: "broj-tretmana", question: "Koliko mi tretmana treba za vidljive rezultate?", answer: "Laser: obično 6–8 tretmana u razmaku od 4–6 sedmica, rezultati vidljivi već poslije 3–4. Body Sculpt: 4–6 tretmana jednom sedmično za trajan efekat, ali se promjene vide već nakon prvog. Manikir i pedikir su, naravno, jednokratni.", order: 30, published: true },
+  { id: "bolnost", question: "Da li je tretman bolan?", answer: "Laserska epilacija Aton Magnum: praktično bezbolna, osjećaj toplog vjetrića. Body Sculpt: osjet mišićnih kontrakcija, ugodan nakon prve minute. Manikir, pedikir, depilacija voskom — diskomfor minimalan.", order: 40, published: true },
+  { id: "kontraindikacije", question: "Postoje li kontraindikacije?", answer: "Da, ali su uglavnom privremene: trudnoća, akutne upale kože u zoni tretmana, nedavno sunčanje (za laser), pejsmejker ili metalni implanti (za Body Sculpt). Prije zakazivanja prvog tretmana rado ćemo odgovoriti na sva pitanja — napišite u napomeni kod rezervacije ili pošaljite email na info@lessenza.me.", order: 50, published: true },
+  { id: "zakazivanje", question: "Kako zakazujem termin?", answer: "Najlakše preko sajta — kliknite Zakaži Termin, izaberete uslugu, datum i vrijeme, i unesete kontakt. Potvrda stiže na email (ako ste ga ostavili). Takođe možete pisati na info@lessenza.me ili Instagram.", order: 60, published: true },
+  { id: "otkazivanje", question: "Mogu li otkazati ili pomjeriti termin?", answer: "Naravno. Najbrže je da odgovorite na email koji ste dobili za potvrdu termina — vidjeću poruku odmah i javiću vam novi termin koji vam odgovara. Zamolila bih vas samo da otkazivanje javite najmanje 24 sata unaprijed kad god je moguće.", order: 70, published: true },
+  { id: "placanje", question: "Kako se plaća?", answer: "Plaćanje se vrši gotovinom ili karticom u salonu poslije tretmana. Za pakete od više tretmana može se dogovoriti plaćanje unaprijed po dogovoru.", order: 80, published: true },
+];
+
+export async function getFaqItems(): Promise<FaqItem[]> {
+  const raw = await store().getJSON<unknown>(KEY_FAQ);
+  if (!raw) return DEFAULT_FAQ;
+  const r = FaqItemsSchema.safeParse(raw);
+  return r.success ? r.data : DEFAULT_FAQ;
+}
+export async function saveFaqItems(list: FaqItem[]): Promise<FaqItem[]> {
+  const validated = FaqItemsSchema.parse(list);
+  await store().setJSON(KEY_FAQ, validated);
   return validated;
 }
 

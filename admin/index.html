@@ -445,6 +445,41 @@
               </div>
             </details>
 
+            <details class="acc" data-acc="faq">
+              <summary>
+                <span style="display:flex;align-items:center;gap:10px;">
+                  <span class="acc__icon">❓</span>
+                  <span>FAQ — pitanja i odgovori <span id="faq-badge" class="gi-badge" hidden></span></span>
+                </span>
+                <span class="acc__chev">▸</span>
+              </summary>
+              <div class="acc__body">
+                <p class="muted" style="font-size:0.86rem;">Pitanja i odgovori koji se prikazuju na <code>/o-nama.html</code>. Možeš ih sakriti, mijenjati redoslijed ili dodati nova.</p>
+                <div class="gi-upload-card">
+                  <div class="gi-upload-card__head">
+                    <span class="gi-upload-card__icon">＋</span>
+                    <div>
+                      <div class="gi-upload-card__title">Dodaj novo pitanje</div>
+                      <div class="gi-upload-card__hint">Plain tekst, max 200 znakova za pitanje, 2000 za odgovor</div>
+                    </div>
+                  </div>
+                  <div class="field" style="margin:0;">
+                    <label for="faq-q">Pitanje</label>
+                    <input id="faq-q" type="text" maxlength="200" placeholder="npr. Kako se priprema za laser?">
+                  </div>
+                  <div class="field" style="margin-top:12px;">
+                    <label for="faq-a">Odgovor</label>
+                    <textarea id="faq-a" rows="4" maxlength="2000" placeholder="Detaljan odgovor…"></textarea>
+                  </div>
+                  <div class="gi-upload-card__footer">
+                    <button id="faq-add-btn" class="btn btn-primary" type="button">Dodaj pitanje</button>
+                    <span id="faq-status" class="muted" style="font-size:0.85rem;"></span>
+                  </div>
+                </div>
+                <div id="faq-list" style="margin-top:1.25rem;"></div>
+              </div>
+            </details>
+
             <details class="accordion__item">
               <summary class="accordion__summary">Galerija — sve slike <span id="gi-badge" class="gi-badge" hidden></span></summary>
               <div class="accordion__body">

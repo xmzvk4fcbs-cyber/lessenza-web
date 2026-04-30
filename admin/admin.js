@@ -365,6 +365,7 @@ async function initAdmin() {
   await import("./tabs/gallery-results.js");
   await import("./tabs/gallery-items.js");
   await import("./tabs/reviews.js");
+  await import("./tabs/faq.js");
   await import("./tabs/clients.js");
 
   const name = location.hash.replace(/^#/, "") || "dashboard";

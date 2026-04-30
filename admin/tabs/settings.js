@@ -18,6 +18,8 @@ const SECTIONS = [
       ["instagramUrl", "Instagram link", "url", {}],
       ["tagline", "Tagline u hero sekciji", "text", {}],
       ["displayHoursOverride", "Radno vrijeme za prikaz na sajtu (opciono). Npr. 'Pon–Pet 09:00–20:00, Sub 09:00–15:00'. Ako ostaviš prazno, radno vrijeme se NE prikazuje klijentima.", "textarea", {}],
+      ["aboutText", "Tekst 'O Nama' (svaki prazan red = novi pasus). Prazno = default tekst.", "textarea", { maxlength: 5000, rows: 6, placeholder: "Nakon dugih godina planiranja…\n\nL'Essenza znači suština…" }],
+      ["aboutMission", "Misija (citat na O Nama stranici, prazno = default)", "textarea", { maxlength: 500, rows: 2, placeholder: "Ja sam suština L'Essenze — moj rad, moja posvećenost…" }],
     ],
   },
   {
@@ -244,7 +246,7 @@ saveBtn.addEventListener("click", async () => {
     else payload[key] = el.value;
   }
   // Strip empty optional fields so Zod accepts as undefined
-  for (const k of ["ownerEmail", "ownerPhone", "publicPhone", "publicEmail", "whatsappPhone", "instagramUrl", "analyticsScript", "emailGreeting", "emailClosing", "emailSignature", "bannerText", "bannerLinkText", "bannerLinkUrl", "reviewLinkUrl"]) {
+  for (const k of ["ownerEmail", "ownerPhone", "publicPhone", "publicEmail", "whatsappPhone", "instagramUrl", "analyticsScript", "emailGreeting", "emailClosing", "emailSignature", "bannerText", "bannerLinkText", "bannerLinkUrl", "reviewLinkUrl", "aboutText", "aboutMission"]) {
     if (!payload[k]) delete payload[k];
   }
   try {

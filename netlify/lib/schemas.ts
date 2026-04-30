@@ -109,6 +109,11 @@ export const SettingsSchema = z.object({
   emailClosing: z.string().max(500).optional(),
   emailSignature: z.string().max(200).optional(),
 
+  /** Owner-editable About-Us copy. Each blank-line-separated chunk becomes a paragraph on /o-nama. */
+  aboutText: z.string().max(5000).optional(),
+  /** Mission quote shown in champagne band on /o-nama.html. */
+  aboutMission: z.string().max(500).optional(),
+
   /** Promotional banner shown at the top of every public page when non-empty. */
   bannerText: z.string().max(200).optional(),
   bannerLinkUrl: z.string().url().optional(),
@@ -187,6 +192,19 @@ export const GalleryResultSchema = z.object({
 });
 export type GalleryResult = z.infer<typeof GalleryResultSchema>;
 export const GalleryResultsSchema = z.array(GalleryResultSchema);
+
+// ----- FAQ items (configurable Q&A on /o-nama.html) -----
+export const FaqItemSchema = z.object({
+  id: z.string().min(1).max(64),
+  question: z.string().min(1).max(200),
+  /** Plain text or HTML. Sanitized minimally on render — owner only writes here. */
+  answer: z.string().min(1).max(2000),
+  /** Lower number = higher in list. */
+  order: z.number().int().min(0).max(9999).default(0),
+  published: z.boolean().default(true),
+});
+export type FaqItem = z.infer<typeof FaqItemSchema>;
+export const FaqItemsSchema = z.array(FaqItemSchema);
 
 // ----- Audit log (admin actions) -----
 export const AuditEventSchema = z.object({

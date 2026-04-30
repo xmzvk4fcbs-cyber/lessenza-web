@@ -25,5 +25,7 @@ export const handler: Handler = async (event) => {
     bannerText: s.bannerText ?? "",
     bannerLinkUrl: s.bannerLinkUrl ?? "",
     bannerLinkText: s.bannerLinkText ?? "",
+    aboutText: s.aboutText ?? "",
+    aboutMission: s.aboutMission ?? "",
   });
 };
