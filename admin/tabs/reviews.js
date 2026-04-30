@@ -27,6 +27,11 @@ if (saveBtn && listEl) {
     photoInput.addEventListener("change", () => {
       const f = photoInput.files?.[0];
       if (!f) { photoPreview.hidden = true; photoPreview.removeAttribute("src"); return; }
+      if (f.size > 12 * 1024 * 1024) {
+        toast(`Slika je prevelika (${(f.size / 1024 / 1024).toFixed(1)} MB). Maksimalno 12 MB.`, "error");
+        photoInput.value = ""; photoPreview.hidden = true; photoPreview.removeAttribute("src");
+        return;
+      }
       if (photoPreview.src && photoPreview.src.startsWith("blob:")) URL.revokeObjectURL(photoPreview.src);
       photoPreview.src = URL.createObjectURL(f);
       photoPreview.hidden = false;

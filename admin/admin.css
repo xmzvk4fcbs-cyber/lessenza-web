@@ -1658,18 +1658,18 @@ html { scroll-behavior: smooth; scroll-padding-top: 88px; -webkit-font-smoothing
 .appt-card__actions--manage .btn {
   flex: 0 1 auto;
   min-width: 0;
-  font-size: 0.78rem;
-  min-height: 36px;
-  padding: 6px 12px;
+  font-size: 0.82rem;
+  min-height: 44px;
+  padding: 8px 14px;
   font-weight: 500;
 }
 .appt-card__actions--manage .btn[title="Pozovi"],
 .appt-card__actions--manage .btn[title="WhatsApp"],
 .appt-card__actions--manage .btn[title="Viber"] {
-  flex: 0 0 38px;
-  padding: 6px 0;
-  min-width: 38px;
-  font-size: 1rem;
+  flex: 0 0 44px;
+  padding: 8px 0;
+  min-width: 44px;
+  font-size: 1.05rem;
 }
 
 @media (prefers-reduced-motion: reduce) {

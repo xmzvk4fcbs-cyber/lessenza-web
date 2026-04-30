@@ -27,6 +27,11 @@ if (uploadBtn && listEl) {
     inp.addEventListener("change", () => {
       const f = inp.files?.[0];
       if (!f) { img.hidden = true; img.removeAttribute("src"); return; }
+      if (f.size > 12 * 1024 * 1024) {
+        toast(`Slika je prevelika (${(f.size / 1024 / 1024).toFixed(1)} MB). Maksimalno 12 MB.`, "error");
+        inp.value = ""; img.hidden = true; img.removeAttribute("src");
+        return;
+      }
       if (img.src && img.src.startsWith("blob:")) URL.revokeObjectURL(img.src);
       img.src = URL.createObjectURL(f);
       img.hidden = false;

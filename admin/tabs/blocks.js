@@ -9,6 +9,14 @@ form.addEventListener("submit", async (e) => {
   const end = document.getElementById("block-end").value;
   const reason = document.getElementById("block-reason").value.trim();
   if (!start || !end) { toast("Unesi početak i kraj.", "error"); return; }
+  const startMs = new Date(start).getTime();
+  const endMs = new Date(end).getTime();
+  if (!Number.isFinite(startMs) || !Number.isFinite(endMs)) {
+    toast("Datumi nisu ispravni.", "error"); return;
+  }
+  if (endMs <= startMs) {
+    toast("Kraj mora biti poslije početka.", "error"); return;
+  }
   try {
     await must("/api/admin/blocks", {
       method: "POST",

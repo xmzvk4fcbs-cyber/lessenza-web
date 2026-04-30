@@ -134,9 +134,18 @@ function openAccept(card) {
   const id = card.dataset.id;
   const serviceId = card.dataset.service;
   const desired = card.dataset.desired;
+  const name = card.dataset.name;
+  const phone = card.dataset.phone;
+  const serviceName = card.querySelector(".stack-card__title")?.textContent.split("—")[0]?.trim() || serviceId;
   openModal("Prihvati upit", `
+    <div class="rs-current">
+      <span class="rs-current__label">Upit</span>
+      <div class="rs-current__main">
+        <strong>${escapeHtml(serviceName)}</strong> — ${escapeHtml(name)}<br>
+        <span class="muted">${escapeHtml(phone)} · željeni datum: ${escapeHtml(desired)}</span>
+      </div>
+    </div>
     <div id="kk-host-acc"></div>
-    <p>Zakaži termin za <strong>${escapeHtml(card.dataset.name)}</strong>.</p>
     <div class="field">
       <label for="acc-date">Datum</label>
       <input id="acc-date" type="date" value="${escapeHtml(desired)}" required>

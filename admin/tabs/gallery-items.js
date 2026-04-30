@@ -22,6 +22,12 @@ if (uploadBtn && listEl) {
     fileInput.addEventListener("change", () => {
       const f = fileInput.files?.[0];
       if (!f) { preview.hidden = true; preview.removeAttribute("src"); return; }
+      if (f.size > 12 * 1024 * 1024) {
+        toast(`Slika je prevelika (${(f.size / 1024 / 1024).toFixed(1)} MB). Maksimalno 12 MB.`, "error");
+        fileInput.value = "";
+        preview.hidden = true; preview.removeAttribute("src");
+        return;
+      }
       if (preview.src && preview.src.startsWith("blob:")) URL.revokeObjectURL(preview.src);
       preview.src = URL.createObjectURL(f);
       preview.hidden = false;
