@@ -195,6 +195,62 @@ if (noteInput) {
   noteInput.addEventListener("blur", saveTodayNote);
 }
 
+function renderSparkline(appointments, fromKey, toKey) {
+  // Build a date-keyed count map across the [from, to] inclusive range.
+  const counts = {};
+  const fromD = new Date(fromKey + "T00:00:00");
+  const toD = new Date(toKey + "T00:00:00");
+  for (let d = new Date(fromD); d <= toD; d.setDate(d.getDate() + 1)) {
+    const k = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+    counts[k] = 0;
+  }
+  for (const a of appointments) {
+    const d = new Date(a.startISO);
+    const k = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+    if (k in counts) counts[k]++;
+  }
+  const days = Object.keys(counts).sort();
+  const values = days.map((k) => counts[k]);
+  const max = Math.max(1, ...values);
+  const W = 280, H = 36, P = 2;
+  const stepX = (W - P * 2) / (values.length - 1 || 1);
+  const points = values.map((v, i) => {
+    const x = P + i * stepX;
+    const y = H - P - ((v / max) * (H - P * 2));
+    return `${x.toFixed(1)},${y.toFixed(1)}`;
+  });
+  const path = `M${points.join(" L")}`;
+  const fill = `M${P},${H - P} L${points.join(" L")} L${(W - P).toFixed(1)},${H - P} Z`;
+  const total = values.reduce((s, v) => s + v, 0);
+  const avg = (total / values.length).toFixed(1);
+  // Mount in stat-row's parent — append once.
+  const statRow = document.querySelector(".stat-row");
+  if (!statRow) return;
+  let host = document.getElementById("dash-sparkline");
+  if (!host) {
+    host = document.createElement("div");
+    host.id = "dash-sparkline";
+    host.className = "dash-sparkline";
+    statRow.parentNode.insertBefore(host, statRow);
+  }
+  host.innerHTML = `
+    <div class="dash-sparkline__head">
+      <span class="dash-sparkline__label">Posljednjih 30 dana</span>
+      <span class="dash-sparkline__total"><strong>${total}</strong> termina · <em>${avg}</em>/dan u prosjeku</span>
+    </div>
+    <svg class="dash-sparkline__svg" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" aria-hidden="true">
+      <defs>
+        <linearGradient id="sparkFill" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color="#C9A961" stop-opacity="0.35"/>
+          <stop offset="100%" stop-color="#C9A961" stop-opacity="0"/>
+        </linearGradient>
+      </defs>
+      <path d="${fill}" fill="url(#sparkFill)"/>
+      <path d="${path}" fill="none" stroke="#C9A961" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+    </svg>
+  `;
+}
+
 function skelAppts(n = 2) {
   const card = `<div class="appt-card appt-card--skel">
     <div class="appt-card__time">
@@ -219,17 +275,22 @@ async function render() {
   const today = todayKey();
   const weekEnd = plusDays(today, 6);
 
-  // Fetch today list + week count in parallel.
+  // Fetch today list + week count + last 30 days in parallel.
   const todayP  = must(`/api/admin/appointments?from=${today}&to=${today}`);
   const weekP   = must(`/api/admin/appointments?from=${today}&to=${weekEnd}`);
+  const trend30Start = plusDays(today, -29);
+  const trendP  = must(`/api/admin/appointments?from=${trend30Start}&to=${today}`).catch(() => null);
 
   try {
-    const [todayR, weekR] = await Promise.all([todayP, weekP]);
+    const [todayR, weekR, trendR] = await Promise.all([todayP, weekP, trendP]);
     const todayApps = (todayR.appointments || []).sort((a, b) => a.startISO.localeCompare(b.startISO));
     const weekApps  = (weekR.appointments || []);
 
     statToday.textContent = String(todayApps.length);
     statWeek.textContent  = String(weekApps.length);
+
+    // Render 30-day sparkline above the stat-row
+    if (trendR && trendR.appointments) renderSparkline(trendR.appointments, trend30Start, today);
 
     // Next appointment = first future booking today (or any week appt)
     const now = Date.now();

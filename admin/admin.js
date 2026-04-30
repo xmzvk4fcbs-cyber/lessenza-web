@@ -372,6 +372,113 @@ async function initAdmin() {
 
   await refreshInquiryBadge();
   setInterval(refreshInquiryBadge, 60_000);
+
+  installKeyboardShortcuts();
+  installShortcutFab();
+}
+
+// ---------- Keyboard shortcuts (desktop only) ----------
+const SHORTCUTS = [
+  { keys: ["?"],     desc: "Otvori ovaj prozor sa prečicama",
+    fire: () => toggleShortcutOverlay(true) },
+  { keys: ["G", "D"], combo: "g d", desc: "Idi na Dnevnik (Dashboard)",
+    fire: () => activateScreen("dashboard") },
+  { keys: ["G", "R"], combo: "g r", desc: "Idi na Raspored",
+    fire: () => activateScreen("schedule") },
+  { keys: ["G", "U"], combo: "g u", desc: "Idi na Upite",
+    fire: () => activateScreen("inquiries") },
+  { keys: ["G", "K"], combo: "g k", desc: "Idi na Klijentkinje",
+    fire: () => activateScreen("clients") },
+  { keys: ["G", "P"], combo: "g p", desc: "Idi na Podešavanja",
+    fire: () => activateScreen("settings") },
+  { keys: ["N"],     desc: "Novi termin (otvori 'Dodaj termin')",
+    fire: () => { const b = document.getElementById("today-add") || document.getElementById("fab-add-booking"); if (b) b.click(); } },
+  { keys: ["/"],     desc: "Fokusiraj traku za pretragu",
+    fire: () => { const s = document.querySelector(".admin-screen.is-active input[type='search']"); if (s) s.focus(); } },
+  { keys: ["Esc"],   desc: "Zatvori modal / poništi",
+    fire: () => closeModal() },
+];
+
+let _kbdSeqBuf = "";
+let _kbdSeqTimer = null;
+
+function isInTextField(el) {
+  if (!el) return false;
+  const tag = el.tagName;
+  if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") return true;
+  if (el.isContentEditable) return true;
+  return false;
+}
+
+function installKeyboardShortcuts() {
+  if (window.matchMedia("(hover: none) and (pointer: coarse)").matches) return; // touch-only
+  document.addEventListener("keydown", (e) => {
+    if (isInTextField(e.target)) return;
+    if (e.metaKey || e.ctrlKey || e.altKey) return;
+    const k = e.key;
+    // Sequence (G then letter) — buffer first key for 1s
+    if (k === "g" || k === "G") {
+      _kbdSeqBuf = "g";
+      if (_kbdSeqTimer) clearTimeout(_kbdSeqTimer);
+      _kbdSeqTimer = setTimeout(() => { _kbdSeqBuf = ""; }, 1000);
+      e.preventDefault();
+      return;
+    }
+    if (_kbdSeqBuf === "g") {
+      const combo = `g ${k.toLowerCase()}`;
+      _kbdSeqBuf = "";
+      if (_kbdSeqTimer) clearTimeout(_kbdSeqTimer);
+      const sc = SHORTCUTS.find((s) => s.combo === combo);
+      if (sc) { e.preventDefault(); sc.fire(); }
+      return;
+    }
+    // Single keys
+    if (k === "?") { e.preventDefault(); toggleShortcutOverlay(true); return; }
+    if (k.toLowerCase() === "n") { e.preventDefault(); SHORTCUTS.find((s) => s.keys[0] === "N").fire(); return; }
+    if (k === "/") { e.preventDefault(); SHORTCUTS.find((s) => s.keys[0] === "/").fire(); return; }
+  });
+}
+
+function toggleShortcutOverlay(show) {
+  let host = document.getElementById("kbd-overlay");
+  if (!host && show) {
+    host = document.createElement("div");
+    host.id = "kbd-overlay";
+    host.className = "kbd-overlay";
+    host.innerHTML = `
+      <div class="kbd-card" role="dialog" aria-label="Tastaturne prečice">
+        <h3 class="kbd-card__title">Tastaturne prečice</h3>
+        <div class="kbd-list">
+          ${SHORTCUTS.map((s) => `
+            <div class="kbd-row">
+              <span class="kbd-keys">${s.keys.map((k) => `<kbd class="kbd-key">${escapeHtml(k)}</kbd>`).join('<span style="opacity:0.4;">+</span>')}</span>
+              <span class="kbd-row__desc">${escapeHtml(s.desc)}</span>
+            </div>
+          `).join("")}
+        </div>
+        <p class="kbd-card__hint">Pritisni <kbd class="kbd-key">Esc</kbd> da zatvoriš.</p>
+      </div>`;
+    document.body.appendChild(host);
+    host.addEventListener("click", (e) => { if (e.target === host) toggleShortcutOverlay(false); });
+    document.addEventListener("keydown", function once(ev) {
+      if (ev.key === "Escape") { toggleShortcutOverlay(false); document.removeEventListener("keydown", once); }
+    });
+  } else if (host && !show) {
+    host.remove();
+  }
+}
+
+function installShortcutFab() {
+  if (window.matchMedia("(hover: none) and (pointer: coarse)").matches) return;
+  if (document.querySelector(".kbd-fab")) return;
+  const btn = document.createElement("button");
+  btn.type = "button";
+  btn.className = "kbd-fab";
+  btn.title = "Tastaturne prečice (?)";
+  btn.setAttribute("aria-label", "Tastaturne prečice");
+  btn.textContent = "?";
+  btn.addEventListener("click", () => toggleShortcutOverlay(true));
+  document.body.appendChild(btn);
 }
 
 // ---------- Expose helpers ----------
