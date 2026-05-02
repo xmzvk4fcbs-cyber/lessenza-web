@@ -43,6 +43,14 @@ html { scroll-behavior: smooth; scroll-padding-top: 88px; -webkit-font-smoothing
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
 }
+/* Logout button — neutralize the inline style noise from index.html */
+#logout-btn {
+  flex: 0 0 auto;
+  min-height: 40px;
+  padding: 0 1rem;
+  font-size: 0.85rem;
+  letter-spacing: 0.04em;
+}
 .admin-topbar__title {
   margin: 0;
   font-family: 'Cormorant Garamond', Georgia, serif;
@@ -98,7 +106,20 @@ html { scroll-behavior: smooth; scroll-padding-top: 88px; -webkit-font-smoothing
 .admin-main .muted { color: #6B5F52; font-size: 0.9rem; }
 
 /* === Auth views (loading / setup / login) === */
-.admin-view { max-width: 460px; margin: 0 auto; padding: 16px; min-height: 100vh; display: flex; align-items: center; justify-content: center; }
+/* Auth-only views (login / setup / loading) get the vertical-center
+   treatment. The actual admin home (#view-home) MUST stay a normal
+   block — otherwise the whole app gets flex-centered and the topbar
+   appears to "float" in the middle of the screen. */
+.admin-view { padding: 16px; }
+#view-loading, #view-setup, #view-login {
+  max-width: 460px;
+  margin: 0 auto;
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+#view-home { max-width: 720px; margin: 0 auto; padding: 0; }
 .admin-view.hidden { display: none; }
 
 /* Decorative gold halo behind auth card — only on login/setup/loading views,
@@ -4036,15 +4057,18 @@ body.modal-open { overflow: hidden; }
 .appt-card__actions {
   display: flex;
   flex-wrap: wrap;
-  gap: 6px;
-  margin-top: 10px;
+  gap: 8px;
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px dashed rgba(217, 192, 154, 0.5);
 }
 .appt-card__actions .btn {
   flex: 1;
   min-width: 0;
-  font-size: 0.8rem;
-  min-height: 36px;
-  padding: 6px 10px;
+  font-size: 0.85rem;
+  min-height: 44px;
+  padding: 10px 12px;
+  font-weight: 600;
 }
 @media (max-width: 380px) {
   .appt-card { grid-template-columns: 72px 1fr; gap: 10px; padding-right: 10px; }
