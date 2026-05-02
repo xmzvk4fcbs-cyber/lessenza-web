@@ -39,9 +39,21 @@ html { scroll-behavior: smooth; scroll-padding-top: 88px; -webkit-font-smoothing
   gap: 1rem;
   padding: env(safe-area-inset-top, 0) 16px 0;
   min-height: calc(env(safe-area-inset-top, 0) + 56px);
-  background: rgba(249, 242, 229, 0.92);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
+  background: rgba(253, 250, 244, 0.92);
+  backdrop-filter: blur(20px) saturate(1.4);
+  -webkit-backdrop-filter: blur(20px) saturate(1.4);
+}
+/* Hairline gold divider — drawn as a pseudo so it never collides with
+   border-* rules from other declarations. */
+.admin-topbar::after {
+  content: '';
+  position: absolute;
+  left: 16px;
+  right: 16px;
+  bottom: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(217, 192, 154, 0.7) 20%, rgba(217, 192, 154, 0.7) 80%, transparent);
+  pointer-events: none;
 }
 /* Logout button — neutralize the inline style noise from index.html */
 #logout-btn {
@@ -4340,17 +4352,8 @@ body.modal-open { overflow: hidden; }
   text-transform: lowercase;
 }
 
-/* Top bar — hairline gold rule replacing thick border.
-   IMPORTANT: do not override position — base rule sets sticky. */
-.admin-topbar { border-bottom: none !important; }
-.admin-topbar::after {
-  content: '';
-  position: absolute;
-  left: 16px; right: 16px;
-  bottom: 0;
-  height: 1px;
-  background: linear-gradient(90deg, transparent, rgba(217, 192, 154, 0.7) 20%, rgba(217, 192, 154, 0.7) 80%, transparent);
-}
+/* (topbar hairline divider is defined inside the base .admin-topbar rule
+   near the top of this file — see ::after there.) */
 
 /* Cards in general — paper-grain depth, no harsh borders */
 .stack-card,
@@ -4417,12 +4420,8 @@ body.modal-open { overflow: hidden; }
 }
 .chip:active { transform: translateY(0); }
 
-/* Topbar refinement — cleaner divider (border off, hairline gold gradient via ::after only). */
-.admin-topbar {
-  background: rgba(253, 250, 244, 0.92) !important;
-  backdrop-filter: blur(20px) saturate(1.4);
-  -webkit-backdrop-filter: blur(20px) saturate(1.4);
-}
+/* (intentionally empty — topbar styles live ONLY in the base rule near the top
+   of this file. previous copies removed to eliminate cascade conflicts.) */
 
 /* Stats chips on dashboard — softer */
 .stat-chip {
@@ -4435,25 +4434,8 @@ body.modal-open { overflow: hidden; }
   box-shadow: 0 6px 16px rgba(74, 66, 56, 0.08);
 }
 
-/* Greeting block — more elegant */
-.greeting { margin-bottom: 1.4rem; }
-.greeting__line {
-  font-family: 'Cormorant Garamond', Georgia, serif;
-  font-style: italic;
-  font-size: clamp(1.45rem, 4.5vw, 1.7rem);
-  color: var(--sage, #6B6F4F);
-  margin: 0 0 0.15rem;
-  letter-spacing: -0.005em;
-  line-height: 1.2;
-}
-.greeting__date {
-  font-family: 'Outfit', sans-serif;
-  font-size: 0.78rem;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  color: var(--text-light, #6B5F52);
-  font-weight: 500;
-}
+/* (greeting styles consolidated above — polish-layer Cormorant italic
+   block is the single source of truth.) */
 
 /* Toast — modern */
 #toast-host {
