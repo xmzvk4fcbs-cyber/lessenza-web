@@ -66,7 +66,11 @@ html { scroll-behavior: smooth; scroll-padding-top: 88px; -webkit-font-smoothing
 .admin-main {
   max-width: 720px;
   margin: 0 auto;
-  padding: 16px 16px 120px;
+  padding: 16px 16px 24px;
+  overflow-x: hidden; /* contain hero-card decorative gradients on narrow screens */
+}
+@media (max-width: 400px) {
+  .admin-main { padding: 12px 12px 18px; }
 }
 .admin-main h2 {
   font-family: 'Cormorant Garamond', Georgia, serif;
@@ -92,8 +96,11 @@ html { scroll-behavior: smooth; scroll-padding-top: 88px; -webkit-font-smoothing
 .admin-view { max-width: 460px; margin: 0 auto; padding: 16px; min-height: 100vh; display: flex; align-items: center; justify-content: center; }
 .admin-view.hidden { display: none; }
 
-/* Decorative gold halo behind auth card */
-.admin-view::before {
+/* Decorative gold halo behind auth card — only on login/setup/loading views,
+   NEVER on #view-home (the real admin) where it caused a weird wash. */
+#view-loading:not(.hidden)::before,
+#view-setup:not(.hidden)::before,
+#view-login:not(.hidden)::before {
   content: '';
   position: fixed;
   inset: 0;
@@ -103,7 +110,7 @@ html { scroll-behavior: smooth; scroll-padding-top: 88px; -webkit-font-smoothing
   pointer-events: none;
   z-index: 0;
 }
-.admin-view > * { position: relative; z-index: 1; }
+#view-loading > *, #view-setup > *, #view-login > * { position: relative; z-index: 1; }
 
 .admin-card {
   width: 100%;
@@ -400,7 +407,7 @@ html { scroll-behavior: smooth; scroll-padding-top: 88px; -webkit-font-smoothing
   letter-spacing: 0.22em;
   text-transform: uppercase;
   color: var(--text-light, #7A6F62);
-  margin-top: 10px;
+  margin-top: 14px;
 }
 
 /* === Greeting — editorial masthead === */
@@ -774,9 +781,12 @@ html { scroll-behavior: smooth; scroll-padding-top: 88px; -webkit-font-smoothing
   border: 2px solid rgba(253, 250, 244, 0.95);
 }
 .bottom-nav__badge.is-visible { display: inline-flex; }
-@media (max-width: 360px) {
-  .bottom-nav__btn { font-size: 0.65rem; gap: 3px; }
-  .bottom-nav__icon { font-size: 1.25rem; }
+@media (max-width: 400px) {
+  .bottom-nav { padding: 6px 4px calc(8px + env(safe-area-inset-bottom, 0)); gap: 1px; }
+  .bottom-nav__btn { font-size: 0.62rem; gap: 2px; padding: 6px 2px 5px; min-height: 52px; }
+  .bottom-nav__icon { font-size: 1.2rem; }
+  .bottom-nav__btn.is-active { font-size: 0.74rem !important; }
+  .bottom-nav__badge { right: calc(50% - 18px); }
 }
 
 /* === Accordion (Podesavanja group) === */
@@ -1974,7 +1984,7 @@ html { scroll-behavior: smooth; scroll-padding-top: 88px; -webkit-font-smoothing
   /* Sits under admin-topbar. Topbar has padding-top: max(14px, safe-area-top),
      plus its own content ~34px — so we offset by safe-area + 48 to guarantee
      no overlap on notched iPhones. */
-  top: calc(env(safe-area-inset-top, 0px) + 48px);
+  top: calc(env(safe-area-inset-top, 0px) + 64px);
   z-index: 20;
   display: grid;
   grid-template-columns: repeat(3, 1fr);
@@ -3386,9 +3396,9 @@ html { scroll-behavior: smooth; scroll-padding-top: 88px; -webkit-font-smoothing
 /* === Settings — sticky section tabs + scroll-spy === */
 .st-tabs {
   position: sticky;
-  /* Sit just under the topbar (~50px) */
-  top: calc(env(safe-area-inset-top, 0px) + 50px);
-  z-index: 18;
+  /* Sit just under the topbar — measured: safe-area + 14 + ~36 button + 12 = ~62px */
+  top: calc(env(safe-area-inset-top, 0px) + 64px);
+  z-index: 25;
   display: flex;
   gap: 4px;
   margin: -16px -16px 1.25rem;
