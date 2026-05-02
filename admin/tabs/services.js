@@ -6,7 +6,7 @@ const list = document.getElementById("services-list");
 addBtn.addEventListener("click", () => openEditModal(null));
 
 async function render() {
-  list.innerHTML = `<p class="muted">Učitavanje...</p>`;
+  list.innerHTML = `<p class="muted">Učitavanje…</p>`;
   try {
     const { services } = await must("/api/admin/services");
     cache.services = services;

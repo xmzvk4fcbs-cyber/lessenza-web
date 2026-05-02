@@ -35,7 +35,7 @@ form.addEventListener("submit", async (e) => {
 });
 
 async function render() {
-  list.innerHTML = `<p class="muted">Učitavanje...</p>`;
+  list.innerHTML = `<p class="muted">Učitavanje…</p>`;
   try {
     const { blocks } = await must("/api/admin/blocks");
     if (!blocks.length) {

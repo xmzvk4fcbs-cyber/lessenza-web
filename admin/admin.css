@@ -489,6 +489,8 @@ html { scroll-behavior: smooth; scroll-padding-top: 88px; -webkit-font-smoothing
   font-weight: 500;
   font-size: 1.15rem;
   color: var(--sage, #6B6F4F);
+  word-break: break-word;
+  overflow-wrap: anywhere;
 }
 .stack-card__meta {
   color: var(--gold, #C9A961);
@@ -1140,6 +1142,10 @@ html { scroll-behavior: smooth; scroll-padding-top: 88px; -webkit-font-smoothing
   color: var(--gold, #C9A961);
 }
 .modal__close:active { transform: scale(0.95); }
+.modal__close:focus-visible {
+  outline: 2px solid var(--gold, #C9A961);
+  outline-offset: 2px;
+}
 
 /* === Desktop tweaks === */
 @media (min-width: 720px) {
@@ -1149,6 +1155,21 @@ html { scroll-behavior: smooth; scroll-padding-top: 88px; -webkit-font-smoothing
   .modal { align-items: center; padding: 24px; }
   .modal__card { border-radius: 20px; max-height: 85vh; padding-top: 1.4rem; }
   .modal__card::before { display: none; }
+}
+
+/* Tablet portrait (768–1023px) — bigger bottom nav, more breathing room */
+@media (min-width: 768px) and (max-width: 1023px) {
+  .bottom-nav {
+    padding: 12px 12px calc(14px + env(safe-area-inset-bottom, 0));
+    max-width: 600px;
+    margin: 0 auto;
+    left: 0; right: 0;
+    border-radius: 18px 18px 0 0;
+  }
+  .bottom-nav__btn { font-size: 0.78rem; min-height: 60px; }
+  .bottom-nav__icon { font-size: 1.5rem; }
+  .admin-main { padding: 20px 24px 120px; }
+  .stat-row { grid-template-columns: repeat(4, 1fr); }
   .fab { right: calc(50% - 260px); }
 }
 

@@ -59,7 +59,7 @@ function wireActions() {
 async function render() {
   const services = await getServices();
   const svcById = Object.fromEntries(services.map((s) => [s.id, s.name]));
-  list.innerHTML = `<p class="muted">Učitavanje...</p>`;
+  list.innerHTML = `<p class="muted">Učitavanje…</p>`;
   try {
     const q = filter.value ? `?status=${encodeURIComponent(filter.value)}` : "";
     const { inquiries } = await must(`/api/admin/inquiries${q}`);

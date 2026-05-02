@@ -163,7 +163,7 @@ refreshBtn.addEventListener("click", () => renderList());
 addBtn.addEventListener("click", () => openManualBookingModal());
 
 async function renderList() {
-  list.innerHTML = `<p class="muted">Učitavanje...</p>`;
+  list.innerHTML = `<p class="muted">Učitavanje…</p>`;
 
   // Single-day mode → show inquiries-for-day + visual timeline above the list.
   const singleDay = fromInput.value && fromInput.value === toInput.value;

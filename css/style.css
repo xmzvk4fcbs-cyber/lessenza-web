@@ -23,7 +23,8 @@
   /* Legacy aliases — keep so leftover refs resolve to a light tone. Don't add new uses. */
   --black: var(--text);
   --dark: var(--sage);
-  --gold-dark: var(--gold);
+  /* WCAG-AA-safe darker gold for small text on cream/white surfaces (≥4.5:1) */
+  --gold-dark: #8B6F2B;
   --cream-dark: var(--champagne);
   --warm-white: var(--white-warm);
 
@@ -154,10 +155,10 @@ p {
 .section-label {
   font-family: var(--font-body);
   font-size: 0.75rem;
-  font-weight: 500;
+  font-weight: 600;
   letter-spacing: 0.25em;
   text-transform: uppercase;
-  color: var(--gold);
+  color: var(--gold-dark);
   margin-bottom: 1rem;
   display: block;
 }
@@ -376,10 +377,14 @@ p {
 .menu-toggle {
   display: none;
   flex-direction: column;
-  gap: 6px;
+  gap: 8px;
+  align-items: center;
+  justify-content: center;
   cursor: pointer;
   z-index: 1001;
-  padding: 8px;
+  padding: 12px;
+  min-width: 48px;
+  min-height: 48px;
   background: none;
   border: none;
 }
@@ -491,8 +496,8 @@ p {
   position: absolute;
   top: 50%;
   left: 50%;
-  width: 140vmax;
-  height: 140vmax;
+  width: clamp(900px, 140vmax, 1800px);
+  height: clamp(900px, 140vmax, 1800px);
   transform: translate(-50%, -50%);
   z-index: 0;
   background: conic-gradient(
@@ -1535,6 +1540,18 @@ p {
     gap: 10px;
   }
 
+  /* Footer single-column on tablet portrait so brand+links read naturally */
+  .footer__grid {
+    grid-template-columns: 1fr;
+    gap: 32px;
+  }
+
+  /* Hide before/after gold connector arrow on narrow phones — overlaps text. */
+  .ba-item__pair::after { display: none; }
+
+  /* Phone/email shouldn't break across lines on narrow screens */
+  .contact-info-item a { white-space: nowrap; }
+
   .hero__title {
     font-size: clamp(2.4rem, 10vw, 3.5rem);
   }
@@ -2106,9 +2123,9 @@ h2 em {
   font-family: var(--font-body);
   font-size: 0.72em;
   font-style: normal;
-  font-weight: 500;
+  font-weight: 600;
   letter-spacing: 0.02em;
-  color: var(--gold);
+  color: var(--gold-dark);
   margin-left: 4px;
   vertical-align: middle;
   white-space: nowrap;

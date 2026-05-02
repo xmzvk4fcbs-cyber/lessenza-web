@@ -24,7 +24,7 @@ async function render() {
   const opts = (sel) => sel === "" ? "<option value=''>—</option>" : "";
   selA.innerHTML = "<option value=''>— izaberi —</option>" + services.map((s) => `<option value="${escapeHtml(s.id)}">${escapeHtml(s.name)}</option>`).join("");
   selB.innerHTML = selA.innerHTML;
-  list.innerHTML = `<p class="muted">Učitavanje...</p>`;
+  list.innerHTML = `<p class="muted">Učitavanje…</p>`;
   try {
     const { pairs } = await must("/api/admin/parallel-pairs");
     if (!pairs.length) {
