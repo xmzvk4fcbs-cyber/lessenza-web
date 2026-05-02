@@ -23,7 +23,12 @@ html { scroll-behavior: smooth; scroll-padding-top: 88px; -webkit-font-smoothing
 /* Momentum scrolling on any internal scrollable region */
 .admin-body, .mb-timeline, .mb-suggest, .modal__body { -webkit-overflow-scrolling: touch; }
 
-/* === Top app bar (sticky) === */
+/* === Top app bar (sticky) ===
+   Mobile target height: ~52px content + safe-area-top (notch).
+   Sticky offsets in the app (.view-switcher, .st-tabs) assume:
+     topbar visual bottom ≈ env(safe-area-inset-top) + 56px
+   Keep this rule the SINGLE source of truth — later additions can tweak
+   visuals but must NOT change position/height/padding. */
 .admin-topbar {
   position: sticky;
   top: 0;
@@ -32,11 +37,11 @@ html { scroll-behavior: smooth; scroll-padding-top: 88px; -webkit-font-smoothing
   justify-content: space-between;
   align-items: center;
   gap: 1rem;
-  padding: max(14px, env(safe-area-inset-top, 0)) 16px 12px;
+  padding: env(safe-area-inset-top, 0) 16px 0;
+  min-height: calc(env(safe-area-inset-top, 0) + 56px);
   background: rgba(249, 242, 229, 0.92);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
-  border-bottom: 1px solid var(--champagne-deep, #D9C09A);
 }
 .admin-topbar__title {
   margin: 0;
@@ -1984,7 +1989,7 @@ html { scroll-behavior: smooth; scroll-padding-top: 88px; -webkit-font-smoothing
   /* Sits under admin-topbar. Topbar has padding-top: max(14px, safe-area-top),
      plus its own content ~34px — so we offset by safe-area + 48 to guarantee
      no overlap on notched iPhones. */
-  top: calc(env(safe-area-inset-top, 0px) + 64px);
+  top: calc(env(safe-area-inset-top, 0px) + 56px);
   z-index: 20;
   display: grid;
   grid-template-columns: repeat(3, 1fr);
@@ -3396,8 +3401,8 @@ html { scroll-behavior: smooth; scroll-padding-top: 88px; -webkit-font-smoothing
 /* === Settings — sticky section tabs + scroll-spy === */
 .st-tabs {
   position: sticky;
-  /* Sit just under the topbar — measured: safe-area + 14 + ~36 button + 12 = ~62px */
-  top: calc(env(safe-area-inset-top, 0px) + 64px);
+  /* Sit exactly under the topbar's 56px visual height (see .admin-topbar). */
+  top: calc(env(safe-area-inset-top, 0px) + 56px);
   z-index: 25;
   display: flex;
   gap: 4px;
@@ -4311,11 +4316,9 @@ body.modal-open { overflow: hidden; }
   text-transform: lowercase;
 }
 
-/* Top bar — hairline gold rule replacing thick border */
-.admin-topbar {
-  border-bottom: none !important;
-  position: relative;
-}
+/* Top bar — hairline gold rule replacing thick border.
+   IMPORTANT: do not override position — base rule sets sticky. */
+.admin-topbar { border-bottom: none !important; }
 .admin-topbar::after {
   content: '';
   position: absolute;
@@ -4390,9 +4393,8 @@ body.modal-open { overflow: hidden; }
 }
 .chip:active { transform: translateY(0); }
 
-/* Topbar refinement — cleaner divider */
+/* Topbar refinement — cleaner divider (border off, hairline gold gradient via ::after only). */
 .admin-topbar {
-  border-bottom: 1px solid rgba(217, 192, 154, 0.4) !important;
   background: rgba(253, 250, 244, 0.92) !important;
   backdrop-filter: blur(20px) saturate(1.4);
   -webkit-backdrop-filter: blur(20px) saturate(1.4);
