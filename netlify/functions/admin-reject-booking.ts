@@ -1,7 +1,7 @@
 import type { Handler } from "@netlify/functions";
 import { json, badRequest, notFound, methodNotAllowed, parseJson } from "../lib/http";
 import { adminGuard } from "../lib/admin-guard";
-import { createCalendarClient, type CalendarClient } from "../lib/calendar";
+import { createCalendarClient, fetchEventById, type CalendarClient } from "../lib/calendar";
 import { getMailerAsync, type Mailer } from "../lib/mailer";
 import { getServices, getSettings, addBlockedPhone, appendCancellation } from "../lib/config";
 import { eventToBooking } from "../lib/calendar-domain";
@@ -37,13 +37,7 @@ const inner: Handler = async (event) => {
   const services = await getServices();
   const settings = await getSettings();
 
-  const nowMs = Date.now();
-  const horizonMs = nowMs + 365 * 24 * 60 * 60 * 1000;
-  const events = await cal.listEvents({
-    timeMin: new Date(nowMs - 24 * 60 * 60 * 1000).toISOString(),
-    timeMax: new Date(horizonMs).toISOString(),
-  });
-  const target = events.find((e) => e.id === eventId);
+  const target = await fetchEventById(cal, eventId);
   if (!target) return notFound("Event not found");
   const booking = eventToBooking(target, services);
 

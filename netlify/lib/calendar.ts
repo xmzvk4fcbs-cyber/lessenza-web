@@ -36,6 +36,25 @@ export interface CalendarClient {
   insertEvent(event: calendar_v3.Schema$Event): Promise<calendar_v3.Schema$Event>;
   deleteEvent(eventId: string): Promise<void>;
   patchEvent(eventId: string, patch: calendar_v3.Schema$Event): Promise<calendar_v3.Schema$Event>;
+  /** Direct lookup by ID — optional; admin handlers fall back to a wide listEvents() if absent. */
+  getEvent?(eventId: string): Promise<calendar_v3.Schema$Event | null>;
+}
+
+/** Robust by-id event lookup that uses the optional getEvent() if the
+ *  client implements it, otherwise pages through a wide listEvents() window.
+ *  Use from any handler that needs to operate on a specific event by id. */
+export async function fetchEventById(cal: CalendarClient, eventId: string): Promise<calendar_v3.Schema$Event | null> {
+  if (cal.getEvent) {
+    try { return await cal.getEvent(eventId); } catch { /* fallthrough to listEvents */ }
+  }
+  // Fallback: very wide window covers past 60d + future 365d (covers same-day
+  // morning bookings rescheduled after they passed, and far-future bookings).
+  const now = Date.now();
+  const items = await cal.listEvents({
+    timeMin: new Date(now - 60 * 24 * 60 * 60 * 1000).toISOString(),
+    timeMax: new Date(now + 365 * 24 * 60 * 60 * 1000).toISOString(),
+  });
+  return items.find((e) => e.id === eventId) ?? null;
 }
 
 // Blobs-backed calendar for demos without Google Calendar configured.
@@ -85,6 +104,10 @@ export function createInMemoryCalendar(): CalendarClient {
       if (!result) throw new Error("Event not found after update");
       return result;
     },
+    async getEvent(eventId) {
+      const events = await readEvents();
+      return events.find((e) => e.id === eventId) ?? null;
+    },
   };
 }
 
@@ -115,6 +138,16 @@ function buildCalendarClientFromAuth(
     async patchEvent(eventId, patch) {
       const { data } = await cal.events.patch({ calendarId, eventId, requestBody: patch });
       return data;
+    },
+    async getEvent(eventId) {
+      try {
+        const { data } = await cal.events.get({ calendarId, eventId });
+        return data;
+      } catch (e) {
+        const err = e as { code?: number };
+        if (err && err.code === 404) return null;
+        throw e;
+      }
     },
   };
 }
@@ -179,6 +212,16 @@ export function createCalendarClient(opts?: { saB64?: string; calendarId?: strin
     async patchEvent(eventId, patch) {
       const { data } = await cal.events.patch({ calendarId, eventId, requestBody: patch });
       return data;
+    },
+    async getEvent(eventId) {
+      try {
+        const { data } = await cal.events.get({ calendarId, eventId });
+        return data;
+      } catch (e) {
+        const err = e as { code?: number };
+        if (err && err.code === 404) return null;
+        throw e;
+      }
     },
   };
 }

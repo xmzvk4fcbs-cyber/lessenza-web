@@ -1718,27 +1718,33 @@ html { scroll-behavior: smooth; scroll-padding-top: 88px; -webkit-font-smoothing
   color: var(--text-light, #6B5F52);
   word-break: break-all;
 }
+/* 3-column grid so 3 icon-only buttons (Pozovi/WhatsApp/Viber) fit row 1 and
+   the 5 text actions fill 2 more rows without text overlapping cells. */
 .appt-card__actions--manage {
-  display: flex;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
   gap: 6px;
   margin-top: 12px;
 }
 .appt-card__actions--manage .btn {
-  flex: 0 1 auto;
   min-width: 0;
-  font-size: 0.82rem;
-  min-height: 44px;
-  padding: 8px 14px;
-  font-weight: 500;
+  font-size: 0.78rem;
+  min-height: 42px;
+  padding: 8px 6px;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+/* Last row: when there are 5 text actions, last button (Otkaži) spans 2 cells. */
+.appt-card__actions--manage .btn[data-action="cancel"] {
+  grid-column: span 2;
 }
 .appt-card__actions--manage .btn[title="Pozovi"],
 .appt-card__actions--manage .btn[title="WhatsApp"],
 .appt-card__actions--manage .btn[title="Viber"] {
-  flex: 0 0 44px;
+  font-size: 1.1rem;
   padding: 8px 0;
-  min-width: 44px;
-  font-size: 1.05rem;
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -2029,15 +2035,14 @@ html { scroll-behavior: smooth; scroll-padding-top: 88px; -webkit-font-smoothing
   gap: 2px;
   margin: 0 -16px 1rem;
   padding: 10px 16px 8px;
-  background: rgba(249, 242, 229, 0.94);
-  backdrop-filter: blur(14px);
-  -webkit-backdrop-filter: blur(14px);
-  border-bottom: 1px solid rgba(217, 192, 154, 0.4);
+  background: rgba(253, 250, 244, 0.98);
+  backdrop-filter: blur(20px) saturate(1.4);
+  -webkit-backdrop-filter: blur(20px) saturate(1.4);
+  border-bottom: 1px solid rgba(217, 192, 154, 0.55);
+  /* Hard-stop the blur so content scrolling under doesn't bleed through */
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.6) inset;
 }
-.view-switcher {
-  background: rgba(249, 242, 229, 0.94);
-  border-radius: 0;
-}
+.view-switcher { border-radius: 0; }
 .view-btn {
   appearance: none;
   -webkit-appearance: none;

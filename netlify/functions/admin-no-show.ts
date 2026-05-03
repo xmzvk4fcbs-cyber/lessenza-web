@@ -2,7 +2,7 @@ import type { Handler } from "@netlify/functions";
 import { json, badRequest, notFound, methodNotAllowed, parseJson } from "../lib/http";
 import { adminGuard } from "../lib/admin-guard";
 import { getServices, getNoShows, recordNoShow, getSettings, appendCancellation } from "../lib/config";
-import { createCalendarClient, createCalendarClientAsync, type CalendarClient } from "../lib/calendar";
+import { createCalendarClient, createCalendarClientAsync, fetchEventById, type CalendarClient } from "../lib/calendar";
 import { eventToBooking } from "../lib/calendar-domain";
 import { normalizePhone } from "../lib/phone";
 
@@ -35,11 +35,7 @@ const inner: Handler = async (event) => {
   const cal = await getCal();
   const services = await getServices();
   const now = new Date();
-  const events = await cal.listEvents({
-    timeMin: new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000).toISOString(),
-    timeMax: new Date(now.getTime() + 365 * 24 * 60 * 60 * 1000).toISOString(),
-  });
-  const target = events.find((e) => e.id === eventId);
+  const target = await fetchEventById(cal, eventId);
   if (!target) return notFound("Event not found");
   const booking = eventToBooking(target, services);
   if (!booking || !booking.phoneE164) {

@@ -2,7 +2,7 @@ import { randomUUID } from "node:crypto";
 import type { Handler } from "@netlify/functions";
 import { json, badRequest, notFound, methodNotAllowed, parseJson, serverError } from "../lib/http";
 import { adminGuard } from "../lib/admin-guard";
-import { createCalendarClient, createCalendarClientAsync, type CalendarClient } from "../lib/calendar";
+import { createCalendarClient, createCalendarClientAsync, fetchEventById, type CalendarClient } from "../lib/calendar";
 import { getServices, getSettings } from "../lib/config";
 import { eventToBooking, bookingToEvent, type Booking } from "../lib/calendar-domain";
 import { getMailerAsync, type Mailer } from "../lib/mailer";
@@ -61,13 +61,8 @@ const inner: Handler = async (event) => {
   const cal = await makeCalendarAsync();
   const reason = (body.reason ?? "").trim();
 
-  // 1. Fetch old event to capture original booking for the cancel email.
-  const nowMs = Date.now();
-  const existing = await cal.listEvents({
-    timeMin: new Date(nowMs - 24 * 60 * 60 * 1000).toISOString(),
-    timeMax: new Date(nowMs + 365 * 24 * 60 * 60 * 1000).toISOString(),
-  });
-  const oldEvent = existing.find((e) => e.id === body.oldEventId);
+  // 1. Fetch old event by ID — direct lookup (listEvents windows can miss).
+  const oldEvent = await fetchEventById(cal, body.oldEventId);
   if (!oldEvent) return notFound("Old event not found");
   const oldBooking = eventToBooking(oldEvent, services);
 
