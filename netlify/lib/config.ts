@@ -84,6 +84,13 @@ export async function setSettings(patch: Partial<Settings>): Promise<Settings> {
   await store().setJSON(KEY_SETTINGS, next);
   return next;
 }
+/** Direct replace — used when caller has already merged + cleared optional
+ *  fields and wants the store to honour explicit deletions. */
+export async function replaceSettings(full: Settings): Promise<Settings> {
+  const validated = SettingsSchema.parse(full);
+  await store().setJSON(KEY_SETTINGS, validated);
+  return validated;
+}
 
 export async function getParallelPairs(): Promise<ParallelPair[]> {
   const raw = await store().getJSON<unknown>(KEY_PAIRS);
