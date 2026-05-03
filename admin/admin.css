@@ -611,7 +611,13 @@ html { scroll-behavior: smooth; scroll-padding-top: 88px; -webkit-font-smoothing
   align-items: flex-end;
   margin-bottom: 0.75rem;
 }
-.field { margin-bottom: 0; }
+.field {
+  margin-bottom: 0;
+  /* Defensive: never let a child overflow the available column. */
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
+}
 .field label {
   display: block;
   font-weight: 500;
@@ -623,6 +629,7 @@ html { scroll-behavior: smooth; scroll-padding-top: 88px; -webkit-font-smoothing
 .field input, .field select, .field textarea {
   width: 100%;
   max-width: 100%;
+  min-width: 0; /* iOS date/time inputs can claim wider intrinsic min-width — neutralise */
   box-sizing: border-box;
   padding: 0.75rem 0.9rem;
   border: 1px solid var(--champagne-deep, #D9C09A);
