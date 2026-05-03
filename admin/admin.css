@@ -1766,33 +1766,77 @@ html { scroll-behavior: smooth; scroll-padding-top: 88px; -webkit-font-smoothing
   color: var(--text-light, #6B5F52);
   word-break: break-all;
 }
-/* 3-column grid so 3 icon-only buttons (Pozovi/WhatsApp/Viber) fit row 1 and
-   the 5 text actions fill 2 more rows without text overlapping cells. */
+/* === appt-card--manage two-tier layout =================================
+   Card is a flex column. Row 1 = top (time + body, 2-col grid).
+   Row 2 = actions, FULL CARD WIDTH so 8 buttons have room to breathe. */
+.appt-card.appt-card--manage {
+  display: flex;
+  flex-direction: column;
+  padding: 14px 14px 14px 0;
+  gap: 0;
+}
+.appt-card.appt-card--manage::before { top: 0; bottom: 0; }
+.appt-card__top {
+  display: grid;
+  grid-template-columns: 88px 1fr;
+  gap: 14px;
+}
 .appt-card__actions--manage {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 14px 14px 0;
+  padding-top: 12px;
+  border-top: 1px dashed rgba(217, 192, 154, 0.5);
+}
+/* Contact row — 3 icon-only buttons in 3 equal cells */
+.ac-group--contact {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 6px;
-  margin-top: 12px;
+  gap: 8px;
 }
-.appt-card__actions--manage .btn {
+.ac-group--contact .ac-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  border: 1px solid rgba(217, 192, 154, 0.55);
+  border-radius: 12px;
+  background: #fff;
+  color: var(--gold-dark, #8B6F2B);
+  cursor: pointer;
+  text-decoration: none;
+  transition: all 0.2s var(--ease, ease);
+  -webkit-tap-highlight-color: transparent;
+  box-shadow: var(--sh-soft);
+}
+.ac-group--contact .ac-icon:hover {
+  background: var(--gold, #C9A961);
+  color: #fff;
+  border-color: var(--gold, #C9A961);
+  transform: translateY(-1px);
+  box-shadow: var(--sh-gold);
+}
+.ac-group--contact .ac-icon:active { transform: translateY(0) scale(0.96); }
+/* Manage row — 5 text buttons in 3 columns; Otkaži (last) spans 2 */
+.ac-group--manage {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+.ac-group--manage .btn {
   min-width: 0;
-  font-size: 0.78rem;
-  min-height: 42px;
-  padding: 8px 6px;
+  min-height: 44px;
+  padding: 10px 8px;
+  font-size: 0.82rem;
   font-weight: 600;
+  letter-spacing: 0.01em;
   white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
 }
-/* Last row: when there are 5 text actions, last button (Otkaži) spans 2 cells. */
-.appt-card__actions--manage .btn[data-action="cancel"] {
-  grid-column: span 2;
-}
-.appt-card__actions--manage .btn[title="Pozovi"],
-.appt-card__actions--manage .btn[title="WhatsApp"],
-.appt-card__actions--manage .btn[title="Viber"] {
-  font-size: 1.1rem;
-  padding: 8px 0;
+.ac-group--manage .btn[data-action="cancel"] { grid-column: span 2; }
+@media (max-width: 380px) {
+  .ac-group--manage { grid-template-columns: repeat(2, 1fr); }
+  .ac-group--manage .btn[data-action="cancel"] { grid-column: span 2; }
 }
 
 @media (prefers-reduced-motion: reduce) {
