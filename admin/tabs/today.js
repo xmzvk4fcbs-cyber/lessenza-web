@@ -508,14 +508,19 @@ function renderCard(a) {
         </div>
       </div>
       <div class="appt-card__actions appt-card__actions--manage">
-        ${phone ? `<a class="btn btn-ghost" href="tel:${phone}">Pozovi</a>` : ""}
-        ${phone ? `<button class="btn btn-ghost" type="button" data-action="wa">WhatsApp</button>` : ""}
-        ${phone ? `<button class="btn btn-ghost" type="button" data-action="viber">Viber</button>` : ""}
-        <button class="btn btn-ghost" type="button" data-action="reschedule">Pomjeri</button>
-        <button class="btn btn-ghost" type="button" data-action="swap">Zamijeni</button>
-        <button class="btn btn-ghost" type="button" data-action="noshow">Nije došla</button>
-        <button class="btn btn-ghost" type="button" data-action="reject">Odbij</button>
-        <button class="btn btn-danger appt-card__cancel" type="button" data-action="cancel">Otkaži termin</button>
+        ${phone ? `
+        <div class="ac-row ac-row--contact">
+          <a class="btn btn-ghost" href="tel:${phone}">Pozovi</a>
+          <button class="btn btn-ghost" type="button" data-action="wa">WhatsApp</button>
+          <button class="btn btn-ghost" type="button" data-action="viber">Viber</button>
+        </div>` : ""}
+        <div class="ac-row ac-row--manage">
+          <button class="btn btn-ghost" type="button" data-action="reschedule">Pomjeri</button>
+          <button class="btn btn-ghost" type="button" data-action="swap">Zamijeni</button>
+          <button class="btn btn-ghost" type="button" data-action="noshow">Nije došla</button>
+          <button class="btn btn-ghost" type="button" data-action="reject">Odbij</button>
+        </div>
+        <button class="btn btn-danger ac-cancel" type="button" data-action="cancel">Otkaži termin</button>
       </div>
     </article>
   `;

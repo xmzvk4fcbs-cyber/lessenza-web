@@ -1849,36 +1849,45 @@ html { scroll-behavior: smooth; scroll-padding-top: 88px; -webkit-font-smoothing
 }
 .acsheet__row--danger { color: #8B3A3E; }
 .acsheet__row--danger .acsheet__icon { background: #FBEDEC; color: #8B3A3E; }
-/* PHONE: each action is its own full-width row — labels can never be
-   truncated, hierarchy is unambiguous. WIDER screens get 2 / 4 columns. */
+/* === Action panel — 3 visually distinct groups ========================
+   Row 1: Contact (Pozovi/WhatsApp/Viber) — 3 equal cols
+   Row 2: Manage (Pomjeri/Zamijeni/Nije došla/Odbij) — 2x2 on phone
+   Row 3: Otkaži (full-width danger)
+============================================================================ */
 .appt-card__actions--manage {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 10px;
   margin: 0 14px;
   padding-top: 14px;
   border-top: 1px solid rgba(217, 192, 154, 0.4);
 }
+.ac-row {
+  display: grid;
+  gap: 6px;
+}
+.ac-row--contact { grid-template-columns: repeat(3, 1fr); }
+.ac-row--manage  { grid-template-columns: repeat(2, 1fr); }
 .appt-card__actions--manage .btn {
   width: 100%;
-  min-height: 46px;
-  padding: 12px 16px;
-  font-size: 0.92rem;
+  min-height: 44px;
+  padding: 10px 12px;
+  font-size: 0.85rem;
   font-weight: 600;
   letter-spacing: 0.01em;
   justify-content: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
+.ac-cancel { width: 100%; min-height: 46px; }
+
 @media (min-width: 480px) {
-  .appt-card__actions--manage {
-    display: grid;
-    grid-template-columns: repeat(2, 1fr);
-  }
-  .appt-card__actions--manage .btn { width: auto; }
-  .appt-card__actions--manage .btn.appt-card__cancel { grid-column: 1 / -1; }
+  .ac-row--manage { grid-template-columns: repeat(4, 1fr); }
 }
 @media (min-width: 720px) {
-  .appt-card__actions--manage { grid-template-columns: repeat(4, 1fr); }
-  .appt-card__actions--manage .btn.appt-card__cancel { grid-column: 4 / span 1; }
+  .ac-row--contact { grid-template-columns: repeat(3, minmax(0, 1fr)); max-width: 50%; }
+  .ac-row--manage  { grid-template-columns: repeat(4, 1fr); }
 }
 .btn--sm {
   min-height: 38px;
