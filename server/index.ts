@@ -114,6 +114,10 @@ function mountStatic(): void {
         res.setHeader("Cache-Control", "public, max-age=2592000, immutable");
       } else if (/\.html$/i.test(filePath)) {
         res.setHeader("Cache-Control", "public, max-age=60");
+      } else if (/\/admin\//i.test(filePath)) {
+        // Admin JS/CSS — never trust browser cache. Owner edits land
+        // immediately. Slightly heavier on bandwidth, worth it for sanity.
+        res.setHeader("Cache-Control", "no-cache, must-revalidate");
       } else {
         res.setHeader("Cache-Control", "public, max-age=600");
       }
