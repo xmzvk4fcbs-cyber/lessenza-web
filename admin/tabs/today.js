@@ -489,39 +489,105 @@ function renderCard(a) {
   const hh = String(start.getHours()).padStart(2, "0");
   const mm = String(start.getMinutes()).padStart(2, "0");
   const dateLabel = start.toLocaleDateString("sr-Latn", { weekday: "short", day: "numeric", month: "short" });
+  // iOS-style pattern: card shows only essentials (time + client + service + phone).
+  // Actions hidden behind a single "Akcije ▾" button that opens a bottom sheet.
   return `
     <article class="appt-card appt-card--manage" data-event-id="${escapeHtml(a.calendarEventId)}" data-service-id="${escapeHtml(a.serviceId || "")}" data-name="${escapeHtml(a.name)}" data-phone="${phone}" data-service="${escapeHtml(a.serviceName)}" data-start="${escapeHtml(a.startISO)}" data-end="${escapeHtml(a.endISO)}">
-      <div class="appt-card__top">
-        <div class="appt-card__time">
-          <span class="appt-card__day">${escapeHtml(dateLabel)}</span>
-          <span class="appt-card__hh">${hh}</span><span class="appt-card__sep">:</span><span class="appt-card__mm">${mm}</span>
-          <span class="appt-card__dur">${dur} min</span>
-        </div>
-        <div class="appt-card__body">
-          <div class="appt-card__name">${escapeHtml(a.name)}</div>
-          <div class="appt-card__service">${escapeHtml(a.serviceName)}</div>
-          ${phone ? `<div class="appt-card__phone">${phone}</div>` : ""}
-          ${emailLine}
-          ${noteLine}
-        </div>
+      <div class="appt-card__time">
+        <span class="appt-card__day">${escapeHtml(dateLabel)}</span>
+        <span class="appt-card__hh">${hh}</span><span class="appt-card__sep">:</span><span class="appt-card__mm">${mm}</span>
+        <span class="appt-card__dur">${dur} min</span>
       </div>
-      <div class="appt-card__actions appt-card__actions--manage">
-        ${phone ? `<a class="btn btn-ghost btn--sm" href="tel:${phone}">Pozovi</a>` : ""}
-        ${phone ? `<button class="btn btn-ghost btn--sm" type="button" data-action="wa">WhatsApp</button>` : ""}
-        ${phone ? `<button class="btn btn-ghost btn--sm" type="button" data-action="viber">Viber</button>` : ""}
-        <button class="btn btn-ghost btn--sm" type="button" data-action="reschedule">Pomjeri</button>
-        <button class="btn btn-ghost btn--sm" type="button" data-action="swap">Zamijeni</button>
-        <button class="btn btn-ghost btn--sm" type="button" data-action="noshow">Nije došla</button>
-        <button class="btn btn-ghost btn--sm" type="button" data-action="reject">Odbij</button>
-        <button class="btn btn-danger btn--sm" type="button" data-action="cancel">Otkaži</button>
+      <div class="appt-card__body">
+        <div class="appt-card__name">${escapeHtml(a.name)}</div>
+        <div class="appt-card__service">${escapeHtml(a.serviceName)}</div>
+        ${phone ? `<div class="appt-card__phone">${phone}</div>` : ""}
+        ${emailLine}
+        ${noteLine}
+        <button class="appt-card__open-actions" type="button" data-action="open-sheet" aria-label="Otvori akcije">Akcije <span aria-hidden="true">▾</span></button>
       </div>
     </article>
   `;
 }
 
+function openActionSheet(card) {
+  const eventId = card.dataset.eventId;
+  const name = card.dataset.name || "";
+  const phone = card.dataset.phone || "";
+  const service = card.dataset.service || "";
+  const start = card.dataset.start || "";
+  const startLabel = start ? fmtDateTime(start) : "";
+
+  const phoneRow = phone ? `
+    <a class="acsheet__row" href="tel:${escapeHtml(phone)}">
+      <span class="acsheet__icon">📞</span>
+      <span class="acsheet__label">Pozovi</span>
+      <span class="acsheet__hint">${escapeHtml(phone)}</span>
+    </a>
+    <button class="acsheet__row" type="button" data-action="wa">
+      <span class="acsheet__icon">💬</span>
+      <span class="acsheet__label">WhatsApp</span>
+    </button>
+    <button class="acsheet__row" type="button" data-action="viber">
+      <span class="acsheet__icon">🟣</span>
+      <span class="acsheet__label">Viber</span>
+    </button>` : "";
+
+  openModal(`${service} — ${name}`, `
+    <div class="acsheet">
+      <p class="acsheet__when">${escapeHtml(startLabel)}</p>
+      <div class="acsheet__group">${phoneRow}</div>
+      <div class="acsheet__group">
+        <button class="acsheet__row" type="button" data-action="reschedule">
+          <span class="acsheet__icon">↻</span>
+          <span class="acsheet__label">Pomjeri termin</span>
+        </button>
+        <button class="acsheet__row" type="button" data-action="swap">
+          <span class="acsheet__icon">⇄</span>
+          <span class="acsheet__label">Zamijeni termin</span>
+        </button>
+        <button class="acsheet__row" type="button" data-action="noshow">
+          <span class="acsheet__icon">⊘</span>
+          <span class="acsheet__label">Nije došla</span>
+        </button>
+        <button class="acsheet__row" type="button" data-action="reject">
+          <span class="acsheet__icon">×</span>
+          <span class="acsheet__label">Odbij</span>
+        </button>
+      </div>
+      <div class="acsheet__group">
+        <button class="acsheet__row acsheet__row--danger" type="button" data-action="cancel">
+          <span class="acsheet__icon">✕</span>
+          <span class="acsheet__label">Otkaži termin</span>
+        </button>
+      </div>
+    </div>
+  `);
+  // Wire actions inside the sheet to the existing onAction handler by
+  // synthesising a card-like element with the same dataset.
+  const sheet = document.querySelector(".acsheet");
+  if (sheet) {
+    sheet.querySelectorAll("[data-action]").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        closeModal();
+        const fakeCard = document.createElement("div");
+        fakeCard.className = "appt-card";
+        Object.assign(fakeCard.dataset, card.dataset);
+        document.body.appendChild(fakeCard);
+        const fakeBtn = document.createElement("button");
+        fakeBtn.dataset.action = btn.dataset.action;
+        fakeCard.appendChild(fakeBtn);
+        onAction({ currentTarget: fakeBtn, preventDefault() {} });
+        setTimeout(() => fakeCard.remove(), 50);
+      });
+    });
+  }
+}
+
 async function onAction(e) {
   const action = e.currentTarget.dataset.action;
   const card = e.currentTarget.closest(".appt-card, .stack-card");
+  if (action === "open-sheet") { openActionSheet(card); return; }
   const eventId = card.dataset.eventId;
   const name = card.dataset.name;
   const phone = card.dataset.phone;

@@ -251,9 +251,9 @@ saveBtn.addEventListener("click", async () => {
     else payload[key] = el.value;
   }
   // Strip empty optional fields so Zod accepts as undefined
-  for (const k of ["ownerEmail", "ownerPhone", "publicPhone", "publicEmail", "whatsappPhone", "instagramUrl", "analyticsScript", "emailGreeting", "emailClosing", "emailSignature", "bannerText", "bannerLinkText", "bannerLinkUrl", "reviewLinkUrl", "aboutText", "aboutMission"]) {
-    if (!payload[k]) delete payload[k];
-  }
+  // NOTE: do NOT strip empty fields. Server-side admin-settings handler
+  // converts "" → undefined for optional fields, which is the correct way
+  // to CLEAR a previously-set value (banner text, review link, etc).
   try {
     await must("/api/admin/settings", { method: "PATCH", body: payload });
     toast("Podešavanja sačuvana.", "success");

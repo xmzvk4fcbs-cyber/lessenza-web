@@ -16,7 +16,17 @@ const inner: Handler = async (event) => {
       return badRequest("invalid-json", "Body must be JSON");
     }
     const current = await getSettings();
-    const merged = { ...current, ...(body as object) };
+    // Empty string from a cleared optional field means "remove this value".
+    // Zod's .url() chokes on "" — pre-clean by converting empties to undefined.
+    const cleaned: Record<string, unknown> = {};
+    for (const [k, v] of Object.entries(body as Record<string, unknown>)) {
+      cleaned[k] = (typeof v === "string" && v.trim() === "") ? undefined : v;
+    }
+    const merged = { ...current, ...cleaned };
+    // Drop keys explicitly set to undefined so they're not carried over from current.
+    for (const k of Object.keys(cleaned)) {
+      if (cleaned[k] === undefined) delete (merged as Record<string, unknown>)[k];
+    }
     const parsed = SettingsSchema.safeParse(merged);
     if (!parsed.success) return badRequest("bad-settings", parsed.error.message);
     await setSettings(parsed.data);
