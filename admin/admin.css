@@ -1787,9 +1787,9 @@ html { scroll-behavior: smooth; scroll-padding-top: 88px; -webkit-font-smoothing
 .appt-card.appt-card--manage::before { top: 14px; bottom: 14px; }
 .appt-card.appt-card--manage .appt-card__top {
   display: grid;
-  grid-template-columns: 76px 1fr;
-  gap: 14px;
-  padding: 14px 14px 14px 0;
+  grid-template-columns: 72px 1fr;
+  gap: 12px;
+  padding: 12px 12px 12px 0;
 }
 
 /* === Bottom action sheet — full-width tappable rows in modal =========== */
@@ -1859,10 +1859,11 @@ html { scroll-behavior: smooth; scroll-padding-top: 88px; -webkit-font-smoothing
 .appt-card__actions--manage {
   display: flex;
   flex-direction: column;
-  gap: 10px;
-  margin: 0 14px;
-  padding-top: 14px;
+  gap: 6px;
+  margin: 0 12px;
+  padding-top: 12px;
   border-top: 1px solid rgba(217, 192, 154, 0.4);
+  box-sizing: border-box;
 }
 .ac-row {
   display: grid;
@@ -1872,21 +1873,29 @@ html { scroll-behavior: smooth; scroll-padding-top: 88px; -webkit-font-smoothing
 .ac-row--manage  { grid-template-columns: repeat(2, 1fr); }
 .appt-card__actions--manage .btn {
   width: 100%;
-  min-height: 42px;
-  padding: 8px 10px;
-  font-size: 0.82rem;
+  min-height: 38px;
+  padding: 6px 6px;
+  font-size: 0.78rem;
   font-weight: 600;
-  letter-spacing: 0.01em;
+  letter-spacing: 0.005em;
   justify-content: center;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
   box-sizing: border-box;
 }
-.ac-cancel { width: 100%; min-height: 44px; }
+.ac-cancel { width: 100%; min-height: 40px; font-size: 0.82rem !important; }
+/* Tiny phones (≤360px) — even tighter so labels still fit */
+@media (max-width: 360px) {
+  .appt-card__actions--manage .btn { font-size: 0.74rem; padding: 6px 4px; }
+}
 
 @media (min-width: 480px) {
   .ac-row--manage { grid-template-columns: repeat(4, 1fr); }
+  .appt-card__actions--manage .btn { font-size: 0.84rem; padding: 8px 12px; min-height: 42px; }
+}
+@media (min-width: 720px) {
+  .appt-card__actions--manage .btn { font-size: 0.88rem; min-height: 44px; }
 }
 .btn--sm {
   min-height: 38px;
