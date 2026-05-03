@@ -516,32 +516,54 @@ html { scroll-behavior: smooth; scroll-padding-top: 88px; -webkit-font-smoothing
 .stack { display: flex; flex-direction: column; gap: 12px; margin-top: 1rem; }
 
 .stack-card {
+  position: relative;
   background: #FFFFFF;
-  border: 1px solid rgba(217, 192, 154, 0.55);
-  border-radius: 14px;
-  padding: 1rem 1.1rem;
-  box-shadow: 0 1px 2px rgba(74, 66, 56, 0.05);
-  transition: box-shadow 0.3s cubic-bezier(0.16, 1, 0.3, 1), transform 0.2s, border-color 0.2s;
+  border: 1px solid rgba(217, 192, 154, 0.5);
+  border-radius: var(--r-lg);
+  padding: var(--s-4) var(--s-5);
+  box-shadow: var(--sh-card);
+  transition: box-shadow var(--t-mid), transform var(--t-fast), border-color var(--t-fast);
+}
+.stack-card::before {
+  content: '';
+  position: absolute;
+  left: 0; top: 16px; bottom: 16px;
+  width: 2px;
+  background: linear-gradient(180deg, rgba(201, 169, 97, 0.45), transparent);
+  border-radius: 0 2px 2px 0;
+  opacity: 0;
+  transition: opacity var(--t-mid);
 }
 .stack-card:hover {
-  box-shadow: 0 8px 22px rgba(74, 66, 56, 0.1);
-  border-color: rgba(201, 169, 97, 0.6);
+  box-shadow: var(--sh-lift);
+  border-color: rgba(201, 169, 97, 0.55);
   transform: translateY(-1px);
 }
-.stack-card__head { display: flex; justify-content: space-between; align-items: flex-start; gap: 0.5rem; }
+.stack-card:hover::before { opacity: 1; }
+.stack-card__head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: var(--s-3);
+}
 .stack-card__title {
   font-family: 'Cormorant Garamond', Georgia, serif;
   font-weight: 500;
-  font-size: 1.15rem;
-  color: var(--sage, #6B6F4F);
+  font-size: 1.2rem;
+  line-height: 1.25;
+  color: var(--text, #4A4238);
+  letter-spacing: -0.005em;
   word-break: break-word;
   overflow-wrap: anywhere;
 }
 .stack-card__meta {
-  color: var(--gold, #C9A961);
-  font-size: 0.85rem;
+  color: var(--gold-dark, #8B6F2B);
+  font-family: 'Outfit', sans-serif;
+  font-size: 0.78rem;
   font-weight: 500;
-  margin-top: 2px;
+  letter-spacing: 0.04em;
+  margin-top: 4px;
+  line-height: 1.5;
 }
 .stack-card__details {
   margin-top: 0.6rem;
@@ -550,13 +572,31 @@ html { scroll-behavior: smooth; scroll-padding-top: 88px; -webkit-font-smoothing
   display: flex; flex-direction: column; gap: 4px;
 }
 .stack-card__actions {
-  display: flex; flex-wrap: wrap; gap: 6px;
-  margin-top: 0.85rem;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s-2);
+  margin-top: var(--s-4);
+  padding-top: var(--s-3);
+  border-top: 1px dashed rgba(217, 192, 154, 0.5);
 }
 .stack-card__actions .btn {
   flex: 1 1 calc(50% - 4px);
   min-width: 0;
+  min-height: 44px;
+  padding: 10px 14px;
   font-size: 0.85rem;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+}
+/* When there are 3+ buttons, switch to a 3-column grid for cleaner rhythm */
+.stack-card__actions:has(.btn:nth-child(3)) {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+}
+.stack-card__actions:has(.btn:nth-child(3)) .btn { flex: none; padding: 10px 8px; font-size: 0.8rem; }
+/* Fallback for browsers without :has — works fine, just less clever layout */
+@supports not selector(:has(*)) {
+  .stack-card__actions .btn { font-size: 0.82rem; }
 }
 
 /* === Forms === */
@@ -2012,18 +2052,42 @@ html { scroll-behavior: smooth; scroll-padding-top: 88px; -webkit-font-smoothing
 .inq-overlay-card__svc { color: var(--text-light); font-size: 0.85rem; }
 .inq-overlay-card__meta { margin-top: 0.2rem; font-size: 0.85rem; color: var(--text-light); }
 
-/* === Link all sage/gold/cream tokens to public palette === */
+/* === Design tokens — single source of truth for the whole admin
+   Editorial Maison aesthetic: a private atelier appointment book.
+   Hermès workshop meets Aesop restraint. =============================== */
 :root {
+  /* Palette */
   --cream: #F4ECDB;
   --cream-soft: #F9F2E5;
   --champagne: #E8D5B5;
   --champagne-deep: #D9C09A;
   --gold: #C9A961;
   --gold-light: #E0C58A;
+  --gold-dark: #8B6F2B;          /* WCAG AA on cream */
   --sage: #6B6F4F;
   --text: #4A4238;
-  --text-light: #7A6F62;
+  --text-light: #6B5F52;         /* slightly darker than before for AA */
   --white-warm: #FBF8F2;
+  --burgundy: #8B3A3E;
+  --moss: #4F6B41;
+
+  /* Spacing — strict 4-pt scale */
+  --s-1: 4px; --s-2: 8px; --s-3: 12px; --s-4: 16px;
+  --s-5: 20px; --s-6: 24px; --s-8: 32px; --s-10: 40px; --s-12: 48px;
+
+  /* Radii */
+  --r-sm: 8px; --r-md: 12px; --r-lg: 14px; --r-xl: 18px; --r-pill: 999px;
+
+  /* Shadows — soft, layered, never harsh */
+  --sh-soft: 0 1px 2px rgba(74, 66, 56, 0.05);
+  --sh-card: 0 1px 1px rgba(74, 66, 56, 0.04), 0 4px 12px -4px rgba(74, 66, 56, 0.06);
+  --sh-lift: 0 1px 1px rgba(74, 66, 56, 0.05), 0 12px 28px -10px rgba(74, 66, 56, 0.14);
+  --sh-gold: 0 6px 18px rgba(201, 169, 97, 0.3);
+
+  /* Motion */
+  --ease: cubic-bezier(0.16, 1, 0.3, 1);
+  --t-fast: 0.15s var(--ease);
+  --t-mid: 0.25s var(--ease);
 }
 
 /* ============================================

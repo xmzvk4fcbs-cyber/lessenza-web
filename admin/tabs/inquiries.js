@@ -40,11 +40,11 @@ function renderInquiryCard(i, svcById) {
       </div>
       <div class="stack-card__actions">
         ${i.status === "pending" ? `
-          <button class="btn btn-primary" type="button" data-accept>✓ Prihvati</button>
-          <button class="btn btn-danger" type="button" data-decline>✕ Odbij</button>
+          <button class="btn btn-primary" type="button" data-accept>Prihvati</button>
+          <button class="btn btn-danger" type="button" data-decline>Odbij</button>
         ` : ""}
-        <a class="btn btn-ghost" href="tel:${escapeHtml(i.phone)}">📞 Pozovi</a>
-        <button class="btn btn-ghost" type="button" data-wa>📱 WhatsApp</button>
+        <a class="btn btn-ghost" href="tel:${escapeHtml(i.phone)}">Pozovi</a>
+        <button class="btn btn-ghost" type="button" data-wa>WhatsApp</button>
       </div>
     </article>
   `;
