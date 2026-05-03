@@ -1849,35 +1849,36 @@ html { scroll-behavior: smooth; scroll-padding-top: 88px; -webkit-font-smoothing
 }
 .acsheet__row--danger { color: #8B3A3E; }
 .acsheet__row--danger .acsheet__icon { background: #FBEDEC; color: #8B3A3E; }
-/* All actions visible on the card. 2-col on phone (4 rows), 4-col on
-   wider screens. Otkaži is always full-width as the final destructive
-   action. Labels NEVER clip. */
+/* PHONE: each action is its own full-width row — labels can never be
+   truncated, hierarchy is unambiguous. WIDER screens get 2 / 4 columns. */
 .appt-card__actions--manage {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
+  display: flex;
+  flex-direction: column;
   gap: 8px;
   margin: 0 14px;
   padding-top: 14px;
   border-top: 1px solid rgba(217, 192, 154, 0.4);
 }
 .appt-card__actions--manage .btn {
-  min-width: 0;
-  min-height: 44px;
-  padding: 11px 12px;
-  font-size: 0.88rem;
+  width: 100%;
+  min-height: 46px;
+  padding: 12px 16px;
+  font-size: 0.92rem;
   font-weight: 600;
   letter-spacing: 0.01em;
-  white-space: nowrap;
+  justify-content: center;
 }
-.appt-card__actions--manage .btn.appt-card__cancel { grid-column: 1 / -1; }
 @media (min-width: 480px) {
-  .appt-card__actions--manage { grid-template-columns: repeat(4, 1fr); }
-  .appt-card__actions--manage .btn.appt-card__cancel { grid-column: span 4; }
+  .appt-card__actions--manage {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .appt-card__actions--manage .btn { width: auto; }
+  .appt-card__actions--manage .btn.appt-card__cancel { grid-column: 1 / -1; }
 }
 @media (min-width: 720px) {
   .appt-card__actions--manage { grid-template-columns: repeat(4, 1fr); }
-  /* On desktop, Otkaži stays alone but right-aligned */
-  .appt-card__actions--manage .btn.appt-card__cancel { grid-column: 4 / span 1; justify-self: stretch; }
+  .appt-card__actions--manage .btn.appt-card__cancel { grid-column: 4 / span 1; }
 }
 .btn--sm {
   min-height: 38px;
@@ -2184,28 +2185,18 @@ html { scroll-behavior: smooth; scroll-padding-top: 88px; -webkit-font-smoothing
    Raspored — Dan / Sedmica / Mjesec views
    ============================================ */
 
-/* --- View switcher (segment control) --- */
+/* --- View switcher (segment control) — NORMAL flow, not sticky.
+   Sticky was hiding the period nav (arrows + date) underneath it when
+   scrolling. Cleaner UX: it scrolls with the rest of the page. */
 .view-switcher {
-  position: sticky;
-  /* Sits under admin-topbar. Topbar has padding-top: max(14px, safe-area-top),
-     plus its own content ~34px — so we offset by safe-area + 48 to guarantee
-     no overlap on notched iPhones. */
-  top: calc(env(safe-area-inset-top, 0px) + 56px);
-  z-index: 20;
+  position: relative;
+  z-index: 1;
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: 2px;
-  margin: 0 -16px 1rem;
-  padding: 10px 16px 8px;
-  background: rgba(253, 250, 244, 0.98);
-  backdrop-filter: blur(20px) saturate(1.4);
-  -webkit-backdrop-filter: blur(20px) saturate(1.4);
-  border-bottom: 1px solid rgba(217, 192, 154, 0.55);
-  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.6) inset;
-}
-.view-switcher {
-  border-radius: 0;
-  margin-top: 0 !important;
+  margin: 0 0 14px;
+  padding: 12px 0;
+  border-bottom: 1px solid rgba(217, 192, 154, 0.4);
 }
 .view-btn {
   appearance: none;
