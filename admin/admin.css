@@ -1009,6 +1009,14 @@ html { scroll-behavior: smooth; scroll-padding-top: 88px; -webkit-font-smoothing
   transform: translateX(2px);
   box-shadow: 0 6px 16px rgba(201, 169, 97, 0.5);
 }
+.tl-appt.is-compact {
+  padding: 4px 10px;
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+}
+.tl-appt.is-compact .tl-item__time { flex: 0 0 auto; }
+.tl-appt.is-compact .tl-item__title { flex: 1 1 auto; min-width: 0; }
 .tl-raw {
   background: rgba(107, 111, 79, 0.18);
   color: var(--sage, #6B6F4F);

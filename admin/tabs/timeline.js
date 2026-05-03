@@ -1,7 +1,8 @@
 // Vertical timeline for a single day — working windows, blocks, bookings.
 import { must, escapeHtml } from "../admin.js";
 
-const HOUR_PX = 64; // pixel height per hour
+const HOUR_PX = 84; // pixel height per hour — gives short appts (30 min) ~42px,
+                    // enough room for time + service + phone without clipping.
 
 function hhmmToMin(hhmm) {
   const [h, m] = hhmm.split(":").map(Number);
@@ -100,9 +101,11 @@ export async function renderTimeline(container, dateKey) {
       const end = isoToDayMinutes(a.endISO, dateKey);
       if (end <= rangeStart || start >= rangeEnd) return "";
       const top = toPx(Math.max(start, rangeStart));
-      const height = Math.max(20, toPx(Math.min(end, rangeEnd)) - top);
-      const phone = a.phoneE164 ? `<span class="tl-item__phone">📞 ${escapeHtml(a.phoneE164)}</span>` : "";
-      return `<div class="tl-appt" style="top:${top}px;height:${height}px;" data-event-id="${escapeHtml(a.calendarEventId || "")}" data-name="${escapeHtml(a.name)}" data-phone="${escapeHtml(a.phoneE164 || "")}" data-service="${escapeHtml(a.serviceName)}" data-start="${escapeHtml(a.startISO)}">
+      const height = Math.max(28, toPx(Math.min(end, rangeEnd)) - top);
+      // Adaptive: short pills (≤42px) only show time+name on one line; phone hidden.
+      const isCompact = height < 50;
+      const phone = (!isCompact && a.phoneE164) ? `<span class="tl-item__phone">📞 ${escapeHtml(a.phoneE164)}</span>` : "";
+      return `<div class="tl-appt${isCompact ? " is-compact" : ""}" style="top:${top}px;height:${height}px;" data-event-id="${escapeHtml(a.calendarEventId || "")}" data-name="${escapeHtml(a.name)}" data-phone="${escapeHtml(a.phoneE164 || "")}" data-service="${escapeHtml(a.serviceName)}" data-start="${escapeHtml(a.startISO)}">
         <span class="tl-item__time">${isoLocalHHMM(a.startISO)} – ${isoLocalHHMM(a.endISO)}</span>
         <span class="tl-item__title">${escapeHtml(a.serviceName)} — ${escapeHtml(a.name)}</span>
         ${phone}

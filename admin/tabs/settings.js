@@ -219,11 +219,16 @@ function wireSettingsTabs() {
   });
 
   // Scroll-spy: highlight the tab whose section is closest to the top
+  const tabsStrip = form.querySelector(".st-tabs");
   const setActive = (id) => {
     tabs.forEach((t) => t.classList.toggle("is-active", t.dataset.target === id));
-    // Auto-scroll the tabs strip so the active one is visible
+    // Scroll the horizontal tab strip ONLY (don't touch page scroll).
+    // scrollIntoView() is unreliable on iOS — it pulls page even with block:nearest.
     const active = form.querySelector(".st-tab.is-active");
-    if (active) active.scrollIntoView({ block: "nearest", inline: "center", behavior: "smooth" });
+    if (active && tabsStrip) {
+      const targetLeft = active.offsetLeft - (tabsStrip.clientWidth / 2) + (active.offsetWidth / 2);
+      tabsStrip.scrollTo({ left: Math.max(0, targetLeft), behavior: "smooth" });
+    }
   };
   if ("IntersectionObserver" in window) {
     const obs = new IntersectionObserver((entries) => {
