@@ -1863,25 +1863,41 @@ html { scroll-behavior: smooth; scroll-padding-top: 88px; -webkit-font-smoothing
 }
 .acsheet__row--danger { color: #8B3A3E; }
 .acsheet__row--danger .acsheet__icon { background: #FBEDEC; color: #8B3A3E; }
-/* Action grid — auto-fill min 100px, so buttons NEVER clip. They form 3
-   columns on iPhone, 4+ on wider screens. Otkaži (last) spans full width. */
+/* All actions visible on the card. 2-col on phone (4 rows), 4-col on
+   wider screens. Otkaži is always full-width as the final destructive
+   action. Labels NEVER clip. */
 .appt-card__actions--manage {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
-  gap: 6px;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 8px;
   margin: 0 14px;
-  padding-top: 12px;
+  padding-top: 14px;
   border-top: 1px solid rgba(217, 192, 154, 0.4);
 }
-.btn--sm {
-  min-height: 40px;
-  padding: 8px 10px;
-  font-size: 0.8rem;
+.appt-card__actions--manage .btn {
+  min-width: 0;
+  min-height: 44px;
+  padding: 11px 12px;
+  font-size: 0.88rem;
   font-weight: 600;
   letter-spacing: 0.01em;
   white-space: nowrap;
 }
-.appt-card__actions--manage .btn[data-action="cancel"] { grid-column: 1 / -1; }
+.appt-card__actions--manage .btn.appt-card__cancel { grid-column: 1 / -1; }
+@media (min-width: 480px) {
+  .appt-card__actions--manage { grid-template-columns: repeat(4, 1fr); }
+  .appt-card__actions--manage .btn.appt-card__cancel { grid-column: span 4; }
+}
+@media (min-width: 720px) {
+  .appt-card__actions--manage { grid-template-columns: repeat(4, 1fr); }
+  /* On desktop, Otkaži stays alone but right-aligned */
+  .appt-card__actions--manage .btn.appt-card__cancel { grid-column: 4 / span 1; justify-self: stretch; }
+}
+.btn--sm {
+  min-height: 38px;
+  padding: 8px 12px;
+  font-size: 0.82rem;
+}
 
 @media (prefers-reduced-motion: reduce) {
   .skel { animation: none; background: rgba(217, 192, 154, 0.28); }
@@ -2199,10 +2215,16 @@ html { scroll-behavior: smooth; scroll-padding-top: 88px; -webkit-font-smoothing
   backdrop-filter: blur(20px) saturate(1.4);
   -webkit-backdrop-filter: blur(20px) saturate(1.4);
   border-bottom: 1px solid rgba(217, 192, 154, 0.55);
-  /* Hard-stop the blur so content scrolling under doesn't bleed through */
   box-shadow: 0 1px 0 rgba(255, 255, 255, 0.6) inset;
 }
-.view-switcher { border-radius: 0; }
+.view-switcher {
+  border-radius: 0;
+  /* Pull up against the topbar — admin-main has 16px top padding, cancel it. */
+  margin-top: -16px !important;
+}
+@media (max-width: 400px) {
+  .view-switcher { margin-top: -12px !important; }
+}
 .view-btn {
   appearance: none;
   -webkit-appearance: none;
