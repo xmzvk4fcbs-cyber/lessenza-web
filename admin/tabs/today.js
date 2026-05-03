@@ -231,7 +231,6 @@ function renderBriefing(host, dateKey, bookings) {
   if (n === 0) {
     host.innerHTML = `
       <div class="briefing">
-        <div class="briefing__eyebrow">Pregled dana</div>
         <h3 class="briefing__title">${escapeHtml(title)}</h3>
         <div class="briefing__row">
           <span class="briefing__stat"><strong>0</strong> termina</span>
@@ -1491,16 +1490,25 @@ function updateSwitcherUI() {
 
 function updateNavLabel() {
   if (!NAV_LABEL) return;
+  const navRow = document.getElementById("view-nav");
+  const todayKey = (() => {
+    const n = new Date();
+    return `${n.getFullYear()}-${String(n.getMonth() + 1).padStart(2, "0")}-${String(n.getDate()).padStart(2, "0")}`;
+  })();
+  const isOnToday = (viewState.view === "day" && viewState.anchor === todayKey)
+    || (viewState.view === "week" && mondayOf(viewState.anchor) === mondayOf(todayKey));
+  if (navRow) navRow.dataset.onToday = isOnToday ? "1" : "0";
+
   if (viewState.view === "day") {
     const [y, m, d] = viewState.anchor.split("-").map(Number);
     const dt = new Date(y, m - 1, d);
     const dow = dt.toLocaleDateString("sr-Latn", { weekday: "long" });
-    const MONTHS = ["jan","feb","mart","april","maj","jun","jul","avg","sep","okt","nov","dec"];
-    NAV_LABEL.innerHTML = `${dow.charAt(0).toUpperCase() + dow.slice(1)} ${d}. <em>${MONTHS[m - 1]}</em>`;
+    const MONTHS = ["januar","februar","mart","april","maj","jun","jul","avgust","septembar","oktobar","novembar","decembar"];
+    NAV_LABEL.innerHTML = `${dow.charAt(0).toUpperCase() + dow.slice(1)}, ${d}. ${MONTHS[m - 1]} ${y}.<em>Pregled dana</em>`;
   } else if (viewState.view === "week") {
-    NAV_LABEL.innerHTML = weekLabel(mondayOf(viewState.anchor));
+    NAV_LABEL.innerHTML = `${weekLabel(mondayOf(viewState.anchor))}<em>Pregled sedmice</em>`;
   } else {
-    NAV_LABEL.innerHTML = monthLabel(viewState.anchor);
+    NAV_LABEL.innerHTML = `${monthLabel(viewState.anchor)}<em>Pregled mjeseca</em>`;
   }
 }
 
