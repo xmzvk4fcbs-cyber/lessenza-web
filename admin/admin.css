@@ -1766,13 +1766,15 @@ html { scroll-behavior: smooth; scroll-padding-top: 88px; -webkit-font-smoothing
   color: var(--text-light, #6B5F52);
   word-break: break-all;
 }
-/* === appt-card--manage two-tier layout =================================
-   Card is a flex column. Row 1 = top (time + body, 2-col grid).
-   Row 2 = actions, FULL CARD WIDTH so 8 buttons have room to breathe. */
+/* === appt-card--manage two-tier layout ================================
+   Top tier: ticket stub (time) + content. Bottom tier: actions, taking
+   the FULL card width so the buttons have room to breathe. The two
+   tiers are separated by a horizontal perforation, mirroring the
+   vertical one between time and content. */
 .appt-card.appt-card--manage {
   display: flex;
   flex-direction: column;
-  padding: 14px 14px 14px 0;
+  padding: 0 0 16px;
   gap: 0;
 }
 .appt-card.appt-card--manage::before { top: 0; bottom: 0; }
@@ -1780,63 +1782,75 @@ html { scroll-behavior: smooth; scroll-padding-top: 88px; -webkit-font-smoothing
   display: grid;
   grid-template-columns: 88px 1fr;
   gap: 14px;
+  padding: 16px 16px 16px 0;
 }
 .appt-card__actions--manage {
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  margin: 14px 14px 0;
-  padding-top: 12px;
-  border-top: 1px dashed rgba(217, 192, 154, 0.5);
+  gap: 10px;
+  margin: 0 16px;
+  padding-top: 14px;
+  /* Horizontal perforation, same dot pattern as the vertical one */
+  background-image: radial-gradient(circle at 50% 1px, rgba(217, 192, 154, 0.7) 1px, transparent 1.2px);
+  background-size: 8px 2px;
+  background-repeat: repeat-x;
+  background-position: top center;
 }
-/* Contact row — 3 icon-only buttons in 3 equal cells */
+
+/* Contact row — 3 icon-only buttons, soft cream-tinted background block */
 .ac-group--contact {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 8px;
+  gap: 6px;
+  padding: 6px;
+  background: var(--cream-soft, #F9F2E5);
+  border-radius: 12px;
 }
 .ac-group--contact .ac-icon {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-height: 44px;
-  border: 1px solid rgba(217, 192, 154, 0.55);
-  border-radius: 12px;
+  min-height: 42px;
+  border: 0;
+  border-radius: 9px;
   background: #fff;
   color: var(--gold-dark, #8B6F2B);
   cursor: pointer;
   text-decoration: none;
   transition: all 0.2s var(--ease, ease);
   -webkit-tap-highlight-color: transparent;
-  box-shadow: var(--sh-soft);
+  box-shadow: 0 1px 2px rgba(74, 66, 56, 0.06);
 }
 .ac-group--contact .ac-icon:hover {
   background: var(--gold, #C9A961);
   color: #fff;
-  border-color: var(--gold, #C9A961);
   transform: translateY(-1px);
-  box-shadow: var(--sh-gold);
+  box-shadow: 0 6px 14px rgba(201, 169, 97, 0.35);
 }
-.ac-group--contact .ac-icon:active { transform: translateY(0) scale(0.96); }
-/* Manage row — 5 text buttons in 3 columns; Otkaži (last) spans 2 */
+.ac-group--contact .ac-icon:active { transform: translateY(0) scale(0.95); }
+
+/* Manage row — 5 text actions in 3 columns; Otkaži spans last 2 */
 .ac-group--manage {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 8px;
+  gap: 6px;
 }
 .ac-group--manage .btn {
   min-width: 0;
   min-height: 44px;
-  padding: 10px 8px;
-  font-size: 0.82rem;
+  padding: 10px 6px;
+  font-size: 0.78rem;
   font-weight: 600;
-  letter-spacing: 0.01em;
+  letter-spacing: 0.02em;
   white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 .ac-group--manage .btn[data-action="cancel"] { grid-column: span 2; }
-@media (max-width: 380px) {
-  .ac-group--manage { grid-template-columns: repeat(2, 1fr); }
+@media (max-width: 360px) {
+  .ac-group--manage { grid-template-columns: repeat(2, 1fr); gap: 5px; }
   .ac-group--manage .btn[data-action="cancel"] { grid-column: span 2; }
+  .ac-group--manage .btn { font-size: 0.74rem; padding: 8px 4px; }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -4131,81 +4145,117 @@ body.modal-open { overflow: hidden; }
   margin-left: auto;
 }
 
-/* === Appointment card — calendar-ticket aesthetic === */
+/* === Appointment card — Boutique Ticket =================================
+   A fine paper ticket from a luxury salon's reception desk.
+   - Gold thread accent down the left edge
+   - Time as the engraved seal: italic Cormorant numerals, generous
+   - Real perforation between time-stub and content
+   - Tiny gold corner flourishes (top-right, bottom-left)
+   - Soft paper grain via radial gradient
+============================================================================ */
 .appt-card {
   display: grid;
   grid-template-columns: 88px 1fr;
   gap: 14px;
-  background: #FFFFFF;
+  background:
+    radial-gradient(120% 80% at 100% 0%, rgba(201, 169, 97, 0.06) 0%, transparent 55%),
+    radial-gradient(80% 70% at 0% 100%, rgba(107, 111, 79, 0.04) 0%, transparent 55%),
+    #FFFFFF;
   border: 1px solid rgba(217, 192, 154, 0.5);
   border-radius: 14px;
-  padding: 14px 14px 14px 0;
-  margin-bottom: 10px;
+  padding: 16px 16px 16px 0;
+  margin-bottom: 12px;
   position: relative;
   overflow: hidden;
-  box-shadow: 0 1px 2px rgba(74, 66, 56, 0.04);
+  box-shadow: 0 1px 2px rgba(74, 66, 56, 0.04), 0 4px 14px -6px rgba(74, 66, 56, 0.08);
   transition: box-shadow 0.25s, transform 0.2s, border-color 0.2s;
 }
+/* Gold thread on the left edge */
 .appt-card::before {
   content: "";
   position: absolute;
   left: 0; top: 0; bottom: 0;
-  width: 4px;
-  background: linear-gradient(180deg, var(--gold, #C9A961), rgba(201, 169, 97, 0.3));
+  width: 3px;
+  background: linear-gradient(180deg, var(--gold, #C9A961) 0%, rgba(201, 169, 97, 0.35) 50%, var(--gold, #C9A961) 100%);
+}
+/* Top-right & bottom-left corner flourish (✻) */
+.appt-card::after {
+  content: "✻";
+  position: absolute;
+  top: 8px; right: 12px;
+  font-family: 'Cormorant Garamond', Georgia, serif;
+  font-size: 0.85rem;
+  color: var(--gold, #C9A961);
+  opacity: 0.4;
+  pointer-events: none;
+  line-height: 1;
+  letter-spacing: 0;
 }
 .appt-card:hover {
   border-color: rgba(201, 169, 97, 0.6);
-  box-shadow: 0 8px 22px rgba(74, 66, 56, 0.08);
-  transform: translateY(-1px);
+  box-shadow: 0 1px 2px rgba(74, 66, 56, 0.04), 0 14px 34px -10px rgba(74, 66, 56, 0.16);
+  transform: translateY(-2px);
 }
 .appt-card__time {
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 8px 4px 8px 16px;
-  border-right: 1px dashed rgba(217, 192, 154, 0.5);
+  padding: 10px 8px 10px 18px;
+  /* Real perforation: dotted vertical line, like a tear-off ticket stub. */
+  background-image: radial-gradient(circle at 1px 50%, rgba(217, 192, 154, 0.7) 1px, transparent 1.2px);
+  background-size: 2px 8px;
+  background-repeat: repeat-y;
+  background-position: right center;
   font-family: 'Cormorant Garamond', Georgia, serif;
   color: var(--sage, #6B6F4F);
   line-height: 1;
 }
 .appt-card__hh, .appt-card__mm {
-  font-size: 1.85rem;
-  font-weight: 500;
-  letter-spacing: -0.02em;
+  font-size: 2.05rem;
+  font-weight: 400;
+  font-style: italic;
+  letter-spacing: -0.025em;
+  color: var(--text, #4A4238);
 }
 .appt-card__sep {
-  font-size: 1.85rem;
+  font-size: 2.05rem;
+  font-style: italic;
   color: var(--gold, #C9A961);
   font-weight: 400;
   margin: 0 1px;
+  opacity: 0.85;
 }
 .appt-card__dur {
   font-family: 'Outfit', sans-serif;
-  font-size: 0.65rem;
-  font-weight: 600;
-  letter-spacing: 0.18em;
-  color: var(--text-light, #6B5F52);
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.22em;
+  color: var(--gold-dark, #8B6F2B);
   text-transform: uppercase;
-  margin-top: 6px;
+  margin-top: 10px;
 }
 .appt-card__body { padding: 4px 0; min-width: 0; }
 .appt-card__name {
   font-family: 'Cormorant Garamond', Georgia, serif;
-  font-size: 1.2rem;
+  font-size: 1.3rem;
   font-weight: 500;
   color: var(--text, #4A4238);
-  letter-spacing: -0.005em;
+  letter-spacing: -0.01em;
   line-height: 1.2;
-  margin-bottom: 2px;
+  margin-bottom: 4px;
+  word-break: break-word;
 }
 .appt-card__service {
   font-family: 'Outfit', sans-serif;
-  font-size: 0.78rem;
-  font-weight: 600;
-  letter-spacing: 0.14em;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.22em;
   text-transform: uppercase;
-  color: var(--gold, #C9A961);
+  color: var(--gold-dark, #8B6F2B);
+  display: inline-block;
+  padding: 2px 0 4px;
+  border-bottom: 1px solid rgba(201, 169, 97, 0.3);
 }
 .appt-card__phone {
   margin-top: 6px;
