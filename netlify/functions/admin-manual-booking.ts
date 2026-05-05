@@ -18,6 +18,8 @@ async function makeCalendar(): Promise<CalendarClient> {
 
 interface Req {
   serviceId: string;
+  /** Optional extra services done in same visit (e.g. manikir + pedikir). */
+  additionalServiceIds?: string[];
   startISO: string;
   name: string;
   phone?: string;
@@ -53,7 +55,21 @@ const inner: Handler = async (event) => {
   const service = services.find((s) => s.id === body.serviceId);
   if (!service) return notFound("Unknown service");
 
-  const endISO = new Date(start.getTime() + service.durationMinutes * 60_000).toISOString();
+  // Sum durations of all selected services (primary + additional).
+  const additionalIds = (body.additionalServiceIds ?? []).filter(Boolean);
+  let totalMin = service.durationMinutes;
+  const additionalNames: string[] = [];
+  for (const id of additionalIds) {
+    const extra = services.find((s) => s.id === id);
+    if (extra) {
+      totalMin += extra.durationMinutes;
+      additionalNames.push(extra.name);
+    }
+  }
+  const endISO = new Date(start.getTime() + totalMin * 60_000).toISOString();
+  const combinedServicesLabel = additionalNames.length
+    ? [service.name, ...additionalNames].join(" + ")
+    : service.name;
 
   // Check for conflicts — warn (409) unless force=true.
   if (!body.force) {
@@ -83,6 +99,8 @@ const inner: Handler = async (event) => {
     bookingId,
     serviceId: service.id,
     serviceName: service.name,
+    additionalServiceIds: additionalIds.length ? additionalIds : undefined,
+    combinedServicesLabel,
     startISO: start.toISOString(),
     endISO,
     name: body.name.trim().slice(0, 120),

@@ -1042,12 +1042,18 @@ async function openManualBookingModal() {
     return;
   }
   const opts = services.map((s) => `<option value="${s.id}" data-dur="${s.durationMinutes}">${escapeHtml(s.name)} (${s.durationMinutes} min)</option>`).join("");
+  const extraOpts = services.map((s) => `
+    <label class="mb-extra__row">
+      <input type="checkbox" class="mb-extra-cb" value="${s.id}" data-dur="${s.durationMinutes}">
+      <span class="mb-extra__label">${escapeHtml(s.name)}</span>
+      <span class="mb-extra__dur">${s.durationMinutes} min</span>
+    </label>`).join("");
   const defaultDate = (dayInput && dayInput.value) || todayKey();
 
   openModal("Dodaj termin ručno", `
     <div class="mb">
       <div class="mb__row">
-        <div class="field"><label for="mb-service">Usluga</label><select id="mb-service">${opts}</select></div>
+        <div class="field"><label for="mb-service">Usluga (glavna)</label><select id="mb-service">${opts}</select></div>
         <div class="field mb__date-field">
           <label for="mb-date">Datum</label>
           <button type="button" id="mb-date-trigger" class="mb-date-trigger" aria-haspopup="true">
@@ -1064,6 +1070,14 @@ async function openManualBookingModal() {
           </div>
         </div>
       </div>
+
+      <details class="mb-extra" id="mb-extra-details">
+        <summary class="mb-extra__summary">
+          <span>＋ Dodaj još uslugu u istom terminu <span id="mb-extra-count" class="mb-extra__count" hidden></span></span>
+        </summary>
+        <div class="mb-extra__list">${extraOpts}</div>
+        <p class="muted" style="font-size:0.8rem;margin:8px 0 0;">Trajanje termina = zbir svih izabranih (npr. Manikir 45 min + Pedikir 60 min = 105 min).</p>
+      </details>
 
       <div class="mb__day-glance" id="mb-glance">
         <div class="mb__glance-head">
@@ -1111,10 +1125,21 @@ async function openManualBookingModal() {
   `);
 
   const serviceEl = document.getElementById("mb-service");
+  const extraCbs = document.querySelectorAll(".mb-extra-cb");
+  const extraCountEl = document.getElementById("mb-extra-count");
   const dateEl = document.getElementById("mb-date");
   const dateText = document.getElementById("mb-date-text");
   const dateTrigger = document.getElementById("mb-date-trigger");
   const timelineEl = document.getElementById("mb-timeline");
+  function getAdditionalIds() {
+    return Array.from(extraCbs).filter((cb) => cb.checked && cb.value !== serviceEl.value).map((cb) => cb.value);
+  }
+  function updateExtraCount() {
+    const n = getAdditionalIds().length;
+    if (n > 0) { extraCountEl.textContent = `(${n})`; extraCountEl.hidden = false; }
+    else extraCountEl.hidden = true;
+  }
+  extraCbs.forEach((cb) => cb.addEventListener("change", () => { updateExtraCount(); refreshAll(); }));
   const glanceMetaEl = document.getElementById("mb-glance-meta");
   const manualDetails = document.getElementById("mb-manual-details");
   const manualInput = document.getElementById("mb-start");
@@ -1253,8 +1278,10 @@ async function openManualBookingModal() {
     timelineEl.innerHTML = `<div class="muted" style="padding:0.5rem 0;">Učitavanje…</div>`;
     glanceMetaEl.textContent = "";
     try {
+      const additional = getAdditionalIds();
+      const extraQs = additional.length ? `&additionalServiceIds=${encodeURIComponent(additional.join(","))}` : "";
       const [slotsRes, dayRes] = await Promise.all([
-        must(`/api/admin/slots?serviceId=${encodeURIComponent(sid)}&date=${encodeURIComponent(date)}`),
+        must(`/api/admin/slots?serviceId=${encodeURIComponent(sid)}&date=${encodeURIComponent(date)}${extraQs}`),
         must(`/api/admin/day-view?date=${encodeURIComponent(date)}`).catch(() => null),
       ]);
       dayCache = dayRes;
@@ -1321,6 +1348,8 @@ async function openManualBookingModal() {
       return;
     }
     const body = { serviceId, startISO, name };
+    const additional = getAdditionalIds();
+    if (additional.length) body.additionalServiceIds = additional;
     if (phone) body.phone = phone;
     if (email) body.email = email;
     if (note) body.note = note;

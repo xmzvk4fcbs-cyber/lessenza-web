@@ -5,8 +5,13 @@ import { TZ } from "./time";
 export interface Booking {
   bookingId: string;
   calendarEventId?: string;
+  /** Primary service. Required. */
   serviceId: string;
   serviceName: string;
+  /** Optional additional services done in the same visit (e.g. manikir + pedikir). */
+  additionalServiceIds?: string[];
+  /** Combined human label including extras: "Manikir + Pedikir" */
+  combinedServicesLabel?: string;
   startISO: string;
   endISO: string;
   name: string;
@@ -17,23 +22,27 @@ export interface Booking {
 }
 
 export function bookingToEvent(b: Booking): calendar_v3.Schema$Event {
+  const additional = (b.additionalServiceIds ?? []).filter(Boolean);
   const description = [
     `phone: ${b.phoneE164}`,
     `email: ${b.email ?? "-"}`,
     `serviceId: ${b.serviceId}`,
+    additional.length ? `additionalServiceIds: ${additional.join(",")}` : "",
     `note: ${b.note ?? "-"}`,
     `bookingId: ${b.bookingId}`,
     `source: ${b.source}`,
-  ].join("\n");
+  ].filter(Boolean).join("\n");
 
+  const label = b.combinedServicesLabel || b.serviceName;
   return {
-    summary: `${b.serviceName} — ${b.name}`,
+    summary: `${label} — ${b.name}`,
     description,
     start: { dateTime: b.startISO, timeZone: TZ },
     end: { dateTime: b.endISO, timeZone: TZ },
     extendedProperties: {
       private: {
         serviceId: b.serviceId,
+        ...(additional.length ? { additionalServiceIds: additional.join(",") } : {}),
         bookingId: b.bookingId,
         source: b.source,
       },
@@ -65,11 +74,23 @@ export function eventToBooking(e: calendar_v3.Schema$Event, services: Service[])
   const service = services.find((s) => s.id === serviceId);
   const email = desc.email && desc.email !== "-" ? desc.email : undefined;
   const note = desc.note && desc.note !== "-" ? desc.note : undefined;
+  const additionalRaw = priv.additionalServiceIds ?? desc.additionalServiceIds ?? "";
+  const additionalServiceIds = additionalRaw
+    ? additionalRaw.split(",").map((s) => s.trim()).filter(Boolean)
+    : [];
+  const additionalNames = additionalServiceIds
+    .map((id) => services.find((s) => s.id === id)?.name)
+    .filter(Boolean) as string[];
+  const combinedServicesLabel = additionalNames.length
+    ? [service?.name ?? serviceId, ...additionalNames].join(" + ")
+    : (service?.name ?? serviceId);
   return {
     bookingId: priv.bookingId ?? desc.bookingId ?? e.id ?? "",
     calendarEventId: e.id ?? undefined,
     serviceId,
     serviceName: service?.name ?? serviceId,
+    additionalServiceIds: additionalServiceIds.length ? additionalServiceIds : undefined,
+    combinedServicesLabel,
     startISO,
     endISO,
     name: (e.summary ?? "").split("—").pop()?.trim() ?? "",

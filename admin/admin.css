@@ -3826,6 +3826,80 @@ html { scroll-behavior: smooth; scroll-padding-top: 88px; -webkit-font-smoothing
 .mb-date-trigger__chev { color: var(--gold, #C9A961); font-size: 0.85rem; }
 
 /* Hide the actual native input visually but keep clickable for browsers without showPicker() */
+/* === Additional services picker — multi-select for combined bookings === */
+.mb-extra {
+  margin: 0.5rem 0 0.85rem;
+  border: 1px solid rgba(217, 192, 154, 0.5);
+  border-radius: 12px;
+  background: var(--cream-soft, #F9F2E5);
+  padding: 0.65rem 0.85rem;
+}
+.mb-extra[open] { background: #FFFFFF; }
+.mb-extra__summary {
+  list-style: none;
+  cursor: pointer;
+  font-family: 'Outfit', sans-serif;
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: var(--sage, #6B6F4F);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.mb-extra__summary::-webkit-details-marker { display: none; }
+.mb-extra__count {
+  background: var(--gold, #C9A961);
+  color: #fff;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+}
+.mb-extra__list {
+  margin-top: 12px;
+  display: grid;
+  gap: 6px;
+}
+.mb-extra__row {
+  display: grid;
+  grid-template-columns: 24px 1fr auto;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border: 1px solid rgba(217, 192, 154, 0.4);
+  border-radius: 10px;
+  background: #FFFFFF;
+  cursor: pointer;
+  transition: all 0.18s var(--ease, ease);
+}
+.mb-extra__row:has(input:checked) {
+  border-color: var(--gold, #C9A961);
+  background: linear-gradient(135deg, #FBF6EB 0%, #F1E5CC 100%);
+  box-shadow: 0 2px 6px rgba(201, 169, 97, 0.18);
+}
+.mb-extra__row input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--gold, #C9A961);
+  cursor: pointer;
+}
+.mb-extra__label {
+  font-family: 'Cormorant Garamond', Georgia, serif;
+  font-size: 1.05rem;
+  color: var(--text, #4A4238);
+  word-break: break-word;
+}
+.mb-extra__dur {
+  font-family: 'Outfit', sans-serif;
+  font-size: 0.74rem;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--gold-dark, #8B6F2B);
+  white-space: nowrap;
+}
+
 /* Native date input sits ON TOP of the styled trigger, transparent.
    This way iOS opens its native picker on a direct tap (showPicker()
    alone is unreliable on iOS Safari). The trigger is purely visual. */

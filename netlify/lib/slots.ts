@@ -13,6 +13,9 @@ function dayWindows(day: DayHours): TimeWindow[] {
 
 export interface ComputeSlotsInput {
   serviceId: string;
+  /** Optional extra services done in the same visit. Their durations are
+   *  added to the primary service for slot length. */
+  additionalServiceIds?: string[];
   date: string; // YYYY-MM-DD in Europe/Podgorica
   services: Service[];
   pairs: ParallelPair[];
@@ -24,7 +27,7 @@ export interface ComputeSlotsInput {
 }
 
 export function computeSlots(input: ComputeSlotsInput): string[] {
-  const { serviceId, date, services, pairs, hours, blocks, events, settings, now } = input;
+  const { serviceId, additionalServiceIds, date, services, pairs, hours, blocks, events, settings, now } = input;
 
   const service = services.find((s) => s.id === serviceId && s.active);
   if (!service) return [];
@@ -34,7 +37,13 @@ export function computeSlots(input: ComputeSlotsInput): string[] {
   const windows = dayWindows(day);
   if (windows.length === 0) return [];
 
-  const durationMs = service.durationMinutes * 60_000;
+  // Sum total duration: primary + each additional active service.
+  let totalMin = service.durationMinutes;
+  for (const extraId of (additionalServiceIds ?? [])) {
+    const extra = services.find((s) => s.id === extraId && s.active);
+    if (extra) totalMin += extra.durationMinutes;
+  }
+  const durationMs = totalMin * 60_000;
   const bufferMs = settings.bufferMinutes * 60_000;
   const granMs = settings.slotGranularityMinutes * 60_000;
   const minLeadMs = settings.minLeadHours * 60 * 60_000;

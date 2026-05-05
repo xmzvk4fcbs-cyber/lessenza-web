@@ -22,6 +22,10 @@ const inner: Handler = async (event) => {
   const q = event.queryStringParameters ?? {};
   const serviceId = (q.serviceId ?? "").trim();
   const date = (q.date ?? "").trim();
+  const additionalServiceIds = (q.additionalServiceIds ?? "")
+    .split(",")
+    .map((s) => s.trim())
+    .filter(Boolean);
   if (!serviceId) return badRequest("missing-param", "serviceId required");
   if (!date) return badRequest("missing-param", "date required");
   if (!DATE_RE.test(date)) return badRequest("bad-date", "date must be YYYY-MM-DD");
@@ -54,6 +58,7 @@ const inner: Handler = async (event) => {
 
   const slots = computeSlots({
     serviceId,
+    additionalServiceIds,
     date,
     services,
     pairs,

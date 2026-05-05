@@ -21,6 +21,11 @@ export const handler: Handler = async (event) => {
   const q = event.queryStringParameters ?? {};
   const serviceId = (q.serviceId ?? "").trim();
   const date = (q.date ?? "").trim();
+  // Optional additional services (CSV) for combined-duration slots.
+  const additionalServiceIds = (q.additionalServiceIds ?? "")
+    .split(",")
+    .map((s) => s.trim())
+    .filter(Boolean);
   if (!serviceId) return badRequest("missing-param", "serviceId required");
   if (!date) return badRequest("missing-param", "date required");
   if (!DATE_RE.test(date)) return badRequest("bad-date", "date must be YYYY-MM-DD");
@@ -49,6 +54,7 @@ export const handler: Handler = async (event) => {
 
   const slots = computeSlots({
     serviceId,
+    additionalServiceIds,
     date,
     services,
     pairs,
