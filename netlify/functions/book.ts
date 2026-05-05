@@ -2,7 +2,7 @@ import { randomUUID } from "node:crypto";
 import type { Handler } from "@netlify/functions";
 import webpush from "web-push";
 import { json, badRequest, notFound, methodNotAllowed, parseJson, serverError } from "../lib/http";
-import { getServices, getWorkingHours, getParallelPairs, getBlocks, getSettings, isPhoneBlocked, getPushSubscriptions, removePushSubscription } from "../lib/config";
+import { getServices, getWorkingHours, getParallelPairs, getBlocks, getSettings, isPhoneBlocked, getPushSubscriptions, removePushSubscription, appendAudit } from "../lib/config";
 import { computeSlots } from "../lib/slots";
 import { createCalendarClient, createCalendarClientAsync, type CalendarClient } from "../lib/calendar";
 import { bookingToEvent, type Booking } from "../lib/calendar-domain";
@@ -166,6 +166,18 @@ export const handler: Handler = async (event) => {
     return serverError(`Calendar insert failed: ${(e as Error).message}`);
   }
   booking.calendarEventId = inserted.id ?? undefined;
+
+  // Activity log — every public booking shows up in the dashboard feed.
+  const whenLabel = formatSalon(new Date(booking.startISO), "dd.MM.yyyy. 'u' HH:mm");
+  await appendAudit({
+    kind: "booking.created",
+    summary: `Novi termin: ${booking.combinedServicesLabel ?? booking.serviceName} — ${booking.name} (${whenLabel})`,
+    meta: {
+      eventId: booking.calendarEventId ?? "",
+      phone: booking.phoneE164,
+      source: "web",
+    },
+  });
 
   const mailer = deps?.makeMailer ? deps.makeMailer() : await getMailerAsync(settings);
   console.log("[book]", JSON.stringify({

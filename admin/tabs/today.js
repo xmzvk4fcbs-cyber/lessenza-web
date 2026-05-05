@@ -517,6 +517,7 @@ function renderCard(a) {
         </div>` : ""}
         <div class="ac-row ac-row--manage">
           <button class="btn btn-ghost" type="button" data-action="reschedule">Pomjeri</button>
+          <button class="btn btn-ghost" type="button" data-action="edit-services">Promijeni uslugu</button>
           <button class="btn btn-ghost" type="button" data-action="swap">Zamijeni</button>
           <button class="btn btn-ghost" type="button" data-action="noshow">Nije došla</button>
           <button class="btn btn-ghost" type="button" data-action="reject">Odbij</button>
@@ -702,6 +703,11 @@ async function onAction(e) {
 
   if (action === "reschedule") {
     await openRescheduleModal({ eventId, serviceId, name, phone, service, start, end });
+    return;
+  }
+
+  if (action === "edit-services") {
+    await openEditServicesModal({ eventId, serviceId, name, service });
     return;
   }
 
@@ -969,6 +975,90 @@ async function openRescheduleModal({ eventId, serviceId, name, phone, service, s
       saveBtn.disabled = false;
       errorBox.hidden = false;
       errorBox.innerHTML = `<strong>⚠️ Ne mogu pomjeriti</strong><br>${escapeHtml(err.message)}`;
+    }
+  });
+}
+
+/** Modal: change which service(s) are attached to an existing booking.
+ *  Keeps the start time fixed; end time recomputes from new combined duration. */
+async function openEditServicesModal({ eventId, serviceId, name, service }) {
+  const services = (await getServices()).filter((s) => s.active);
+  if (!services.length) { toast("Nema aktivnih usluga.", "error"); return; }
+  const primaryOpts = services.map((s) =>
+    `<option value="${escapeHtml(s.id)}" ${s.id === serviceId ? "selected" : ""}>${escapeHtml(s.name)} (${s.durationMinutes} min)</option>`
+  ).join("");
+  // Pre-check extras: anything that is NOT the current primary AND was previously
+  // attached cannot be inferred from the card alone — admin re-picks if multi.
+  const extraRows = services.map((s) => `
+    <label class="mb-extra__row">
+      <input type="checkbox" class="es-extra-cb" value="${escapeHtml(s.id)}" data-dur="${s.durationMinutes}" ${s.id === serviceId ? "disabled" : ""}>
+      <span class="mb-extra__label">${escapeHtml(s.name)}</span>
+      <span class="mb-extra__dur">${s.durationMinutes} min</span>
+    </label>`).join("");
+
+  openModal("Promijeni uslugu", `
+    <div class="mb">
+      <p class="muted" style="margin:0 0 12px;">Termin: <strong>${escapeHtml(service)}</strong> — ${escapeHtml(name)}</p>
+      <div class="field">
+        <label for="es-service">Glavna usluga</label>
+        <select id="es-service">${primaryOpts}</select>
+      </div>
+      <details class="mb-extra">
+        <summary class="mb-extra__summary"><span>＋ Dodatne usluge u istom terminu</span></summary>
+        <div class="mb-extra__list">${extraRows}</div>
+      </details>
+      <div class="es-summary" id="es-summary"></div>
+      <div id="es-error" class="mb-conflict-banner" hidden></div>
+      <div class="mb__actions">
+        <button class="btn btn-ghost" type="button" data-close="1">Nazad</button>
+        <button class="btn btn-primary" type="button" id="es-save">Sačuvaj</button>
+      </div>
+    </div>
+  `);
+
+  const primarySel = document.getElementById("es-service");
+  const cbs = document.querySelectorAll(".es-extra-cb");
+  const summary = document.getElementById("es-summary");
+  const errorBox = document.getElementById("es-error");
+  const saveBtn = document.getElementById("es-save");
+
+  function updateSummary() {
+    const primary = services.find((s) => s.id === primarySel.value);
+    let total = primary ? primary.durationMinutes : 0;
+    const names = primary ? [primary.name] : [];
+    cbs.forEach((cb) => {
+      // Disable the checkbox matching the new primary so we don't double-count it.
+      cb.disabled = cb.value === primarySel.value;
+      if (cb.disabled && cb.checked) cb.checked = false;
+      if (cb.checked) {
+        const s = services.find((x) => x.id === cb.value);
+        if (s) { total += s.durationMinutes; names.push(s.name); }
+      }
+    });
+    summary.textContent = names.length ? `${names.join(" + ")} · ${total} min` : "";
+  }
+  primarySel.addEventListener("change", updateSummary);
+  cbs.forEach((cb) => cb.addEventListener("change", updateSummary));
+  updateSummary();
+
+  saveBtn.addEventListener("click", async () => {
+    saveBtn.disabled = true;
+    saveBtn.textContent = "Čuvam…";
+    errorBox.hidden = true;
+    try {
+      const additional = Array.from(cbs).filter((cb) => cb.checked && !cb.disabled).map((cb) => cb.value);
+      await must("/api/admin/edit-services", {
+        method: "POST",
+        body: { eventId, serviceId: primarySel.value, additionalServiceIds: additional },
+      });
+      closeModal();
+      toast("Usluga ažurirana.", "success");
+      await renderList();
+    } catch (err) {
+      saveBtn.disabled = false;
+      saveBtn.textContent = "Sačuvaj";
+      errorBox.hidden = false;
+      errorBox.innerHTML = `<strong>⚠️ Ne mogu sačuvati</strong><br>${escapeHtml(err.message)}`;
     }
   });
 }

@@ -18,7 +18,11 @@ function fmtDayLabel(dateKey) {
 }
 
 function renderInquiryCard(i, svcById) {
-  const svcName = svcById[i.serviceId] || i.serviceId;
+  const primary = svcById[i.serviceId] || i.serviceId;
+  const extras = (i.additionalServiceIds ?? [])
+    .map((id) => svcById[id])
+    .filter(Boolean);
+  const svcName = extras.length ? [primary, ...extras].join(" + ") : primary;
   const isAny = i.desiredTimeWindow === "any";
   const winLabel = WINDOW_LABEL[i.desiredTimeWindow] || i.desiredTimeWindow;
   return `

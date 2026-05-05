@@ -325,7 +325,69 @@ async function render() {
   await loadTodayNote();
   renderSuggestions(); // fire-and-forget — not critical to dashboard
   renderStats();        // monthly summary card (also fire-and-forget)
+  renderActivityFeed(); // recent bookings/changes/overlaps
 }
+
+// --- Activity feed (recent audit events) -------------------------------------
+
+const ACTIVITY_KIND = {
+  "booking.created":     { icon: "✦", label: "Novi termin",       cls: "is-new" },
+  "booking.cancelled":   { icon: "✕", label: "Otkazan termin",     cls: "is-cancel" },
+  "booking.rescheduled": { icon: "↻", label: "Pomjeren termin",    cls: "is-move" },
+  "booking.overlap":     { icon: "⚠", label: "Preklapanje termina", cls: "is-warn" },
+  "settings.updated":    { icon: "⚙", label: "Izmjena podešavanja", cls: "is-cfg" },
+  "inquiry.created":     { icon: "✉", label: "Novi upit",          cls: "is-info" },
+  "inquiry.accepted":    { icon: "✓", label: "Prihvaćen upit",     cls: "is-ok" },
+  "inquiry.declined":    { icon: "✕", label: "Odbijen upit",       cls: "is-cancel" },
+};
+
+function fmtRelativeShort(iso) {
+  const ms = Date.now() - new Date(iso).getTime();
+  if (ms < 60_000)         return "upravo sad";
+  if (ms < 3600_000)       return `prije ${Math.round(ms / 60_000)} min`;
+  if (ms < 24 * 3600_000)  return `prije ${Math.round(ms / 3600_000)} h`;
+  if (ms < 7 * 24 * 3600_000) return `prije ${Math.round(ms / (24 * 3600_000))} dan(a)`;
+  return new Date(iso).toLocaleDateString("sr-Latn", { day: "2-digit", month: "2-digit", year: "numeric" });
+}
+
+async function renderActivityFeed() {
+  const host = document.getElementById("activity-list");
+  if (!host) return;
+  host.innerHTML = `<p class="muted">Učitavanje…</p>`;
+  try {
+    const { events } = await must("/api/admin/audit?limit=20");
+    if (!events.length) {
+      host.innerHTML = `<p class="muted">Još nema aktivnosti.</p>`;
+      return;
+    }
+    host.innerHTML = events.map((e) => {
+      const meta = ACTIVITY_KIND[e.kind] || { icon: "•", label: e.kind, cls: "" };
+      const when = fmtRelativeShort(e.at);
+      const fullWhen = new Date(e.at).toLocaleString("sr-Latn", {
+        day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit",
+      });
+      return `<article class="activity-item ${meta.cls}">
+        <span class="activity-item__icon" aria-hidden="true">${meta.icon}</span>
+        <div class="activity-item__body">
+          <div class="activity-item__line">${escapeHtml(e.summary)}</div>
+          <div class="activity-item__when" title="${escapeHtml(fullWhen)}">${escapeHtml(meta.label)} · ${escapeHtml(when)}</div>
+        </div>
+      </article>`;
+    }).join("");
+  } catch (e) {
+    host.innerHTML = `<p class="muted">Ne mogu učitati aktivnost: ${escapeHtml(e.message)}</p>`;
+  }
+}
+
+// Refresh button + auto-refresh every 60s while on dashboard.
+const _activityRefreshBtn = document.getElementById("activity-refresh");
+if (_activityRefreshBtn) {
+  _activityRefreshBtn.addEventListener("click", () => renderActivityFeed());
+}
+setInterval(() => {
+  const dash = document.getElementById("screen-dashboard");
+  if (dash && dash.classList.contains("is-active")) renderActivityFeed();
+}, 60_000);
 
 // --- Mjesečni rezime (analytics card) ---
 

@@ -260,6 +260,8 @@ export const InquirySchema = z.object({
   phone: z.string().min(4).max(32),
   email: z.string().email().optional(),
   serviceId: z.string().min(1),
+  /** Optional extra services for the same visit (matches Booking.additionalServiceIds). */
+  additionalServiceIds: z.array(z.string().min(1)).optional(),
   desiredDateISO: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
   desiredTimeWindow: z.enum(["morning", "afternoon", "any"]),
   note: z.string().max(1000).optional(),

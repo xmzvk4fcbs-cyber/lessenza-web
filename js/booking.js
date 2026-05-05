@@ -615,8 +615,13 @@ async function submitInquiry() {
   if (!desiredDateISO) throw new Error("Izaberi datum.");
   const phone = `${dial}${local.replace(/\D+/g, "")}`;
   const hp2 = document.getElementById("i-hp-website")?.value || "";
+  // Carry forward all services the user selected on step 1, not just the primary,
+  // so a Manikir+Pedikir inquiry stays a Manikir+Pedikir inquiry.
+  const primaryId = state.chosenService?.id ?? state.services[0]?.id;
+  const inquiryAdditional = state.chosenServiceIds.filter((id) => id !== primaryId);
   await apiPost("/api/inquiry", {
-    serviceId: state.chosenService?.id ?? state.services[0]?.id,
+    serviceId: primaryId,
+    additionalServiceIds: inquiryAdditional.length ? inquiryAdditional : undefined,
     desiredDateISO,
     desiredTimeWindow,
     name,

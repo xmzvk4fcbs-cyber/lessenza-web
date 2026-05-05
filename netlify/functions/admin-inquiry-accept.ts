@@ -43,12 +43,30 @@ const inner: Handler = async (event) => {
   const service = services.find((s) => s.id === inquiry.serviceId);
   if (!service) return notFound("Service in inquiry no longer exists");
 
+  // Sum durations of all services attached to the inquiry (primary + extras).
+  const additionalIds = inquiry.additionalServiceIds ?? [];
+  const additionalNames: string[] = [];
+  let totalMin = service.durationMinutes;
+  const validAdditional: string[] = [];
+  for (const id of additionalIds) {
+    const extra = services.find((s) => s.id === id);
+    if (!extra) continue; // silently drop services that disappeared since inquiry
+    totalMin += extra.durationMinutes;
+    additionalNames.push(extra.name);
+    validAdditional.push(id);
+  }
+  const combinedLabel = additionalNames.length
+    ? [service.name, ...additionalNames].join(" + ")
+    : service.name;
+
   const settings = await getSettings();
-  const endISO = new Date(start.getTime() + service.durationMinutes * 60_000).toISOString();
+  const endISO = new Date(start.getTime() + totalMin * 60_000).toISOString();
   const booking: Booking = {
     bookingId: randomUUID(),
     serviceId: service.id,
     serviceName: service.name,
+    additionalServiceIds: validAdditional.length ? validAdditional : undefined,
+    combinedServicesLabel: validAdditional.length ? combinedLabel : undefined,
     startISO: start.toISOString(),
     endISO,
     name: inquiry.name,
@@ -75,7 +93,7 @@ const inner: Handler = async (event) => {
       const mailer = await makeMailer();
       await mailer.send(
         inquiryAcceptedToClient(
-          { ...inquiry, serviceName: service.name },
+          { ...inquiry, serviceName: combinedLabel },
           start.toISOString(),
           { salonAddress: settings.salonAddress, ownerPhone: settings.ownerPhone, emailGreeting: settings.emailGreeting, emailClosing: settings.emailClosing, emailSignature: settings.emailSignature }
         )
@@ -87,7 +105,7 @@ const inner: Handler = async (event) => {
   }
   if (inquiry.phone) {
     const when = formatSalon(start, "dd.MM.yyyy. 'u' HH:mm");
-    const msg = `Zdravo ${inquiry.name}, vaš upit za ${service.name} je prihvaćen. Termin: ${when}. — L'Essenza`;
+    const msg = `Zdravo ${inquiry.name}, vaš upit za ${combinedLabel} je prihvaćen. Termin: ${when}. — L'Essenza`;
     whatsappLink = waLink(inquiry.phone, msg);
   }
   return json({ ok: true, emailSent, whatsappLink, booking });

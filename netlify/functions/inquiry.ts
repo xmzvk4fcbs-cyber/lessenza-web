@@ -20,6 +20,8 @@ async function makeMailer(): Promise<Mailer> {
 
 interface InquiryRequest {
   serviceId: string;
+  /** Optional extra services done in the same visit. */
+  additionalServiceIds?: string[];
   desiredDateISO: string;
   desiredTimeWindow: "morning" | "afternoon" | "any";
   name: string;
@@ -78,6 +80,21 @@ export const handler: Handler = async (event) => {
   const service = services.find((s) => s.id === body.serviceId);
   if (!service) return notFound("Unknown service");
 
+  // Validate optional additional services.
+  const additionalIds = (body.additionalServiceIds ?? [])
+    .filter((id): id is string => typeof id === "string" && id.length > 0 && id !== body.serviceId);
+  const additionalNames: string[] = [];
+  const validAdditionalIds: string[] = [];
+  for (const id of additionalIds) {
+    const extra = services.find((s) => s.id === id);
+    if (!extra) return notFound(`Unknown service: ${id}`);
+    additionalNames.push(extra.name);
+    validAdditionalIds.push(id);
+  }
+  const combinedLabel = additionalNames.length
+    ? [service.name, ...additionalNames].join(" + ")
+    : service.name;
+
   const inquiry: Inquiry = {
     id: randomUUID(),
     createdAt: new Date().toISOString(),
@@ -85,6 +102,7 @@ export const handler: Handler = async (event) => {
     phone,
     email: body.email?.trim() || undefined,
     serviceId: service.id,
+    additionalServiceIds: validAdditionalIds.length ? validAdditionalIds : undefined,
     desiredDateISO: body.desiredDateISO,
     desiredTimeWindow: body.desiredTimeWindow,
     note: body.note?.trim() || undefined,
@@ -97,7 +115,7 @@ export const handler: Handler = async (event) => {
       const mailer = await makeMailer();
       await mailer.send(
         inquiryCreatedToOwner(
-          { ...inquiry, serviceName: service.name },
+          { ...inquiry, serviceName: combinedLabel },
           { ownerEmail: settings.ownerEmail, siteUrl: process.env.SITE_URL ?? "" }
         )
       );
