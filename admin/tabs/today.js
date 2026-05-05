@@ -25,7 +25,7 @@ function applySearchFilter() {
     const haystack = [
       a.kind === "raw" ? a.summary : a.name,
       a.kind === "raw" ? "" : (a.phoneE164 || ""),
-      a.kind === "raw" ? "" : (a.serviceName || ""),
+      a.kind === "raw" ? "" : (a.combinedServicesLabel || a.serviceName || ""),
       a.kind === "raw" ? "" : (a.email || ""),
       a.kind === "raw" ? "" : (a.note || ""),
     ].join(" ").toLowerCase();
@@ -65,7 +65,7 @@ if (exportBtn) {
       const dateStr = d.toLocaleDateString("sr-Latn", { day: "2-digit", month: "2-digit", year: "numeric" });
       const timeStr = d.toLocaleTimeString("sr-Latn", { hour: "2-digit", minute: "2-digit" });
       const cells = [
-        dateStr, timeStr, r.serviceName || "", r.name || "", r.phoneE164 || "", r.email || "", r.note || "",
+        dateStr, timeStr, r.combinedServicesLabel || r.serviceName || "", r.name || "", r.phoneE164 || "", r.email || "", r.note || "",
       ].map((c) => {
         const s = String(c).replace(/"/g, '""');
         return /[",\n]/.test(s) ? `"${s}"` : s;
@@ -491,8 +491,9 @@ function renderCard(a) {
   const dateLabel = start.toLocaleDateString("sr-Latn", { weekday: "short", day: "numeric", month: "short" });
   // All actions visible on the card itself. Multiple rows on phone — labels
   // ALWAYS readable in full. 2-column grid on phone, more on wider screens.
+  const serviceLabel = a.combinedServicesLabel || a.serviceName;
   return `
-    <article class="appt-card appt-card--manage" data-event-id="${escapeHtml(a.calendarEventId)}" data-service-id="${escapeHtml(a.serviceId || "")}" data-name="${escapeHtml(a.name)}" data-phone="${phone}" data-service="${escapeHtml(a.serviceName)}" data-start="${escapeHtml(a.startISO)}" data-end="${escapeHtml(a.endISO)}">
+    <article class="appt-card appt-card--manage" data-event-id="${escapeHtml(a.calendarEventId)}" data-service-id="${escapeHtml(a.serviceId || "")}" data-name="${escapeHtml(a.name)}" data-phone="${phone}" data-service="${escapeHtml(serviceLabel)}" data-start="${escapeHtml(a.startISO)}" data-end="${escapeHtml(a.endISO)}">
       <div class="appt-card__top">
         <div class="appt-card__time">
           <span class="appt-card__day">${escapeHtml(dateLabel)}</span>
@@ -501,7 +502,7 @@ function renderCard(a) {
         </div>
         <div class="appt-card__body">
           <div class="appt-card__name">${escapeHtml(a.name)}</div>
-          <div class="appt-card__service">${escapeHtml(a.serviceName)}</div>
+          <div class="appt-card__service">${escapeHtml(serviceLabel)}</div>
           ${phone ? `<div class="appt-card__phone">${phone}</div>` : ""}
           ${emailLine}
           ${noteLine}

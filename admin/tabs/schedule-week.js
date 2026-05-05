@@ -157,8 +157,9 @@ export async function renderWeekView(host, anchorKey, onItemClick) {
 function renderItem(it) {
   const isBooking = it.kind === "booking";
   const time = it.startISO ? fmtTime(it.startISO) : "—:—";
+  const serviceLabel = it.combinedServicesLabel || it.serviceName || "";
   const title = isBooking
-    ? `${escapeHtml(it.serviceName || "")} — <em>${escapeHtml(it.name || "")}</em>`
+    ? `${escapeHtml(serviceLabel)} — <em>${escapeHtml(it.name || "")}</em>`
     : `🔒 ${escapeHtml(it.summary || "Privatno")}`;
   const dotCls = isBooking ? "" : "is-raw";
   // Click is enabled only for bookings (raw events are inert, matching Day view behaviour).
@@ -174,7 +175,7 @@ function renderItem(it) {
     data-event-id="${escapeHtml(it.calendarEventId || "")}"
     data-name="${escapeHtml(it.name || "")}"
     data-phone="${escapeHtml(it.phoneE164 || "")}"
-    data-service="${escapeHtml(it.serviceName || "")}"
+    data-service="${escapeHtml(serviceLabel)}"
     data-start="${escapeHtml(it.startISO || "")}">
     <span class="wk__item-dot"></span>
     <span class="wk__item-time">${escapeHtml(time)}</span>

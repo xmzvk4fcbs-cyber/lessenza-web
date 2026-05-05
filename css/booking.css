@@ -206,6 +206,7 @@
 }
 .service-summary[hidden] { display: none; }
 .service-summary__label {
+  flex: 0 0 auto;
   font-size: 0.72rem;
   letter-spacing: 0.18em;
   text-transform: uppercase;
@@ -213,11 +214,15 @@
   font-weight: 600;
 }
 .service-summary__value {
+  flex: 1 1 auto;
+  min-width: 0;
   font-size: 0.95rem;
   font-weight: 600;
   color: var(--text);
   text-align: right;
   letter-spacing: 0.01em;
+  word-break: break-word;
+  overflow-wrap: anywhere;
 }
 @keyframes summaryIn {
   from { opacity: 0; transform: translateY(6px); }

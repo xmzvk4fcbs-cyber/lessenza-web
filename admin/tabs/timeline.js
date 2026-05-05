@@ -105,9 +105,10 @@ export async function renderTimeline(container, dateKey) {
       // Adaptive: short pills (≤42px) only show time+name on one line; phone hidden.
       const isCompact = height < 50;
       const phone = (!isCompact && a.phoneE164) ? `<span class="tl-item__phone">📞 ${escapeHtml(a.phoneE164)}</span>` : "";
-      return `<div class="tl-appt${isCompact ? " is-compact" : ""}" style="top:${top}px;height:${height}px;" data-event-id="${escapeHtml(a.calendarEventId || "")}" data-name="${escapeHtml(a.name)}" data-phone="${escapeHtml(a.phoneE164 || "")}" data-service="${escapeHtml(a.serviceName)}" data-start="${escapeHtml(a.startISO)}">
+      const serviceLabel = a.combinedServicesLabel || a.serviceName;
+      return `<div class="tl-appt${isCompact ? " is-compact" : ""}" style="top:${top}px;height:${height}px;" data-event-id="${escapeHtml(a.calendarEventId || "")}" data-name="${escapeHtml(a.name)}" data-phone="${escapeHtml(a.phoneE164 || "")}" data-service="${escapeHtml(serviceLabel)}" data-start="${escapeHtml(a.startISO)}">
         <span class="tl-item__time">${isoLocalHHMM(a.startISO)} – ${isoLocalHHMM(a.endISO)}</span>
-        <span class="tl-item__title">${escapeHtml(a.serviceName)} — ${escapeHtml(a.name)}</span>
+        <span class="tl-item__title">${escapeHtml(serviceLabel)} — ${escapeHtml(a.name)}</span>
         ${phone}
       </div>`;
     }).join("");
