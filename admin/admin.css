@@ -3826,15 +3826,24 @@ html { scroll-behavior: smooth; scroll-padding-top: 88px; -webkit-font-smoothing
 .mb-date-trigger__chev { color: var(--gold, #C9A961); font-size: 0.85rem; }
 
 /* Hide the actual native input visually but keep clickable for browsers without showPicker() */
+/* Native date input sits ON TOP of the styled trigger, transparent.
+   This way iOS opens its native picker on a direct tap (showPicker()
+   alone is unreliable on iOS Safari). The trigger is purely visual. */
 .mb-date-native {
   position: absolute;
   inset: 0;
   width: 100%;
   height: 100%;
   opacity: 0;
-  pointer-events: none;
-  z-index: -1;
+  cursor: pointer;
+  z-index: 2;
+  -webkit-appearance: none;
+  appearance: none;
+  border: 0;
+  background: transparent;
+  font-size: 16px; /* prevent iOS zoom */
 }
+.mb__date-field { position: relative; }
 
 .mb-date-shortcuts {
   display: flex;
