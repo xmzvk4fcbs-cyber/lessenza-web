@@ -13,12 +13,28 @@ const state = {
   step: 1,
   mode: "booking", // "booking" | "inquiry"
   services: [],
+  /** First selected service (primary). Kept for downstream code that expects a single chosenService. */
   chosenService: null,
+  /** Ordered list of all selected service ids (primary first). */
+  chosenServiceIds: [],
   chosenDate: null, // YYYY-MM-DD
   chosenSlot: null, // "HH:MM"
   slots: [],
   bookingWindowDays: 15,
 };
+
+function combinedDurationMin() {
+  return state.chosenServiceIds.reduce((sum, id) => {
+    const s = state.services.find((x) => x.id === id);
+    return sum + (s?.durationMinutes ?? 0);
+  }, 0);
+}
+function combinedServicesLabel() {
+  return state.chosenServiceIds
+    .map((id) => state.services.find((x) => x.id === id)?.name)
+    .filter(Boolean)
+    .join(" + ");
+}
 
 const ui = {
   steps: document.querySelectorAll(".booking-steps__item"),
@@ -31,6 +47,9 @@ const ui = {
   stepInquirySuccess: document.getElementById("step-inquiry-success"),
   error: document.getElementById("wizard-error"),
   serviceGrid: document.getElementById("service-grid"),
+  serviceSummary: document.getElementById("service-summary"),
+  serviceSummaryValue: document.getElementById("service-summary-value"),
+  slotContext: document.getElementById("slot-context"),
   datePicker: document.getElementById("date-picker"),
   slotGrid: document.getElementById("slot-grid"),
   slotEmpty: document.getElementById("slot-empty"),
@@ -329,16 +348,49 @@ async function loadServices() {
     btn.type = "button";
     btn.className = "service-card";
     btn.setAttribute("role", "listitem");
+    btn.setAttribute("aria-pressed", "false");
     btn.dataset.id = s.id;
     const priceLabel = typeof s.price === "number" ? ` · ${s.price} ${currency}` : "";
-    btn.innerHTML = `<span class="service-card__name">${escapeHtml(s.name)}</span><span class="service-card__duration">${s.durationMinutes} min${escapeHtml(priceLabel)}</span>`;
-    btn.addEventListener("click", () => {
-      state.chosenService = s;
-      document.querySelectorAll(".service-card").forEach((el) => el.classList.remove("is-selected"));
-      btn.classList.add("is-selected");
-    });
+    btn.innerHTML = `
+      <span class="service-card__check" aria-hidden="true"></span>
+      <span class="service-card__body">
+        <span class="service-card__name">${escapeHtml(s.name)}</span>
+        <span class="service-card__duration">${s.durationMinutes} min${escapeHtml(priceLabel)}</span>
+      </span>`;
+    btn.addEventListener("click", () => toggleService(s, btn));
     ui.serviceGrid.appendChild(btn);
   }
+  renderServiceSummary();
+}
+
+function toggleService(s, btn) {
+  const idx = state.chosenServiceIds.indexOf(s.id);
+  if (idx >= 0) {
+    state.chosenServiceIds.splice(idx, 1);
+    btn.classList.remove("is-selected");
+    btn.setAttribute("aria-pressed", "false");
+  } else {
+    state.chosenServiceIds.push(s.id);
+    btn.classList.add("is-selected");
+    btn.setAttribute("aria-pressed", "true");
+  }
+  // Keep chosenService in sync (first selected = primary).
+  const firstId = state.chosenServiceIds[0];
+  state.chosenService = firstId ? state.services.find((x) => x.id === firstId) ?? null : null;
+  renderServiceSummary();
+}
+
+function renderServiceSummary() {
+  if (!ui.serviceSummary || !ui.serviceSummaryValue) return;
+  if (state.chosenServiceIds.length === 0) {
+    ui.serviceSummary.hidden = true;
+    ui.serviceSummaryValue.textContent = "";
+    return;
+  }
+  const label = combinedServicesLabel();
+  const dur = combinedDurationMin();
+  ui.serviceSummary.hidden = false;
+  ui.serviceSummaryValue.textContent = `${label} · ${dur} min`;
 }
 
 function escapeHtml(s) {
@@ -445,8 +497,23 @@ async function loadSlots() {
   ui.slotEmpty.hidden = true;
   // Clean any legend from previous render to avoid duplicates.
   ui.slotGrid.parentNode.querySelectorAll(".slot-legend").forEach((el) => el.remove());
+  // Update step-3 context line: "Manikir + Pedikir · 105 min".
+  if (ui.slotContext) {
+    const label = combinedServicesLabel();
+    const dur = combinedDurationMin();
+    if (label) {
+      ui.slotContext.textContent = `${label} · ${dur} min`;
+      ui.slotContext.hidden = false;
+    } else {
+      ui.slotContext.hidden = true;
+    }
+  }
 
-  const url = `/api/slots?serviceId=${encodeURIComponent(state.chosenService.id)}&date=${encodeURIComponent(state.chosenDate)}&_=${t0}`;
+  const additionalIds = state.chosenServiceIds.slice(1);
+  const addParam = additionalIds.length
+    ? `&additionalServiceIds=${encodeURIComponent(additionalIds.join(","))}`
+    : "";
+  const url = `/api/slots?serviceId=${encodeURIComponent(state.chosenService.id)}&date=${encodeURIComponent(state.chosenDate)}${addParam}&_=${t0}`;
   const { slots, recommended = [] } = await apiGet(url);
   state.slots = slots;
   const recSet = new Set(recommended);
@@ -517,8 +584,10 @@ async function submitBooking() {
   if (!local) throw new Error("Unesi broj telefona.");
   const phone = `${dial}${local.replace(/\D+/g, "")}`;
   const hp = document.getElementById("hp-website")?.value || "";
+  const additionalIds = state.chosenServiceIds.slice(1);
   const payload = {
     serviceId: state.chosenService.id,
+    additionalServiceIds: additionalIds.length ? additionalIds : undefined,
     startISO: localToISO(state.chosenDate, state.chosenSlot),
     name,
     phone,
@@ -529,7 +598,8 @@ async function submitBooking() {
   const { booking } = await apiPost("/api/book", payload);
   const d = new Date(booking.startISO);
   const when = d.toLocaleString("sr-Latn", { weekday: "long", day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" });
-  showSuccess(`${booking.serviceName} — ${when}.`, Boolean(email));
+  const label = booking.combinedServicesLabel || booking.serviceName;
+  showSuccess(`${label} — ${when}.`, Boolean(email));
 }
 
 async function submitInquiry() {
@@ -570,7 +640,7 @@ async function onNext() {
       return;
     }
     if (state.step === 1) {
-      if (!state.chosenService) throw new Error("Izaberi uslugu.");
+      if (state.chosenServiceIds.length === 0) throw new Error("Izaberi bar jednu uslugu.");
       renderDatePicker();
       setStep(2);
       return;

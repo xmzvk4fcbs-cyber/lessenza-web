@@ -2217,6 +2217,27 @@ html { scroll-behavior: smooth; scroll-padding-top: 88px; -webkit-font-smoothing
    Raspored — Dan / Sedmica / Mjesec views
    ============================================ */
 
+/* --- Inquiry toolbar — stacks on narrow phones so the iOS date chrome
+   (which has its own minimum width) never gets clipped. */
+.inq-toolbar {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  align-items: end;
+  margin-bottom: 14px;
+}
+.inq-toolbar .field {
+  margin: 0;
+  min-width: 0;
+}
+.inq-toolbar #inq-refresh {
+  grid-column: 1 / -1;
+  min-height: 44px;
+}
+@media (max-width: 420px) {
+  .inq-toolbar { grid-template-columns: 1fr; }
+}
+
 /* --- View switcher (segment control) — NORMAL flow, not sticky.
    Sticky was hiding the period nav (arrows + date) underneath it when
    scrolling. Cleaner UX: it scrolls with the rest of the page. */
@@ -2773,9 +2794,16 @@ html { scroll-behavior: smooth; scroll-padding-top: 88px; -webkit-font-smoothing
 /* --- Responsive: desktop polish --- */
 @media (min-width: 768px) {
   .view-switcher {
-    position: sticky;
-    top: 62px;
-    margin: 0 0 1.2rem;
+    /* Stay in normal flow on desktop too — sticky was hiding behind the
+       blurred topbar on some zoom levels and made Dan/Sedmica/Mjesec invisible. */
+    position: relative;
+    top: auto;
+    margin: 16px 0 1.2rem;
+    background: var(--cream-soft, #F9F2E5);
+    padding: 12px 14px;
+    border: 1px solid rgba(217, 192, 154, 0.5);
+    border-radius: 14px;
+    box-shadow: 0 2px 8px rgba(74, 66, 56, 0.05);
   }
   .view-nav {
     padding: 12px 16px;
@@ -3900,9 +3928,13 @@ html { scroll-behavior: smooth; scroll-padding-top: 88px; -webkit-font-smoothing
   white-space: nowrap;
 }
 
-/* Native date input sits ON TOP of the styled trigger, transparent.
-   This way iOS opens its native picker on a direct tap (showPicker()
-   alone is unreliable on iOS Safari). The trigger is purely visual. */
+/* Native date input sits ON TOP of the styled trigger only — wrapped in
+   .mb-date-wrap so the input doesn't bleed over the chip-row below it
+   (which would otherwise eat chip taps). */
+.mb-date-wrap {
+  position: relative;
+  display: block;
+}
 .mb-date-native {
   position: absolute;
   inset: 0;

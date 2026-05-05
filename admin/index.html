@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <meta name="theme-color" content="#F9F2E5">
   <title>Admin — L'Essenza</title>
-  <link rel="stylesheet" href="admin.css?v=20260503-card-rebuild">
+  <link rel="stylesheet" href="admin.css?v=20260423-multi-service">
   <link rel="icon" href="/img/favicon-32.png" type="image/png" sizes="32x32">
   <link rel="apple-touch-icon" sizes="180x180" href="/img/apple-touch-icon.png">
   <link rel="manifest" href="/manifest.webmanifest">
@@ -207,8 +207,8 @@
         <section id="screen-inquiries" class="admin-screen">
           <section class="tab-panel" id="tab-inquiries">
             <h2>Upiti</h2>
-            <div class="row-between" style="display:grid;grid-template-columns:1fr 1fr;gap:8px;align-items:end;">
-              <div class="field" style="margin:0;min-width:0;">
+            <div class="inq-toolbar">
+              <div class="field">
                 <label for="inq-filter">Prikaži</label>
                 <select id="inq-filter">
                   <option value="pending" selected>Samo otvorene</option>
@@ -217,11 +217,11 @@
                   <option value="declined">Odbijene</option>
                 </select>
               </div>
-              <div class="field" style="margin:0;min-width:0;">
+              <div class="field">
                 <label for="inq-day">Datum</label>
                 <input id="inq-day" type="date" placeholder="Svi datumi">
               </div>
-              <button id="inq-refresh" class="btn btn-ghost" type="button" style="grid-column:1/-1;min-height:44px;">Osvježi</button>
+              <button id="inq-refresh" class="btn btn-ghost" type="button">Osvježi</button>
             </div>
             <div id="inquiries-list" class="stack"></div>
           </section>

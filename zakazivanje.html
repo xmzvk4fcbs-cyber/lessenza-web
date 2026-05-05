@@ -71,7 +71,7 @@
 
   <section class="section">
     <div class="section__inner">
-      <link rel="stylesheet" href="css/booking.css">
+      <link rel="stylesheet" href="css/booking.css?v=20260423-multi">
 
       <div class="booking-wizard" id="wizard">
         <ol class="booking-steps" aria-label="Koraci rezervacije">
@@ -85,7 +85,12 @@
 
         <section class="booking-step" id="step-1" aria-labelledby="step-1-title">
           <h2 id="step-1-title">Izaberi uslugu</h2>
-          <div class="service-grid" id="service-grid" role="list"></div>
+          <p class="step-hint">Možete odabrati više usluga koje želite obaviti istovremeno.</p>
+          <div class="service-grid" id="service-grid" role="list" aria-multiselectable="true"></div>
+          <div class="service-summary" id="service-summary" hidden aria-live="polite">
+            <span class="service-summary__label">Odabrano</span>
+            <span class="service-summary__value" id="service-summary-value"></span>
+          </div>
         </section>
 
         <section class="booking-step" id="step-2" hidden aria-labelledby="step-2-title">
@@ -96,6 +101,7 @@
 
         <section class="booking-step" id="step-3" hidden aria-labelledby="step-3-title">
           <h2 id="step-3-title">Izaberi vrijeme</h2>
+          <p class="step-context" id="slot-context" hidden></p>
           <div class="slot-grid" id="slot-grid"></div>
           <p class="slot-empty" id="slot-empty" hidden>Nema slobodnih termina za ovaj datum. Probaj drugi.</p>
         </section>
@@ -248,7 +254,7 @@
     </div>
   </footer>
 
-  <script src="js/booking.js" type="module"></script>
+  <script src="js/booking.js?v=20260423-multi" type="module"></script>
   <script src="js/site-config.js"></script>
   <script src="js/main.js"></script>
 </body>

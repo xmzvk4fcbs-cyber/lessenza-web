@@ -81,9 +81,11 @@ export function eventToBooking(e: calendar_v3.Schema$Event, services: Service[])
   const additionalNames = additionalServiceIds
     .map((id) => services.find((s) => s.id === id)?.name)
     .filter(Boolean) as string[];
+  // Only emit combinedServicesLabel when there *are* additional services —
+  // otherwise serviceName already covers it and the duplicate field wastes space.
   const combinedServicesLabel = additionalNames.length
     ? [service?.name ?? serviceId, ...additionalNames].join(" + ")
-    : (service?.name ?? serviceId);
+    : undefined;
   return {
     bookingId: priv.bookingId ?? desc.bookingId ?? e.id ?? "",
     calendarEventId: e.id ?? undefined,

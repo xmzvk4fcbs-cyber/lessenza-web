@@ -761,12 +761,14 @@ async function openRescheduleModal({ eventId, serviceId, name, phone, service, s
 
       <div class="field mb__date-field">
         <label for="rs-date">Novi datum</label>
-        <button type="button" id="rs-date-trigger" class="mb-date-trigger">
-          <span class="mb-date-trigger__icon">📅</span>
-          <span class="mb-date-trigger__text" id="rs-date-text">—</span>
-          <span class="mb-date-trigger__chev">▾</span>
-        </button>
-        <input id="rs-date" type="date" value="${defaultDate}" required class="mb-date-native">
+        <div class="mb-date-wrap">
+          <button type="button" id="rs-date-trigger" class="mb-date-trigger">
+            <span class="mb-date-trigger__icon">📅</span>
+            <span class="mb-date-trigger__text" id="rs-date-text">—</span>
+            <span class="mb-date-trigger__chev">▾</span>
+          </button>
+          <input id="rs-date" type="date" value="${defaultDate}" required class="mb-date-native">
+        </div>
         <div class="mb-date-shortcuts">
           <button type="button" class="chip" data-quick="today">Danas</button>
           <button type="button" class="chip" data-quick="tomorrow">Sjutra</button>
@@ -1056,12 +1058,14 @@ async function openManualBookingModal() {
         <div class="field"><label for="mb-service">Usluga (glavna)</label><select id="mb-service">${opts}</select></div>
         <div class="field mb__date-field">
           <label for="mb-date">Datum</label>
-          <button type="button" id="mb-date-trigger" class="mb-date-trigger" aria-haspopup="true">
-            <span class="mb-date-trigger__icon" aria-hidden="true">📅</span>
-            <span class="mb-date-trigger__text" id="mb-date-text">—</span>
-            <span class="mb-date-trigger__chev" aria-hidden="true">▾</span>
-          </button>
-          <input id="mb-date" type="date" value="${defaultDate}" required class="mb-date-native">
+          <div class="mb-date-wrap">
+            <button type="button" id="mb-date-trigger" class="mb-date-trigger" aria-haspopup="true">
+              <span class="mb-date-trigger__icon" aria-hidden="true">📅</span>
+              <span class="mb-date-trigger__text" id="mb-date-text">—</span>
+              <span class="mb-date-trigger__chev" aria-hidden="true">▾</span>
+            </button>
+            <input id="mb-date" type="date" value="${defaultDate}" required class="mb-date-native">
+          </div>
           <div class="mb-date-shortcuts">
             <button type="button" class="chip" data-quick="today">Danas</button>
             <button type="button" class="chip" data-quick="tomorrow">Sjutra</button>
@@ -1726,20 +1730,28 @@ document.addEventListener("click", (e) => {
 });
 
 // Swipe support on touch devices (week/month only — day has its own interactions).
-let touchStartX = null;
+// Track BOTH X and Y so vertical scrolling never gets misclassified as a swipe —
+// a small horizontal drift during scroll was hijacking the view and snapping
+// the page back to top.
+let touchStart = null;
 const scheduleScreen = document.getElementById("screen-schedule");
 if (scheduleScreen) {
   scheduleScreen.addEventListener("touchstart", (e) => {
     if (viewState.view === "day") return;
-    touchStartX = e.touches[0]?.clientX ?? null;
+    const t = e.touches[0];
+    if (!t) return;
+    touchStart = { x: t.clientX, y: t.clientY };
   }, { passive: true });
   scheduleScreen.addEventListener("touchend", (e) => {
-    if (touchStartX == null) return;
-    const endX = e.changedTouches[0]?.clientX;
-    if (typeof endX !== "number") { touchStartX = null; return; }
-    const dx = endX - touchStartX;
-    touchStartX = null;
-    if (Math.abs(dx) < 60) return; // threshold
+    if (touchStart == null) return;
+    const t = e.changedTouches[0];
+    if (!t) { touchStart = null; return; }
+    const dx = t.clientX - touchStart.x;
+    const dy = t.clientY - touchStart.y;
+    touchStart = null;
+    // Only count as a horizontal swipe if X movement clearly dominates Y.
+    if (Math.abs(dx) < 60) return;
+    if (Math.abs(dy) > Math.abs(dx) * 0.6) return;
     const delta = dx < 0 ? 1 : -1;
     if (viewState.view === "week") viewState.anchor = shiftWeek(viewState.anchor, delta);
     else if (viewState.view === "month") viewState.anchor = shiftMonth(viewState.anchor, delta);

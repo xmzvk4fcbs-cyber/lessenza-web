@@ -39,6 +39,11 @@ function formatDateHuman(iso: string): string {
   return formatSalon(new Date(iso), "EEEE, dd.MM.yyyy. 'u' HH:mm");
 }
 
+/** Combined services label if multi-service booking, else single service name. */
+function svc(b: { serviceName: string; combinedServicesLabel?: string }): string {
+  return b.combinedServicesLabel ?? b.serviceName;
+}
+
 // --- Brand palette (must match css/style.css) ---
 const BRAND = {
   cream: "#F4ECDB",
@@ -166,7 +171,7 @@ export function bookingConfirmedToClient(
     ``,
     `Potvrda termina u L'Essenza Beauty Salon:`,
     ``,
-    `Usluga: ${b.serviceName}`,
+    `Usluga: ${svc(b)}`,
     `Kada: ${dateLine}`,
     `Gdje: ${_ctx.salonAddress}`,
     ``,
@@ -192,7 +197,7 @@ export function bookingConfirmedToClient(
     paragraph(`Zdravo ${b.name},`),
     paragraph(esc(greeting)),
     detailsTable([
-      ["Usluga", b.serviceName],
+      ["Usluga", svc(b)],
       ["Kada", dateLine],
       ["Gdje", _ctx.salonAddress],
     ]),
@@ -206,7 +211,7 @@ export function bookingConfirmedToClient(
     to: b.email,
     subject: "L'Essenza — Potvrda termina",
     text,
-    html: renderShell({ heading: "Termin je potvrđen", preheader: `${b.serviceName} · ${dateLine}`, inner }),
+    html: renderShell({ heading: "Termin je potvrđen", preheader: `${svc(b)} · ${dateLine}`, inner }),
   };
 }
 
@@ -216,7 +221,7 @@ export function bookingCreatedToOwner(b: Booking, ctx: OwnerTemplateCtx): EmailM
   const text = [
     `Novi termin:`,
     ``,
-    `Usluga: ${b.serviceName}`,
+    `Usluga: ${svc(b)}`,
     `Kada: ${dateLine}`,
     `Klijent: ${b.name}`,
     `Telefon: ${b.phoneE164}`,
@@ -229,7 +234,7 @@ export function bookingCreatedToOwner(b: Booking, ctx: OwnerTemplateCtx): EmailM
   const inner = [
     paragraph(`Klijentkinja je upravo rezervisala termin.`),
     detailsTable([
-      ["Usluga", b.serviceName],
+      ["Usluga", svc(b)],
       ["Kada", dateLine],
       ["Klijent", b.name],
       ["Telefon", b.phoneE164],
@@ -241,7 +246,7 @@ export function bookingCreatedToOwner(b: Booking, ctx: OwnerTemplateCtx): EmailM
 
   return {
     to: ctx.ownerEmail,
-    subject: `Novi termin — ${b.serviceName} (${formatSalon(new Date(b.startISO), "dd.MM. HH:mm")})`,
+    subject: `Novi termin — ${svc(b)} (${formatSalon(new Date(b.startISO), "dd.MM. HH:mm")})`,
     text,
     html: renderShell({ heading: "Novi termin", preheader: `${b.name} · ${dateLine}`, inner }),
   };
@@ -309,7 +314,7 @@ export function bookingCancelledToClient(
     ``,
     `Nažalost moramo otkazati vaš termin:`,
     ``,
-    `Usluga: ${b.serviceName}`,
+    `Usluga: ${svc(b)}`,
     `Kada: ${dateLine}`,
     reason ? `Razlog: ${reason}` : "",
     ``,
@@ -319,7 +324,7 @@ export function bookingCancelledToClient(
   ].filter(Boolean).join("\n");
 
   const rows: Array<[string, string]> = [
-    ["Usluga", b.serviceName],
+    ["Usluga", svc(b)],
     ["Kada", dateLine],
   ];
   if (reason) rows.push(["Razlog", reason]);
@@ -336,7 +341,7 @@ export function bookingCancelledToClient(
     to: b.email,
     subject: "L'Essenza — Termin je otkazan",
     text,
-    html: renderShell({ heading: "Termin je otkazan", preheader: `${b.serviceName} · ${dateLine}`, inner }),
+    html: renderShell({ heading: "Termin je otkazan", preheader: `${svc(b)} · ${dateLine}`, inner }),
   };
 }
 
@@ -349,7 +354,7 @@ export function bookingRejectedToClient(b: Booking, _ctx: ClientTemplateCtx): Em
       Hvala na interesovanju za <strong>L'Essenza</strong>.
     </p>
     <p style="margin:0 0 16px;font-size:15px;line-height:1.7;">
-      Nažalost, u narednom periodu ne mogu prihvatiti Vaš termin za <strong>${esc(b.serviceName)}</strong> (${esc(when)}).
+      Nažalost, u narednom periodu ne mogu prihvatiti Vaš termin za <strong>${esc(svc(b))}</strong> (${esc(when)}).
     </p>
     ${replyNote()}
     <p style="margin:24px 0 0;font-size:14px;color:${BRAND.sageSoft};">Srdačno ✿ L'Essenza</p>
@@ -360,7 +365,7 @@ export function bookingRejectedToClient(b: Booking, _ctx: ClientTemplateCtx): Em
     html: renderShell({ heading: "Obavještenje o terminu", preheader: "Nažalost termin nije moguć.", inner }),
     text:
       `Draga ${b.name},\n\n` +
-      `Hvala na interesovanju za L'Essenza. Nažalost, u narednom periodu ne mogu prihvatiti Vaš termin za ${b.serviceName} (${when}).\n\n` +
+      `Hvala na interesovanju za L'Essenza. Nažalost, u narednom periodu ne mogu prihvatiti Vaš termin za ${svc(b)} (${when}).\n\n` +
       `Ako imate pitanja, slobodno odgovorite na ovaj email.\n\n` +
       `Srdačno ✿ L'Essenza`,
   };
@@ -379,7 +384,7 @@ export function bookingRescheduledToClient(
     ``,
     `Vaš termin u L'Essenza je pomjeren.`,
     ``,
-    `Usluga: ${updated.serviceName}`,
+    `Usluga: ${svc(updated)}`,
     `Stari termin: ${oldLine}`,
     `Novi termin: ${newLine}`,
     `Gdje: ${ctx.salonAddress}`,
@@ -393,7 +398,7 @@ export function bookingRescheduledToClient(
     paragraph(`Draga ${updated.name},`),
     paragraph(`Vaš termin je pomjeren. Novi detalji su ispod.`),
     detailsTable([
-      ["Usluga", updated.serviceName],
+      ["Usluga", svc(updated)],
       ["Stari termin", oldLine],
       ["Novi termin", newLine],
       ["Gdje", ctx.salonAddress],
@@ -491,7 +496,7 @@ export function dailyDigestToOwner(
 ): EmailMessage {
   const lines = bookings.length
     ? bookings
-        .map((b) => `• ${formatSalon(new Date(b.startISO), "HH:mm")} — ${b.serviceName} — ${b.name} (${b.phoneE164})`)
+        .map((b) => `• ${formatSalon(new Date(b.startISO), "HH:mm")} — ${svc(b)} — ${b.name} (${b.phoneE164})`)
         .join("\n")
     : "Nema zakazanih termina za sutra.";
   const adminUrl = `${ctx.siteUrl.replace(/\/$/, "")}/admin/`;
@@ -509,7 +514,7 @@ export function dailyDigestToOwner(
           <tr>
             <td style="padding:14px 18px;border-bottom:1px solid ${BRAND.champagne};">
               <div style="font-family:'Playfair Display',Georgia,serif;font-size:18px;color:${BRAND.gold};">${esc(formatSalon(new Date(b.startISO), "HH:mm"))}</div>
-              <div style="font-size:15px;color:${BRAND.sage};font-weight:500;margin-top:2px;">${esc(b.serviceName)}</div>
+              <div style="font-size:15px;color:${BRAND.sage};font-weight:500;margin-top:2px;">${esc(svc(b))}</div>
               <div style="font-size:13px;color:${BRAND.sageSoft};margin-top:2px;">${esc(b.name)} &middot; ${esc(b.phoneE164)}</div>
             </td>
           </tr>`).join("")}
@@ -538,7 +543,7 @@ export function reminderToClient(b: Booking, ctx: ClientTemplateCtx): EmailMessa
     ``,
     `Podsjećamo vas na sutrašnji termin:`,
     ``,
-    `Usluga: ${b.serviceName}`,
+    `Usluga: ${svc(b)}`,
     `Kada: ${when}`,
     `Gdje: ${ctx.salonAddress}`,
     ``,
@@ -551,7 +556,7 @@ export function reminderToClient(b: Booking, ctx: ClientTemplateCtx): EmailMessa
     paragraph(`Draga ${b.name},`),
     paragraph(`Podsjećamo Vas na sutrašnji termin u L'Essenza.`),
     detailsTable([
-      ["Usluga", b.serviceName],
+      ["Usluga", svc(b)],
       ["Kada", when],
       ["Gdje", ctx.salonAddress],
     ]),
@@ -564,7 +569,7 @@ export function reminderToClient(b: Booking, ctx: ClientTemplateCtx): EmailMessa
     to: b.email,
     subject: "L'Essenza — Podsjetnik za sutra",
     text,
-    html: renderShell({ heading: "Podsjetnik za sutra", preheader: `${b.serviceName} · ${when}`, inner }),
+    html: renderShell({ heading: "Podsjetnik za sutra", preheader: `${svc(b)} · ${when}`, inner }),
   };
 }
 
@@ -583,7 +588,7 @@ export function bookingCancelledByClientToOwner(
   const text = [
     `Klijentkinja je sama otkazala termin preko sajta.`,
     ``,
-    `Termin: ${b.serviceName}`,
+    `Termin: ${svc(b)}`,
     `Klijentkinja: ${b.name}`,
     phoneLine,
     emailLine,
@@ -597,7 +602,7 @@ export function bookingCancelledByClientToOwner(
   const inner = [
     paragraph(`<strong>Klijentkinja je sama otkazala termin preko sajta.</strong>`),
     detailsTable([
-      ["Termin", b.serviceName],
+      ["Termin", svc(b)],
       ["Klijentkinja", b.name],
       ["Telefon", b.phoneE164 || "—"],
       ["Email", b.email || "—"],
@@ -608,7 +613,7 @@ export function bookingCancelledByClientToOwner(
 
   return {
     to: ctx.ownerEmail,
-    subject: `Otkazan termin — ${b.name}, ${b.serviceName}`,
+    subject: `Otkazan termin — ${b.name}, ${svc(b)}`,
     text,
     html: renderShell({ heading: "Termin otkazan", preheader: `${b.name} · ${when}`, inner }),
   };
@@ -667,7 +672,7 @@ export function reviewNudgeToClient(
 
   const inner = [
     paragraph(`Draga ${b.name},`),
-    paragraph(`Hvala što ste danas bili kod nas u L'Essenza. Nadamo se da ste zadovoljne svojim ${b.serviceName.toLowerCase()} tretmanom.`),
+    paragraph(`Hvala što ste danas bili kod nas u L'Essenza. Nadamo se da ste zadovoljne svojim ${svc(b).toLowerCase()} tretmanom.`),
     paragraph(`Ako Vam nije teško, dvije rečenice u Google recenziji nam mnogo znače — pomažete drugim klijentkinjama da nas pronađu.`),
     btnLink(url, "Ostavi recenziju"),
     softNote(`Bez pritiska — recenzije ostavljamo u potpunosti dobrovoljno.`),

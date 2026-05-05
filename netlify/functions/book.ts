@@ -41,6 +41,8 @@ function getDeps(): Deps {
 
 interface BookRequest {
   serviceId: string;
+  /** Optional extra services done in same visit (e.g. manikir + pedikir). */
+  additionalServiceIds?: string[];
   startISO: string;
   name: string;
   phone: string;
@@ -96,6 +98,23 @@ export const handler: Handler = async (event) => {
   const service = services.find((s) => s.id === body.serviceId && s.active);
   if (!service) return notFound("Unknown service");
 
+  // Validate & accumulate optional additional services (multi-service booking).
+  const additionalIds = (body.additionalServiceIds ?? [])
+    .filter((id): id is string => typeof id === "string" && id.length > 0 && id !== body.serviceId);
+  let totalMin = service.durationMinutes;
+  const additionalNames: string[] = [];
+  const validAdditionalIds: string[] = [];
+  for (const id of additionalIds) {
+    const extra = services.find((s) => s.id === id && s.active);
+    if (!extra) return notFound(`Unknown service: ${id}`);
+    totalMin += extra.durationMinutes;
+    additionalNames.push(extra.name);
+    validAdditionalIds.push(id);
+  }
+  const combinedServicesLabel = additionalNames.length
+    ? [service.name, ...additionalNames].join(" + ")
+    : service.name;
+
   const dateKey = dayKeyInTZ(startDate);
   const startHHMM = formatSalon(startDate, "HH:mm");
 
@@ -108,6 +127,7 @@ export const handler: Handler = async (event) => {
 
   const available = computeSlots({
     serviceId: body.serviceId,
+    additionalServiceIds: validAdditionalIds,
     date: dateKey,
     services,
     pairs,
@@ -123,11 +143,13 @@ export const handler: Handler = async (event) => {
   }
 
   const bookingId = randomUUID();
-  const endISO = new Date(startDate.getTime() + service.durationMinutes * 60_000).toISOString();
+  const endISO = new Date(startDate.getTime() + totalMin * 60_000).toISOString();
   const booking: Booking = {
     bookingId,
     serviceId: service.id,
     serviceName: service.name,
+    additionalServiceIds: validAdditionalIds.length ? validAdditionalIds : undefined,
+    combinedServicesLabel: validAdditionalIds.length ? combinedServicesLabel : undefined,
     startISO: startDate.toISOString(),
     endISO,
     name: body.name.trim().slice(0, 120),
@@ -198,7 +220,7 @@ export const handler: Handler = async (event) => {
       const subs = await getPushSubscriptions();
       const payload = JSON.stringify({
         title: "Novi termin",
-        body: `${booking.serviceName} — ${booking.name}, ${formatSalon(new Date(booking.startISO), "dd.MM. 'u' HH:mm")}`,
+        body: `${booking.combinedServicesLabel ?? booking.serviceName} — ${booking.name}, ${formatSalon(new Date(booking.startISO), "dd.MM. 'u' HH:mm")}`,
         url: "/admin/",
       });
       for (const s of subs) {
@@ -226,6 +248,8 @@ export const handler: Handler = async (event) => {
     booking: {
       bookingId,
       serviceName: booking.serviceName,
+      combinedServicesLabel: booking.combinedServicesLabel,
+      additionalServiceIds: booking.additionalServiceIds,
       startISO: booking.startISO,
       endISO: booking.endISO,
     },
