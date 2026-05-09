@@ -168,16 +168,22 @@ export const handler: Handler = async (event) => {
   booking.calendarEventId = inserted.id ?? undefined;
 
   // Activity log — every public booking shows up in the dashboard feed.
-  const whenLabel = formatSalon(new Date(booking.startISO), "dd.MM.yyyy. 'u' HH:mm");
-  await appendAudit({
-    kind: "booking.created",
-    summary: `Novi termin: ${booking.combinedServicesLabel ?? booking.serviceName} — ${booking.name} (${whenLabel})`,
-    meta: {
-      eventId: booking.calendarEventId ?? "",
-      phone: booking.phoneE164,
-      source: "web",
-    },
-  });
+  // Best-effort: a transient store failure here must NOT break a successful
+  // booking (the calendar event is already committed at this point).
+  try {
+    const whenLabel = formatSalon(new Date(booking.startISO), "dd.MM.yyyy. 'u' HH:mm");
+    await appendAudit({
+      kind: "booking.created",
+      summary: `Novi termin: ${booking.combinedServicesLabel ?? booking.serviceName} — ${booking.name} (${whenLabel})`,
+      meta: {
+        eventId: booking.calendarEventId ?? "",
+        phone: booking.phoneE164,
+        source: "web",
+      },
+    });
+  } catch (e) {
+    console.warn("[book][audit] failed:", (e as Error).message);
+  }
 
   const mailer = deps?.makeMailer ? deps.makeMailer() : await getMailerAsync(settings);
   console.log("[book]", JSON.stringify({

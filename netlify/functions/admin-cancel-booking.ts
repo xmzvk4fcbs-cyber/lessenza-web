@@ -91,14 +91,19 @@ const inner: Handler = async (event) => {
       viberLink = `viber://chat?number=${encodeURIComponent(booking.phoneE164)}`;
     }
   }
-  if (booking) {
-    await appendAudit({
-      kind: "booking.cancelled",
-      summary: `Otkazan termin: ${booking.serviceName} — ${booking.name} (${formatSalon(new Date(booking.startISO), "dd.MM.yyyy. HH:mm")})${reason ? ` · razlog: ${reason}` : ""}`,
-      meta: { eventId: booking.calendarEventId ?? "", phone: booking.phoneE164 ?? "" },
-    });
-  } else {
-    await appendAudit({ kind: "booking.cancelled", summary: `Otkazan event ${eventId}${reason ? ` · razlog: ${reason}` : ""}`, meta: { eventId } });
+  try {
+    if (booking) {
+      const cancelLabel = booking.combinedServicesLabel ?? booking.serviceName;
+      await appendAudit({
+        kind: "booking.cancelled",
+        summary: `Otkazan termin: ${cancelLabel} — ${booking.name} (${formatSalon(new Date(booking.startISO), "dd.MM.yyyy. HH:mm")})${reason ? ` · razlog: ${reason}` : ""}`,
+        meta: { eventId: booking.calendarEventId ?? "", phone: booking.phoneE164 ?? "" },
+      });
+    } else {
+      await appendAudit({ kind: "booking.cancelled", summary: `Otkazan event ${eventId}${reason ? ` · razlog: ${reason}` : ""}`, meta: { eventId } });
+    }
+  } catch (e) {
+    console.warn("[cancel][audit] failed:", (e as Error).message);
   }
   return json({ ok: true, emailSent, whatsappLink, viberLink, message });
 };

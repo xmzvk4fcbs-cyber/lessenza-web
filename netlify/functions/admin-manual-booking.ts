@@ -119,24 +119,28 @@ const inner: Handler = async (event) => {
   booking.calendarEventId = inserted.id ?? undefined;
   const whenLabel = new Date(booking.startISO).toLocaleString("sr-Latn", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" });
   const auditLabel = booking.combinedServicesLabel ?? booking.serviceName;
-  await appendAudit({
-    kind: "booking.created",
-    summary: `Dodat termin ručno: ${auditLabel} — ${booking.name} (${whenLabel})`,
-    meta: {
-      eventId: booking.calendarEventId ?? "",
-      phone: booking.phoneE164 ?? "",
-      source: "admin-manual",
-      forced: body.force ? "1" : "0",
-    },
-  });
-  // If admin forced the slot despite a conflict, log a separate "overlap" event
-  // so the activity feed shows it distinctly with a warning icon.
-  if (body.force) {
+  // Best-effort audit — gcal already has the event, don't fail the request if
+  // the activity log can't be written.
+  try {
     await appendAudit({
-      kind: "booking.overlap",
-      summary: `Termin se preklapa sa drugim — ${auditLabel} · ${booking.name} (${whenLabel})`,
-      meta: { eventId: booking.calendarEventId ?? "" },
+      kind: "booking.created",
+      summary: `Dodat termin ručno: ${auditLabel} — ${booking.name} (${whenLabel})`,
+      meta: {
+        eventId: booking.calendarEventId ?? "",
+        phone: booking.phoneE164 ?? "",
+        source: "admin-manual",
+        forced: body.force ? "1" : "0",
+      },
     });
+    if (body.force) {
+      await appendAudit({
+        kind: "booking.overlap",
+        summary: `Termin se preklapa sa drugim — ${auditLabel} · ${booking.name} (${whenLabel})`,
+        meta: { eventId: booking.calendarEventId ?? "" },
+      });
+    }
+  } catch (e) {
+    console.warn("[manual-booking][audit] failed:", (e as Error).message);
   }
   return json({ ok: true, booking });
 };

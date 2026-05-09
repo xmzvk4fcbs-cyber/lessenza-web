@@ -83,11 +83,15 @@ const inner: Handler = async (event) => {
     whatsappLink = waLink(updated.phoneE164, msg);
     viberLink = `viber://chat?number=${encodeURIComponent(updated.phoneE164)}`;
   }
-  await appendAudit({
-    kind: "booking.rescheduled",
-    summary: `Pomjeren termin: ${updated.serviceName} — ${updated.name} → ${newLine}`,
-    meta: { eventId: updated.calendarEventId ?? "" },
-  });
+  try {
+    await appendAudit({
+      kind: "booking.rescheduled",
+      summary: `Pomjeren termin: ${updated.combinedServicesLabel ?? updated.serviceName} — ${updated.name} → ${newLine}`,
+      meta: { eventId: updated.calendarEventId ?? "" },
+    });
+  } catch (e) {
+    console.warn("[reschedule][audit] failed:", (e as Error).message);
+  }
   return json({ ok: true, emailSent, whatsappLink, viberLink, message: msg, booking: updated });
 };
 

@@ -1041,26 +1041,41 @@ async function openEditServicesModal({ eventId, serviceId, name, service }) {
   cbs.forEach((cb) => cb.addEventListener("change", updateSummary));
   updateSummary();
 
-  saveBtn.addEventListener("click", async () => {
+  let lastConflict = false;
+  async function trySave(force) {
     saveBtn.disabled = true;
     saveBtn.textContent = "Čuvam…";
     errorBox.hidden = true;
     try {
       const additional = Array.from(cbs).filter((cb) => cb.checked && !cb.disabled).map((cb) => cb.value);
-      await must("/api/admin/edit-services", {
+      const res = await fetch("/api/admin/edit-services", {
         method: "POST",
-        body: { eventId, serviceId: primarySel.value, additionalServiceIds: additional },
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ eventId, serviceId: primarySel.value, additionalServiceIds: additional, force }),
       });
+      const data = await res.json().catch(() => ({}));
+      if (res.status === 409) {
+        lastConflict = true;
+        saveBtn.disabled = false;
+        saveBtn.textContent = "Sačuvaj svejedno";
+        errorBox.hidden = false;
+        errorBox.innerHTML = `<strong>⚠️ ${escapeHtml(data.message || "Konflikt")}</strong>`;
+        return;
+      }
+      if (!res.ok) {
+        throw new Error(data.message || `HTTP ${res.status}`);
+      }
       closeModal();
       toast("Usluga ažurirana.", "success");
       await renderList();
     } catch (err) {
       saveBtn.disabled = false;
-      saveBtn.textContent = "Sačuvaj";
+      saveBtn.textContent = lastConflict ? "Sačuvaj svejedno" : "Sačuvaj";
       errorBox.hidden = false;
       errorBox.innerHTML = `<strong>⚠️ Ne mogu sačuvati</strong><br>${escapeHtml(err.message)}`;
     }
-  });
+  }
+  saveBtn.addEventListener("click", () => trySave(lastConflict));
 }
 
 async function openSwapModal({ eventId, name: oldName, phone: oldPhone, service: oldServiceName, start: oldStart }) {

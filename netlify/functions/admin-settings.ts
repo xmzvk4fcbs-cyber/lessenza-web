@@ -38,10 +38,14 @@ const inner: Handler = async (event) => {
       catch { return false; }
     });
     if (changed.length) {
-      await appendAudit({
-        kind: "settings.updated",
-        summary: `Promijenjena podešavanja: ${changed.join(", ")}`,
-      });
+      try {
+        await appendAudit({
+          kind: "settings.updated",
+          summary: `Promijenjena podešavanja: ${changed.join(", ")}`,
+        });
+      } catch (e) {
+        console.warn("[settings][audit] failed:", (e as Error).message);
+      }
     }
     return json({ settings: parsed.data });
   }
