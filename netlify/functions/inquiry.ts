@@ -77,7 +77,9 @@ export const handler: Handler = async (event) => {
   }
 
   const services = await getServices();
-  const service = services.find((s) => s.id === body.serviceId);
+  // Match book.ts: only ACTIVE services are bookable / inquirable. Otherwise
+  // the owner sees a pending inquiry for a deprecated service and gets confused.
+  const service = services.find((s) => s.id === body.serviceId && s.active);
   if (!service) return notFound("Unknown service");
 
   // Validate optional additional services.
@@ -88,7 +90,7 @@ export const handler: Handler = async (event) => {
   const additionalNames: string[] = [];
   const validAdditionalIds: string[] = [];
   for (const id of additionalIds) {
-    const extra = services.find((s) => s.id === id);
+    const extra = services.find((s) => s.id === id && s.active);
     if (!extra) return notFound(`Unknown service: ${id}`);
     additionalNames.push(extra.name);
     validAdditionalIds.push(id);

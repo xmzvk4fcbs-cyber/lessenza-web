@@ -77,9 +77,16 @@ export function createInMemoryCalendar(): CalendarClient {
       const min = new Date(timeMin).getTime();
       const max = new Date(timeMax).getTime();
       const events = await readEvents();
+      // Return any event whose [start, end) interval OVERLAPS the query window
+      // — same semantics as Google Calendar API. Previously this filtered on
+      // start only, hiding events that began before the window but were still
+      // running during it (e.g. 08:30 booking when querying [09:00, 10:30]).
       return events.filter((e) => {
         const s = new Date(e.start?.dateTime ?? e.start?.date ?? 0).getTime();
-        return s >= min && s <= max;
+        const en = new Date(e.end?.dateTime ?? e.end?.date ?? 0).getTime();
+        if (!s) return false;
+        const eventEnd = en || s + 60 * 60_000; // fallback if no end set
+        return s < max && eventEnd > min;
       });
     },
     async insertEvent(event) {

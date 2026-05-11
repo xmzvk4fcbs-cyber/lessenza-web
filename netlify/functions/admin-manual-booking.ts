@@ -7,7 +7,7 @@ import { getServices, getSettings, appendAudit } from "../lib/config";
 import { bookingToEvent, type Booking } from "../lib/calendar-domain";
 import { normalizePhone } from "../lib/phone";
 import { withDayLock } from "../lib/booking-lock";
-import { dayKeyInTZ } from "../lib/time";
+import { dayKeyInTZ, fromTZ } from "../lib/time";
 
 let factory: (() => CalendarClient) | null = null;
 export function __setCalendarFactoryForTests(f: (() => CalendarClient) | null): void {
@@ -102,7 +102,11 @@ const inner: Handler = async (event) => {
   const lockResult = await withDayLock<LockResult>(dayKey, async () => {
     const cal = await makeCalendar();
     if (!body.force) {
-      const existing = await cal.listEvents({ timeMin: start.toISOString(), timeMax: endISO });
+      // Query the whole salon day so we don't miss events that started before
+      // `start` but are still running during it (08:30→10:30 vs new 09:00).
+      const dayStart = fromTZ(dayKey, "00:00").toISOString();
+      const dayEnd = fromTZ(dayKey, "23:59").toISOString();
+      const existing = await cal.listEvents({ timeMin: dayStart, timeMax: dayEnd });
       const overlaps = existing.filter((e) => {
         const s = new Date(e.start?.dateTime ?? e.start?.date ?? 0).getTime();
         const en = new Date(e.end?.dateTime ?? e.end?.date ?? 0).getTime();

@@ -724,7 +724,7 @@ async function onAction(e) {
     openModal("Označi 'nije došla'", `
       <p><strong>${escapeHtml(service)}</strong> — ${escapeHtml(name)}<br><span class="muted">${fmtDateTime(start)}</span></p>
       <p class="muted" style="font-size:0.88rem;">Termin se briše iz Google kalendara, a klijentkinja se broji u no-show statistici (vidiš u kartonu pri sljedećem zakazivanju).</p>
-      <p class="muted" style="font-size:0.85rem;">Ne šalje se nikakva poruka klijentu.</p>
+      <p class="muted" style="font-size:0.85rem;">Po želji možeš poslati i kratku poruku klijentkinji.</p>
       <div class="stack-card__actions" style="margin-top:0.75rem;">
         <button class="btn btn-ghost" type="button" data-close="1">Nazad</button>
         <button class="btn btn-danger" type="button" id="confirm-noshow">Da, nije došla</button>
@@ -735,6 +735,15 @@ async function onAction(e) {
         const r = await must("/api/admin/no-show", { method: "POST", body: { eventId } });
         closeModal();
         toast(`Označeno · ${r.count}× ukupno za ovaj broj.`, "success");
+        // Offer to message the client — same UX as cancel/reject. Only show if
+        // we have a phone (otherwise there's nothing to do).
+        if (phone) {
+          const when = fmtDateTime(start);
+          const msg = `Draga ${name}, niste se pojavili na terminu (${service}, ${when}). Molim Vas da mi javite kad budete htjeli novi termin. Srdačno, L'Essenza ✿`;
+          const wa = `https://wa.me/${phone.replace(/[^\d]/g, "")}?text=${encodeURIComponent(msg)}`;
+          const viber = `viber://chat?number=${encodeURIComponent(phone)}`;
+          showMessageActions("Pošalji poruku klijentkinji (opciono)", msg, wa, viber);
+        }
         await renderList();
       } catch (err) {
         toast(err.message, "error");
@@ -964,16 +973,31 @@ async function openRescheduleModal({ eventId, serviceId, name, phone, service, s
 
   refresh();
 
+  let rsForce = false;
   saveBtn.addEventListener("click", async () => {
     const iso = chosenIso.value;
     if (!iso) return;
     saveBtn.disabled = true;
     errorBox.hidden = true;
     try {
-      const r = await must("/api/admin/reschedule-booking", { method: "POST", body: { eventId, newStartISO: iso } });
+      const res = await fetch("/api/admin/reschedule-booking", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ eventId, newStartISO: iso, force: rsForce }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (res.status === 409) {
+        rsForce = true;
+        saveBtn.disabled = false;
+        saveBtn.textContent = "Pomjeri svejedno";
+        errorBox.hidden = false;
+        errorBox.innerHTML = `<strong>⚠️ ${escapeHtml(data.message || "Konflikt")}</strong>`;
+        return;
+      }
+      if (!res.ok) throw new Error(data.message || `HTTP ${res.status}`);
       closeModal();
       toast("Termin pomjeren.", "success");
-      if (r.message) showMessageActions("Obavijesti klijentkinju", r.message, r.whatsappLink, r.viberLink);
+      if (data.message) showMessageActions("Obavijesti klijentkinju", data.message, data.whatsappLink, data.viberLink);
       await renderList();
     } catch (err) {
       saveBtn.disabled = false;

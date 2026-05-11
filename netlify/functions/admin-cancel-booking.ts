@@ -7,7 +7,8 @@ import { getServices, getSettings, appendCancellation, appendAudit } from "../li
 import { eventToBooking } from "../lib/calendar-domain";
 import { bookingCancelledToClient } from "../lib/email-templates";
 import { waLink } from "../lib/phone";
-import { formatSalon } from "../lib/time";
+import { formatSalon, dayKeyInTZ } from "../lib/time";
+import { withDayLock } from "../lib/booking-lock";
 
 interface Deps {
   makeCalendar: () => CalendarClient;
@@ -43,7 +44,13 @@ const inner: Handler = async (event) => {
   if (!target) return notFound("Event not found");
   const booking = eventToBooking(target, services);
 
-  await cal.deleteEvent(eventId);
+  // Serialize deletion under the day lock so a concurrent /api/book that's
+  // checking availability for an adjacent slot sees a stable snapshot — either
+  // the event still exists (and is treated as busy) or it's already gone.
+  const dayKey = booking ? dayKeyInTZ(new Date(booking.startISO)) : dayKeyInTZ(new Date(target.start?.dateTime ?? Date.now()));
+  await withDayLock(dayKey, async () => {
+    await cal.deleteEvent(eventId);
+  });
 
   // Best-effort: log cancellation. Failure must NOT abort the cancel flow —
   // the calendar event is already gone.

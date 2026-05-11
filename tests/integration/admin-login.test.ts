@@ -48,4 +48,24 @@ describe("admin-login", () => {
     const r = await handler(ev({ password: "whatever" }), {} as never);
     expect(r?.statusCode).toBe(409);
   });
+
+  /** Rate limit: 8 attempts per 15 min per IP. The 9th attempt returns 429
+   *  regardless of password correctness. clientIP() falls back to "unknown"
+   *  when no headers — so all attempts here bucket to the same key. */
+  it("returns 429 after 8 wrong-password attempts from the same IP", async () => {
+    const wrongs = [];
+    for (let i = 0; i < 8; i++) {
+      wrongs.push(await handler(ev({ password: `wrong-${i}` }), {} as never));
+    }
+    // First 8 are 401 (rate limit allows them, password is wrong).
+    for (const r of wrongs) expect(r?.statusCode).toBe(401);
+    // 9th is rate-limited BEFORE password check.
+    const ninth = await handler(ev({ password: "correct-horse" }), {} as never);
+    expect(ninth?.statusCode).toBe(429);
+    const body = JSON.parse(ninth!.body!);
+    expect(body.error).toBe("rate-limited");
+    // Retry-After header should be present and positive.
+    const retryAfter = (ninth!.headers as Record<string, string>)["retry-after"];
+    expect(Number(retryAfter)).toBeGreaterThan(0);
+  });
 });

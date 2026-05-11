@@ -8,7 +8,7 @@ import { getInquiry, getServices, getSettings, updateInquiryStatus, appendAudit 
 import { bookingToEvent, type Booking } from "../lib/calendar-domain";
 import { inquiryAcceptedToClient } from "../lib/email-templates";
 import { waLink } from "../lib/phone";
-import { formatSalon, dayKeyInTZ } from "../lib/time";
+import { formatSalon, dayKeyInTZ, fromTZ } from "../lib/time";
 import { withDayLock } from "../lib/booking-lock";
 
 interface Deps {
@@ -90,7 +90,11 @@ const inner: Handler = async (event) => {
     | { kind: "ok"; eventId: string | undefined };
   const lockResult = await withDayLock<LockResult>(dayKey, async () => {
     if (!force) {
-      const existing = await cal.listEvents({ timeMin: start.toISOString(), timeMax: endISO });
+      // Whole-day window — matches book.ts and avoids missing pre-existing
+      // events that overlap the new booking from before its start.
+      const dayStart = fromTZ(dayKey, "00:00").toISOString();
+      const dayEnd = fromTZ(dayKey, "23:59").toISOString();
+      const existing = await cal.listEvents({ timeMin: dayStart, timeMax: dayEnd });
       const overlaps = existing.filter((e) => {
         const s = new Date(e.start?.dateTime ?? e.start?.date ?? 0).getTime();
         const en = new Date(e.end?.dateTime ?? e.end?.date ?? 0).getTime();
@@ -128,7 +132,22 @@ const inner: Handler = async (event) => {
     return serverError("Calendar insert failed");
   }
   booking.calendarEventId = lockResult.eventId;
-  await updateInquiryStatus(inquiryId, "accepted");
+  // Mark inquiry accepted. If this fails, the booking already exists in
+  // Calendar — retry a couple of times before logging. If it still fails the
+  // owner may re-accept and hit the 409 conflict path on the second try.
+  let statusUpdated = false;
+  for (let attempt = 0; attempt < 3 && !statusUpdated; attempt++) {
+    try {
+      await updateInquiryStatus(inquiryId, "accepted");
+      statusUpdated = true;
+    } catch (e) {
+      console.warn(`[inquiry-accept][status-update] attempt ${attempt + 1} failed:`, (e as Error).message);
+      if (attempt < 2) await new Promise((r) => setTimeout(r, 250 * (attempt + 1)));
+    }
+  }
+  if (!statusUpdated) {
+    console.error("[inquiry-accept] inquiry status update failed after retries — booking exists, inquiry still pending. Manual cleanup needed for inquiry id=", inquiryId);
+  }
 
   // Activity feed entries — best-effort.
   try {

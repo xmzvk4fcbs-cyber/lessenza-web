@@ -154,19 +154,17 @@ describe("POST /api/book", () => {
     expect(mailer.sent[0]?.to).toBe("vlasnica@example.com");
   });
 
-  /** Two clients race for the same 09:00 slot. With the per-day mutex, exactly
-   *  one insertEvent fires; the other request gets a 409 "slot-taken". The
-   *  mock insertEvent yields the event loop *before* committing so the second
-   *  handler has a real chance to enter its critical section before the first
-   *  one finishes — which is exactly when an unlocked TOCTOU would double-book. */
-  it("serialises concurrent bookings for the same slot (no double-book)", async () => {
+  /** Helper: build a mock calendar whose insertEvent yields the event loop
+   *  before committing, so concurrent handlers have a real race window. */
+  function makeRacingCalendar() {
     const events: Array<{ id: string; start: string; end: string }> = [];
     let nextId = 1;
-
-    __setDepsForTests({
-      makeCalendar: () => ({
+    let insertCallCount = 0;
+    return {
+      events,
+      get insertCallCount() { return insertCallCount; },
+      cal: {
         async listEvents() {
-          // Snapshot what's currently committed; do NOT include in-flight inserts.
           return events.map((e) => ({
             id: e.id,
             start: { dateTime: e.start },
@@ -175,20 +173,27 @@ describe("POST /api/book", () => {
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
           })) as any;
         },
-        async insertEvent(e) {
-          // Force a microtask hop so the second handler has a chance to start
-          // its critical section before this one's listEvents has returned.
+        async insertEvent(e: { start?: { dateTime?: string }; end?: { dateTime?: string } } & Record<string, unknown>) {
+          insertCallCount++;
           await new Promise((r) => setTimeout(r, 5));
           const id = `gcal-${nextId++}`;
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          events.push({ id, start: (e as any).start.dateTime, end: (e as any).end.dateTime });
+          events.push({ id, start: e.start!.dateTime!, end: e.end!.dateTime! });
           return { ...e, id };
         },
         async deleteEvent() {},
-        async patchEvent(_id, e) { return e; },
-      }),
-      makeMailer: () => mailer,
-    });
+        async patchEvent(_id: string, e: object) { return e; },
+      },
+    };
+  }
+
+  /** Two clients race for the same 09:00 slot. With the per-day mutex, exactly
+   *  one insertEvent fires; the other request gets a 409 "slot-taken". The
+   *  mock insertEvent yields the event loop *before* committing so the second
+   *  handler has a real chance to enter its critical section before the first
+   *  one finishes — which is exactly when an unlocked TOCTOU would double-book. */
+  it("serialises concurrent bookings for the same slot (no double-book)", async () => {
+    const rc = makeRacingCalendar();
+    __setDepsForTests({ makeCalendar: () => rc.cal, makeMailer: () => mailer });
 
     const payload = (name: string) => ({
       serviceId: "manikir-gel",
@@ -204,7 +209,52 @@ describe("POST /api/book", () => {
 
     const codes = [r1?.statusCode, r2?.statusCode].sort();
     expect(codes).toEqual([200, 409]);
-    // Calendar must reflect exactly one booking for this slot.
-    expect(events).toHaveLength(1);
+    expect(rc.events).toHaveLength(1);
+    expect(rc.insertCallCount).toBe(1); // The lock must prevent the second insert from firing at all.
+  });
+
+  /** Five clients race for the same slot. Lock semantics must hold for N>2:
+   *  exactly one wins, the rest get 409. */
+  it("serialises 5-way race for the same slot", async () => {
+    const rc = makeRacingCalendar();
+    __setDepsForTests({ makeCalendar: () => rc.cal, makeMailer: () => mailer });
+
+    const reqs = ["Ana", "Mara", "Jovana", "Milica", "Tijana"].map((name) =>
+      handler(
+        ev({ serviceId: "manikir-gel", startISO: "2099-01-05T09:00:00.000Z", name, phone: "069123456" }),
+        {} as never,
+      ),
+    );
+    const results = await Promise.all(reqs);
+    const codes = results.map((r) => r?.statusCode).sort();
+    expect(codes).toEqual([200, 409, 409, 409, 409]);
+    expect(rc.events).toHaveLength(1);
+    expect(rc.insertCallCount).toBe(1);
+  });
+
+  /** Concurrent bookings on DIFFERENT days must NOT be serialised — different
+   *  day keys, no contention. Both should succeed in parallel. */
+  it("does not serialise bookings on different days", async () => {
+    const rc = makeRacingCalendar();
+    __setDepsForTests({ makeCalendar: () => rc.cal, makeMailer: () => mailer });
+
+    const t0 = Date.now();
+    const [r1, r2] = await Promise.all([
+      handler(
+        ev({ serviceId: "manikir-gel", startISO: "2099-01-05T09:00:00.000Z", name: "Ana", phone: "069123456" }),
+        {} as never,
+      ),
+      handler(
+        ev({ serviceId: "manikir-gel", startISO: "2099-01-06T09:00:00.000Z", name: "Mara", phone: "069123456" }),
+        {} as never,
+      ),
+    ]);
+    const elapsed = Date.now() - t0;
+    expect(r1?.statusCode).toBe(200);
+    expect(r2?.statusCode).toBe(200);
+    expect(rc.events).toHaveLength(2);
+    // Both inserts wait ~5ms; if serialised, elapsed would be ~10ms+; if
+    // parallel, ~5ms. Allow generous headroom for CI noise.
+    expect(elapsed).toBeLessThan(40);
   });
 });

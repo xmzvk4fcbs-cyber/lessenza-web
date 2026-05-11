@@ -1,5 +1,6 @@
 import { randomUUID, createHash } from "node:crypto";
 import { store } from "./blobs";
+import { withKeyLock } from "./booking-lock";
 import {
   ServicesSchema,
   WorkingHoursSchema,
@@ -339,17 +340,21 @@ function auditMonthKey(d = new Date()): string {
 
 export async function appendAudit(input: { kind: string; summary: string; meta?: Record<string, string | number | boolean | null> }): Promise<void> {
   const key = auditMonthKey();
-  const raw = await store().getJSON<unknown>(key);
-  const list = Array.isArray(raw) ? (raw as Array<{ id: string; at: string; kind: string; summary: string; meta?: Record<string, string | number | boolean | null> }>) : [];
-  list.unshift({
-    id: randomUUID(),
-    at: new Date().toISOString(),
-    kind: input.kind.slice(0, 80),
-    summary: input.summary.slice(0, 400),
-    meta: input.meta,
+  // Serialize the read-modify-write per file — two concurrent appends would
+  // otherwise race on the same blob and silently drop one entry.
+  await withKeyLock(`audit:${key}`, async () => {
+    const raw = await store().getJSON<unknown>(key);
+    const list = Array.isArray(raw) ? (raw as Array<{ id: string; at: string; kind: string; summary: string; meta?: Record<string, string | number | boolean | null> }>) : [];
+    list.unshift({
+      id: randomUUID(),
+      at: new Date().toISOString(),
+      kind: input.kind.slice(0, 80),
+      summary: input.summary.slice(0, 400),
+      meta: input.meta,
+    });
+    if (list.length > AUDIT_MAX_PER_MONTH) list.length = AUDIT_MAX_PER_MONTH;
+    await store().setJSON(key, list);
   });
-  if (list.length > AUDIT_MAX_PER_MONTH) list.length = AUDIT_MAX_PER_MONTH;
-  await store().setJSON(key, list);
 }
 
 /** Read most-recent N audit events across the last N months. Newest first. */
@@ -466,10 +471,13 @@ export async function getCancellationLog(): Promise<CancellationLogEntry[]> {
 }
 
 export async function appendCancellation(entry: CancellationLogEntry): Promise<void> {
-  // Cap at 5000 entries — older ones rotate out (one-person salon, ~1000/year).
-  const cur = await getCancellationLog();
-  const next = [entry, ...cur].slice(0, 5000);
-  await store().setJSON(KEY_CANCEL_LOG, CancellationLogSchema.parse(next));
+  // Same lock pattern as appendAudit — read-modify-write must be atomic per file.
+  await withKeyLock(`cancellations:${KEY_CANCEL_LOG}`, async () => {
+    // Cap at 5000 entries — older ones rotate out (one-person salon, ~1000/year).
+    const cur = await getCancellationLog();
+    const next = [entry, ...cur].slice(0, 5000);
+    await store().setJSON(KEY_CANCEL_LOG, CancellationLogSchema.parse(next));
+  });
 }
 
 // ---------- Review-nudge sent tracker ----------
