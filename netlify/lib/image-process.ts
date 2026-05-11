@@ -58,6 +58,11 @@ function decodeBase64(input: string): { buf: Buffer; mime: string } | null {
 export async function processUploadDataUrl(
   input: string
 ): Promise<{ ok: true; image: ProcessedImage } | { ok: false; error: ImageProcessError }> {
+  // Cheap pre-check: base64 inflates ~33% → reject obviously-oversized inputs
+  // BEFORE allocating the decoded buffer (which would still hit memory).
+  if (input.length > MAX_UPLOAD_BYTES * 2) {
+    return { ok: false, error: { kind: "too-large", message: "Slika mora biti manja od 12 MB" } };
+  }
   const decoded = decodeBase64(input);
   if (!decoded) {
     return { ok: false, error: { kind: "decode", message: "Slika nije validna" } };
@@ -68,13 +73,25 @@ export async function processUploadDataUrl(
   if (!/^image\//.test(decoded.mime)) {
     return { ok: false, error: { kind: "bad-type", message: "Dozvoljene su samo slike" } };
   }
+  // SVG is image/* but can carry <script> / event handlers → stored XSS when
+  // the public gallery embeds it. Block.
+  if (/svg/i.test(decoded.mime)) {
+    return { ok: false, error: { kind: "bad-type", message: "SVG nije dozvoljen — koristite JPEG/PNG/WebP." } };
+  }
 
   try {
     // failOn: "truncated" lets sharp accept quirky-but-valid uploads
     // (some phone HEIC/JPEG variants trip "error"). We still throw on
     // truly broken data, just not on benign warnings.
-    const out = await sharp(decoded.buf, { failOn: "truncated" })
+    // limitInputPixels caps decode at ~7.4 MP — prevents the "billion-pixel"
+    // attack where a 12 MB PNG declares 100000×100000 dimensions and the
+    // RGBA decode blows out memory.
+    const out = await sharp(decoded.buf, {
+      failOn: "truncated",
+      limitInputPixels: 1920 * 1920 * 4,
+    })
       .rotate() // honor EXIF orientation
+      .withMetadata({ exif: undefined } as never) // strip EXIF after rotation
       .resize({ width: 1920, height: 1920, fit: "inside", withoutEnlargement: true })
       .jpeg({ quality: 82, progressive: true })
       .toBuffer();
