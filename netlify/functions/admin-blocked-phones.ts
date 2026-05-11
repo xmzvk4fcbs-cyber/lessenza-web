@@ -29,6 +29,11 @@ const inner: Handler = async (event) => {
     const settings = await getSettings();
     const phoneE164 = normalizePhone(raw, settings.defaultCountryCode);
     if (!phoneE164) return badRequest("bad-phone", "Phone number is invalid");
+    // Refuse to block the salon's own number — would silently break every
+    // outbound message link in the admin UI (WhatsApp/Viber to ownerPhone).
+    if (settings.ownerPhone && phoneE164 === normalizePhone(settings.ownerPhone, settings.defaultCountryCode)) {
+      return badRequest("own-phone", "Ne možete blokirati sopstveni broj salona.");
+    }
     const name = typeof body.name === "string" ? body.name.trim().slice(0, 120) : undefined;
     const reason = typeof body.reason === "string" ? body.reason.trim().slice(0, 200) : undefined;
     await addBlockedPhone({

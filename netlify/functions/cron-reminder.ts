@@ -1,6 +1,6 @@
 import type { Handler } from "@netlify/functions";
 import { json } from "../lib/http";
-import { createCalendarClient, type CalendarClient } from "../lib/calendar";
+import { createCalendarClient, createCalendarClientAsync, type CalendarClient } from "../lib/calendar";
 import { getMailerAsync, type Mailer } from "../lib/mailer";
 import { getSettings, getServices } from "../lib/config";
 import { eventToBooking } from "../lib/calendar-domain";
@@ -10,7 +10,7 @@ import { withKeyLock } from "../lib/booking-lock";
 import { cronGuard } from "../lib/cron-guard";
 
 interface Deps {
-  makeCalendar: () => CalendarClient;
+  makeCalendar: () => CalendarClient | Promise<CalendarClient>;
   makeMailer: () => Mailer | Promise<Mailer>;
 }
 let deps: Deps | null = null;
@@ -25,7 +25,10 @@ function now(): Date {
   return nowOverride ?? new Date();
 }
 function getDeps(): Deps {
-  return deps ?? { makeCalendar: () => createCalendarClient(), makeMailer: () => getMailerAsync() };
+  // Async client — same as other crons. Without this, OAuth-connected
+  // Google Calendar is ignored for the reminder sweep, leaving production
+  // owners with no day-before email if they connected via the in-app wizard.
+  return deps ?? { makeCalendar: () => createCalendarClientAsync(), makeMailer: () => getMailerAsync() };
 }
 
 async function alreadySent(bookingId: string): Promise<boolean> {

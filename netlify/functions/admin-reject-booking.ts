@@ -3,7 +3,7 @@ import { json, badRequest, notFound, methodNotAllowed, parseJson } from "../lib/
 import { adminGuard } from "../lib/admin-guard";
 import { createCalendarClient, createCalendarClientAsync, fetchEventById, type CalendarClient } from "../lib/calendar";
 import { getMailerAsync, type Mailer } from "../lib/mailer";
-import { getServices, getSettings, addBlockedPhone, appendCancellation } from "../lib/config";
+import { getServices, getSettings, addBlockedPhone, appendCancellation, appendAudit } from "../lib/config";
 import { eventToBooking } from "../lib/calendar-domain";
 import { bookingRejectedToClient } from "../lib/email-templates";
 import { waLink } from "../lib/phone";
@@ -102,6 +102,25 @@ const inner: Handler = async (event) => {
       whatsappLink = waLink(booking.phoneE164, message);
       viberLink = `viber://chat?number=${encodeURIComponent(booking.phoneE164)}`;
     }
+  }
+  // Activity feed entry — best-effort, never blocks the response.
+  try {
+    if (booking) {
+      const rejectLabel = booking.combinedServicesLabel ?? booking.serviceName;
+      await appendAudit({
+        kind: "booking.cancelled",
+        summary: `Odbijen termin: ${rejectLabel} — ${booking.name}${blocked ? " (broj blokiran)" : ""}`,
+        meta: { eventId, phone: booking.phoneE164 ?? "", blocked: blocked ? "1" : "0" },
+      });
+    } else {
+      await appendAudit({
+        kind: "booking.cancelled",
+        summary: `Odbijen event ${eventId}`,
+        meta: { eventId },
+      });
+    }
+  } catch (e) {
+    console.warn("[reject][audit] failed:", (e as Error).message);
   }
   return json({ ok: true, emailSent, whatsappLink, viberLink, message, blocked });
 };

@@ -3,7 +3,7 @@ import type { Handler } from "@netlify/functions";
 import { json, badRequest, notFound, methodNotAllowed, parseJson, serverError } from "../lib/http";
 import { adminGuard } from "../lib/admin-guard";
 import { createCalendarClient, createCalendarClientAsync, fetchEventById, type CalendarClient } from "../lib/calendar";
-import { getServices, getSettings } from "../lib/config";
+import { getServices, getSettings, appendAudit } from "../lib/config";
 import { eventToBooking, bookingToEvent, type Booking } from "../lib/calendar-domain";
 import { getMailerAsync, type Mailer } from "../lib/mailer";
 import { bookingCancelledToClient, bookingConfirmedToClient } from "../lib/email-templates";
@@ -156,11 +156,34 @@ const inner: Handler = async (event) => {
   if (oldBooking) {
     const dateLine = formatSalon(new Date(oldBooking.startISO), "dd.MM.yyyy. 'u' HH:mm");
     const reasonLine = reason ? ` (${reason})` : "";
-    oldMessage = `Draga ${oldBooking.name}, nažalost moram otkazati Vaš termin za ${oldBooking.serviceName}, ${dateLine}${reasonLine}. Izvinjavam se — javite se da ugovorimo novi. Hvala na razumijevanju ✿ L'Essenza`;
+    const oldLabel = oldBooking.combinedServicesLabel ?? oldBooking.serviceName;
+    oldMessage = `Draga ${oldBooking.name}, nažalost moram otkazati Vaš termin za ${oldLabel}, ${dateLine}${reasonLine}. Izvinjavam se — javite se da ugovorimo novi. Hvala na razumijevanju ✿ L'Essenza`;
     if (oldBooking.phoneE164) {
       oldWhatsappLink = waLink(oldBooking.phoneE164, oldMessage);
       oldViberLink = `viber://chat?number=${encodeURIComponent(oldBooking.phoneE164)}`;
     }
+  }
+
+  // Activity feed — log both halves of the swap so the owner sees them.
+  try {
+    const when = formatSalon(new Date(newBooking.startISO), "dd.MM.yyyy. 'u' HH:mm");
+    const newLabel = newBooking.combinedServicesLabel ?? newBooking.serviceName;
+    if (oldBooking) {
+      const oldLabel = oldBooking.combinedServicesLabel ?? oldBooking.serviceName;
+      await appendAudit({
+        kind: "booking.rescheduled",
+        summary: `Zamijenjen termin: ${oldLabel} — ${oldBooking.name} → ${newLabel} — ${newBooking.name} (${when})`,
+        meta: { oldEventId: oldBooking.calendarEventId ?? "", newEventId: newBooking.calendarEventId ?? "" },
+      });
+    } else {
+      await appendAudit({
+        kind: "booking.created",
+        summary: `Novi termin (zamjena): ${newLabel} — ${newBooking.name} (${when})`,
+        meta: { eventId: newBooking.calendarEventId ?? "" },
+      });
+    }
+  } catch (e) {
+    console.warn("[swap][audit] failed:", (e as Error).message);
   }
 
   return json({

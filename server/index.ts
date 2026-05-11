@@ -102,8 +102,41 @@ async function mountAllFunctions(): Promise<Mounted[]> {
   return mounted;
 }
 
+// Compute a SW VERSION from the deploy time so the activate handler reliably
+// drops old caches every time we rsync. PROJECT_ROOT/sw.js is read once at
+// boot and the VERSION constant rewritten before being served. Without this
+// owners with the PWA installed stay on stale code forever after a deploy.
+const SW_BOOT_VERSION = (() => {
+  try {
+    const stamp = process.env.DEPLOY_STAMP || String(Date.now());
+    return `v-${stamp}`;
+  } catch {
+    return "v-fallback";
+  }
+})();
+
+function serveServiceWorker(): void {
+  app.get("/sw.js", (_req, res) => {
+    try {
+      const raw = fs.readFileSync(path.join(PROJECT_ROOT, "sw.js"), "utf-8");
+      const patched = raw.replace(
+        /const VERSION = ".*?";/,
+        `const VERSION = "${SW_BOOT_VERSION}";`,
+      );
+      res.setHeader("Content-Type", "application/javascript; charset=utf-8");
+      res.setHeader("Cache-Control", "no-cache, must-revalidate");
+      res.setHeader("Service-Worker-Allowed", "/");
+      res.send(patched);
+    } catch (e) {
+      res.status(500).send(`/* sw.js load failed: ${(e as Error).message} */`);
+    }
+  });
+}
+
 // --- 4. Static assets (served last, so /api/* takes precedence) ---
 function mountStatic(): void {
+  // SW must be served via the patched route (above), not as a static file.
+  serveServiceWorker();
   // Root static files (index.html, *.html, css/, js/, img/, etc.).
   app.use(express.static(PROJECT_ROOT, {
     extensions: ["html"],
@@ -118,6 +151,9 @@ function mountStatic(): void {
         // Admin JS/CSS — never trust browser cache. Owner edits land
         // immediately. Slightly heavier on bandwidth, worth it for sanity.
         res.setHeader("Cache-Control", "no-cache, must-revalidate");
+        // Block framing — admin must not be embedded anywhere (clickjacking).
+        res.setHeader("X-Frame-Options", "DENY");
+        res.setHeader("Content-Security-Policy", "frame-ancestors 'none'");
       } else {
         res.setHeader("Cache-Control", "public, max-age=600");
       }
@@ -127,6 +163,9 @@ function mountStatic(): void {
   // Admin SPA lives under /admin/ — serve index.html on any /admin/* miss.
   app.get(/^\/admin(\/.*)?$/, (req, res, next) => {
     if (/\.[a-zA-Z0-9]+$/.test(req.path)) return next(); // already a file
+    res.setHeader("X-Frame-Options", "DENY");
+    res.setHeader("Content-Security-Policy", "frame-ancestors 'none'");
+    res.setHeader("Cache-Control", "no-cache, must-revalidate");
     res.sendFile(path.join(PROJECT_ROOT, "admin", "index.html"));
   });
 

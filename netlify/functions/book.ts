@@ -255,10 +255,14 @@ export const handler: Handler = async (event) => {
   if (process.env.VAPID_PUBLIC_KEY && process.env.VAPID_PRIVATE_KEY) {
     try {
       const subs = await getPushSubscriptions();
+      // Deep-link the notification straight to the booking's day in Schedule
+      // view, so tapping it lands the owner where the new termin lives —
+      // instead of dumping her on the dashboard.
+      const bookingDayKey = formatSalon(new Date(booking.startISO), "yyyy-MM-dd");
       const payload = JSON.stringify({
         title: "Novi termin",
         body: `${booking.combinedServicesLabel ?? booking.serviceName} — ${booking.name}, ${formatSalon(new Date(booking.startISO), "dd.MM. 'u' HH:mm")}`,
-        url: "/admin/",
+        url: `/admin/?view=day&anchor=${bookingDayKey}#schedule`,
       });
       for (const s of subs) {
         try {

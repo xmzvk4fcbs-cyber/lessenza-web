@@ -1,5 +1,5 @@
 // Admin → Klijenti tab. Aggregates bookings by phone number.
-import { registerTab, must, escapeHtml } from "../admin.js";
+import { registerTab, must, escapeHtml, searchFold } from "../admin.js";
 
 const searchInput = document.getElementById("cli-search");
 const refreshBtn = document.getElementById("cli-refresh");
@@ -42,10 +42,10 @@ function relativeDays(iso) {
 }
 
 function paint() {
-  const q = (searchInput?.value || "").trim().toLowerCase();
+  const q = searchFold((searchInput?.value || "").trim());
   const filtered = q
     ? cached.filter((c) => {
-        const hay = `${c.name} ${c.phoneE164} ${c.email || ""}`.toLowerCase();
+        const hay = searchFold(`${c.name} ${c.phoneE164} ${c.email || ""}`);
         return hay.includes(q);
       })
     : cached;

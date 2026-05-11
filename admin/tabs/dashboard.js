@@ -283,14 +283,26 @@ async function render() {
 
   try {
     const [todayR, weekR, trendR] = await Promise.all([todayP, weekP, trendP]);
+    // Count BOTH real bookings AND raw Google Calendar entries (manual GCal
+    // additions, blocks, etc.) so the dashboard stats match the schedule
+    // views that show them inline. Without this the owner sees "0 today"
+    // while clearly having events on the calendar.
+    const todayAll = [
+      ...(todayR.appointments || []),
+      ...(todayR.rawEvents || []),
+    ].sort((a, b) => (a.startISO || "").localeCompare(b.startISO || ""));
     const todayApps = (todayR.appointments || []).sort((a, b) => a.startISO.localeCompare(b.startISO));
-    const weekApps  = (weekR.appointments || []);
+    const weekAll = [...(weekR.appointments || []), ...(weekR.rawEvents || [])];
+    const weekApps = (weekR.appointments || []);
 
-    statToday.textContent = String(todayApps.length);
-    statWeek.textContent  = String(weekApps.length);
+    statToday.textContent = String(todayAll.length);
+    statWeek.textContent  = String(weekAll.length);
 
-    // Render 30-day sparkline above the stat-row
-    if (trendR && trendR.appointments) renderSparkline(trendR.appointments, trend30Start, today);
+    // Render 30-day sparkline above the stat-row — count everything, not just bookings.
+    if (trendR) {
+      const trendAll = [...(trendR.appointments || []), ...(trendR.rawEvents || [])];
+      renderSparkline(trendAll, trend30Start, today);
+    }
 
     // Next appointment = first future booking today (or any week appt)
     const now = Date.now();
@@ -401,9 +413,19 @@ if (_activityRefreshBtn) {
   _activityRefreshBtn.addEventListener("click", () => renderActivityFeed());
 }
 _activityPoll = setInterval(() => {
+  // Don't burn network if the admin tab is in the background — owner moves on
+  // to other apps for hours; resume on visibilitychange below.
+  if (document.visibilityState !== "visible") return;
   const dash = document.getElementById("screen-dashboard");
   if (dash && dash.classList.contains("is-active")) renderActivityFeed();
 }, 60_000);
+// When the tab comes back to the foreground, do an immediate refresh so the
+// owner sees current state instead of stale data from before they left.
+document.addEventListener("visibilitychange", () => {
+  if (document.visibilityState !== "visible") return;
+  const dash = document.getElementById("screen-dashboard");
+  if (dash && dash.classList.contains("is-active")) renderActivityFeed();
+});
 
 // --- Mjesečni rezime (analytics card) ---
 

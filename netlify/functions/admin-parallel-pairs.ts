@@ -21,6 +21,9 @@ const inner: Handler = async (event) => {
     }
     const parsed = ParallelPairSchema.safeParse(body);
     if (!parsed.success) return badRequest("bad-pair", parsed.error.message);
+    if (parsed.data.serviceIdA === parsed.data.serviceIdB) {
+      return badRequest("same-service", "Usluga ne može biti uparena sama sa sobom.");
+    }
     const all = await getParallelPairs();
     if (all.some((p) => samePair(p, parsed.data.serviceIdA, parsed.data.serviceIdB))) {
       return json({ error: "duplicate", message: "Par već postoji" }, 409);

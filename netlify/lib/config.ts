@@ -169,12 +169,16 @@ export async function getDayNote(dateKey: string): Promise<string> {
 }
 
 export async function setDayNote(dateKey: string, text: string): Promise<void> {
-  const trimmed = text.slice(0, 2000);
-  if (!trimmed) {
-    await store().delete(`${DAY_NOTE_PREFIX}${dateKey}.json`);
-    return;
-  }
-  await store().setJSON(`${DAY_NOTE_PREFIX}${dateKey}.json`, { text: trimmed });
+  // Serialize writes per date so two concurrent saves don't silently drop one
+  // version (owner editing same note in two tabs).
+  await withKeyLock(`day-note:${dateKey}`, async () => {
+    const trimmed = text.slice(0, 2000);
+    if (!trimmed) {
+      await store().delete(`${DAY_NOTE_PREFIX}${dateKey}.json`);
+      return;
+    }
+    await store().setJSON(`${DAY_NOTE_PREFIX}${dateKey}.json`, { text: trimmed });
+  });
 }
 
 /** Walk every day-note file and return [{ dateKey, text }]. Used by GDPR data export. */

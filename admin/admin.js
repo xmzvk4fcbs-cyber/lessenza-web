@@ -115,6 +115,16 @@ export function escapeHtml(s) {
   return String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
 }
 
+/** Strip diacritics + lowercase so admin search treats "Đorđe" / "Djordje" /
+ *  "djordje" the same. Also folds Serbian Latin č/ć/š/ž/đ to ASCII. */
+export function searchFold(s) {
+  return String(s ?? "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/đ/gi, "d")  // ð isn't an NFD-decomposable letter in some fonts
+    .toLowerCase();
+}
+
 function pad2(n) { return String(n).padStart(2, "0"); }
 
 export function fmtDate(iso) {

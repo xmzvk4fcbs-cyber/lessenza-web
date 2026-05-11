@@ -1,4 +1,4 @@
-import { registerTab, must, api, toast, openModal, closeModal, escapeHtml, fmtDateTime, fmtTime, todayKey, localDateKey, plusDays, getServices } from "../admin.js";
+import { registerTab, must, api, toast, openModal, closeModal, escapeHtml, fmtDateTime, fmtTime, todayKey, localDateKey, plusDays, getServices, searchFold } from "../admin.js";
 import { renderTimeline } from "./timeline.js";
 import { renderWeekView, shiftWeek, mondayOf, weekLabel } from "./schedule-week.js";
 import { renderMonthView, shiftMonth, monthLabel } from "./schedule-month.js";
@@ -18,17 +18,17 @@ const statsWrap = document.getElementById("rsp-stats");
 let cachedRows = []; // populated by renderList and filtered by search
 
 function applySearchFilter() {
-  const q = (searchInput?.value || "").trim().toLowerCase();
+  const q = searchFold((searchInput?.value || "").trim());
   if (searchClear) searchClear.hidden = !q;
   if (!q) return cachedRows;
   const filtered = cachedRows.filter((a) => {
-    const haystack = [
+    const haystack = searchFold([
       a.kind === "raw" ? a.summary : a.name,
       a.kind === "raw" ? "" : (a.phoneE164 || ""),
       a.kind === "raw" ? "" : (a.combinedServicesLabel || a.serviceName || ""),
       a.kind === "raw" ? "" : (a.email || ""),
       a.kind === "raw" ? "" : (a.note || ""),
-    ].join(" ").toLowerCase();
+    ].join(" "));
     return haystack.includes(q);
   });
   return filtered;
