@@ -11,9 +11,11 @@ export const handler: Handler = async (event) => {
     salonAddress: s.salonAddress,
     salonCity: s.salonCity,
     mapQuery: s.mapQuery,
-    publicPhone: s.publicPhone ?? s.ownerPhone,
-    publicEmail: s.publicEmail ?? s.ownerEmail,
-    whatsappPhone: s.whatsappPhone ?? s.publicPhone ?? s.ownerPhone,
+    // Never fall back to ownerEmail/ownerPhone — those are PRIVATE owner-side
+    // contacts (notifications, audit). Public contact must be set explicitly.
+    publicPhone: s.publicPhone,
+    publicEmail: s.publicEmail,
+    whatsappPhone: s.whatsappPhone ?? s.publicPhone,
     instagramUrl: s.instagramUrl,
     tagline: s.tagline,
     displayHoursOverride: s.displayHoursOverride,

@@ -37,6 +37,8 @@ export const handler: Handler = async (event) => {
   if (!(await verifyPassword(password))) return unauthorized("Invalid password");
 
   // Second factor: if TOTP is enabled, require a valid 6-digit code.
+  // RATE LIMIT TOTP separately — otherwise an attacker with a leaked password
+  // can brute-force 10^6 codes at the password limit's cadence.
   const auth = await getAuth();
   if (auth?.totpEnabled) {
     const code = typeof body.totp === "string" ? body.totp.trim() : "";
@@ -44,6 +46,14 @@ export const handler: Handler = async (event) => {
       return json(
         { error: "totp-required", message: "Unesi 6-cifreni kod iz Authenticator-a" },
         401
+      );
+    }
+    const totpRl = await rateLimitAllow(ip, { key: "admin-totp", limit: 6, windowSeconds: 600 });
+    if (!totpRl.allowed) {
+      return json(
+        { error: "rate-limited", message: "Previše 2FA pokušaja — probaj za par minuta." },
+        429,
+        { "retry-after": String(totpRl.retryAfterSec) }
       );
     }
     if (!auth.totpSecret || !totpVerify(auth.totpSecret, code)) {

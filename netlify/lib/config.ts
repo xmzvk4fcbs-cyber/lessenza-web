@@ -77,7 +77,13 @@ export async function setWorkingHours(hours: WorkingHours): Promise<void> {
 
 export async function getSettings(): Promise<Settings> {
   const raw = await store().getJSON<unknown>(KEY_SETTINGS);
-  return SettingsSchema.parse(raw ?? {});
+  // safeParse so a corrupted blob doesn't crash every handler that reads
+  // settings. Fall back to schema defaults (parsed from {}) — the salon is
+  // still operable until the owner re-saves.
+  const r = SettingsSchema.safeParse(raw ?? {});
+  if (r.success) return r.data;
+  console.warn("[config] settings blob invalid — using defaults:", r.error.message);
+  return SettingsSchema.parse({});
 }
 export async function setSettings(patch: Partial<Settings>): Promise<Settings> {
   const current = await getSettings();

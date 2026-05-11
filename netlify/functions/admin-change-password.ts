@@ -21,7 +21,18 @@ const inner: Handler = async (event) => {
     if (msg === "wrong-password") return forbidden("Pogrešna trenutna lozinka");
     return badRequest("change-failed", msg);
   }
-  return json({ ok: true });
+  // Rotate cookie to nothing: the JWT secret has changed server-side, so the
+  // current cookie is already invalid for future requests. Set Max-Age=0 to
+  // remove it from the browser too, so the UI shows the login screen on next
+  // request instead of an inscrutable 401 loop.
+  return {
+    statusCode: 200,
+    headers: {
+      "content-type": "application/json",
+      "set-cookie": "lessenza_admin=; Path=/; HttpOnly; Secure; SameSite=Strict; Max-Age=0",
+    },
+    body: JSON.stringify({ ok: true, sessionInvalidated: true }),
+  };
 };
 
 export const handler = adminGuard(inner);

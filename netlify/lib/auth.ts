@@ -164,8 +164,11 @@ export async function changePassword(oldPassword: string, newPassword: string): 
   if (!ok) throw new Error("wrong-password");
   const existing = await readAuth();
   const passwordHash = await bcrypt.hash(newPassword, 12);
-  // Preserve JWT secret if already stored; otherwise mint a fresh one.
-  const jwtSecret = existing?.jwtSecret || randomBytes(48).toString("base64url");
+  // ROTATE the JWT secret on every password change so any existing session
+  // cookie (including a stolen one the attacker used to trigger this very
+  // change) is invalidated. The owner will need to log in again — that's the
+  // intended UX after a password change.
+  const jwtSecret = randomBytes(48).toString("base64url");
   // Preserve TOTP fields so changing password doesn't disable 2FA.
   await store().setJSON(KEY_AUTH, {
     passwordHash,
