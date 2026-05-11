@@ -204,9 +204,12 @@ async function renderList() {
       ...appointments.map((a) => ({ kind: "booking", ...a })),
       ...rawEvents.map((r) => ({ kind: "raw", ...r })),
     ].sort((a, b) => (a.startISO || "").localeCompare(b.startISO || ""));
-    // Render briefing card in single-day mode.
+    // Render briefing card in single-day mode. Pass EVERYTHING that will be
+    // rendered (bookings + raw Google Calendar entries) so the count matches
+    // the list — the week view had the same bug where raws were rendered but
+    // not counted, confusing the owner with "slobodan dan, 0 termina".
     if (singleDay && briefingHost) {
-      renderBriefing(briefingHost, fromInput.value, appointments || []);
+      renderBriefing(briefingHost, fromInput.value, cachedRows);
     }
     paintList();
   } catch (e) {
