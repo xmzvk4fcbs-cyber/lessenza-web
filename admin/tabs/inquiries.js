@@ -232,17 +232,31 @@ function openAccept(card) {
 
   loadSlots();
 
-  document.getElementById("acc-confirm").addEventListener("click", async () => {
+  let forceNext = false;
+  const confirmBtn = document.getElementById("acc-confirm");
+  confirmBtn.addEventListener("click", async () => {
     const iso = chosenIso.value;
     if (!iso) {
       toast("Izaberi termin (ili unesi tačno vrijeme).", "error");
       return;
     }
     try {
-      const r = await must("/api/admin/inquiry-accept", { method: "POST", body: { inquiryId: id, startISO: iso } });
+      const res = await fetch("/api/admin/inquiry-accept", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ inquiryId: id, startISO: iso, force: forceNext }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (res.status === 409) {
+        forceNext = true;
+        confirmBtn.textContent = "Prihvati svejedno";
+        toast(data.message || "Termin se preklapa sa postojećim.", "error");
+        return;
+      }
+      if (!res.ok) throw new Error(data.message || `HTTP ${res.status}`);
       closeModal();
       toast("Upit prihvaćen.", "success");
-      if (r.whatsappLink && !r.emailSent) window.open(r.whatsappLink, "_blank");
+      if (data.whatsappLink && !data.emailSent) window.open(data.whatsappLink, "_blank");
       await render();
     } catch (e) {
       toast(e.message, "error");

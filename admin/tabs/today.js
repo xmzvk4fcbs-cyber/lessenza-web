@@ -492,8 +492,10 @@ function renderCard(a) {
   // All actions visible on the card itself. Multiple rows on phone — labels
   // ALWAYS readable in full. 2-column grid on phone, more on wider screens.
   const serviceLabel = a.combinedServicesLabel || a.serviceName;
+  // CSV of existing extras so the edit-services modal can pre-check them.
+  const existingExtras = Array.isArray(a.additionalServiceIds) ? a.additionalServiceIds.join(",") : "";
   return `
-    <article class="appt-card appt-card--manage" data-event-id="${escapeHtml(a.calendarEventId)}" data-service-id="${escapeHtml(a.serviceId || "")}" data-name="${escapeHtml(a.name)}" data-phone="${phone}" data-service="${escapeHtml(serviceLabel)}" data-start="${escapeHtml(a.startISO)}" data-end="${escapeHtml(a.endISO)}">
+    <article class="appt-card appt-card--manage" data-event-id="${escapeHtml(a.calendarEventId)}" data-service-id="${escapeHtml(a.serviceId || "")}" data-additional="${escapeHtml(existingExtras)}" data-name="${escapeHtml(a.name)}" data-phone="${phone}" data-service="${escapeHtml(serviceLabel)}" data-start="${escapeHtml(a.startISO)}" data-end="${escapeHtml(a.endISO)}">
       <div class="appt-card__top">
         <div class="appt-card__time">
           <span class="appt-card__day">${escapeHtml(dateLabel)}</span>
@@ -611,6 +613,8 @@ async function onAction(e) {
   const phone = card.dataset.phone;
   const service = card.dataset.service;
   const serviceId = card.dataset.serviceId || "";
+  const additionalCsv = card.dataset.additional || "";
+  const additionalServiceIds = additionalCsv ? additionalCsv.split(",").filter(Boolean) : [];
   const start = card.dataset.start;
   const end = card.dataset.end || "";
 
@@ -707,7 +711,7 @@ async function onAction(e) {
   }
 
   if (action === "edit-services") {
-    await openEditServicesModal({ eventId, serviceId, name, service });
+    await openEditServicesModal({ eventId, serviceId, additionalServiceIds, name, service });
     return;
   }
 
@@ -981,17 +985,18 @@ async function openRescheduleModal({ eventId, serviceId, name, phone, service, s
 
 /** Modal: change which service(s) are attached to an existing booking.
  *  Keeps the start time fixed; end time recomputes from new combined duration. */
-async function openEditServicesModal({ eventId, serviceId, name, service }) {
+async function openEditServicesModal({ eventId, serviceId, additionalServiceIds, name, service }) {
   const services = (await getServices()).filter((s) => s.active);
   if (!services.length) { toast("Nema aktivnih usluga.", "error"); return; }
+  const existingExtras = new Set(additionalServiceIds || []);
   const primaryOpts = services.map((s) =>
     `<option value="${escapeHtml(s.id)}" ${s.id === serviceId ? "selected" : ""}>${escapeHtml(s.name)} (${s.durationMinutes} min)</option>`
   ).join("");
-  // Pre-check extras: anything that is NOT the current primary AND was previously
-  // attached cannot be inferred from the card alone — admin re-picks if multi.
+  // Pre-check extras matching what the booking currently has so save-without-change
+  // doesn't silently drop them. Primary itself is disabled (it's the dropdown above).
   const extraRows = services.map((s) => `
     <label class="mb-extra__row">
-      <input type="checkbox" class="es-extra-cb" value="${escapeHtml(s.id)}" data-dur="${s.durationMinutes}" ${s.id === serviceId ? "disabled" : ""}>
+      <input type="checkbox" class="es-extra-cb" value="${escapeHtml(s.id)}" data-dur="${s.durationMinutes}" ${s.id === serviceId ? "disabled" : existingExtras.has(s.id) ? "checked" : ""}>
       <span class="mb-extra__label">${escapeHtml(s.name)}</span>
       <span class="mb-extra__dur">${s.durationMinutes} min</span>
     </label>`).join("");
@@ -1003,7 +1008,7 @@ async function openEditServicesModal({ eventId, serviceId, name, service }) {
         <label for="es-service">Glavna usluga</label>
         <select id="es-service">${primaryOpts}</select>
       </div>
-      <details class="mb-extra">
+      <details class="mb-extra" ${existingExtras.size > 0 ? "open" : ""}>
         <summary class="mb-extra__summary"><span>＋ Dodatne usluge u istom terminu</span></summary>
         <div class="mb-extra__list">${extraRows}</div>
       </details>

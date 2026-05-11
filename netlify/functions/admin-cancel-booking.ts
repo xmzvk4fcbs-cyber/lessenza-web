@@ -57,7 +57,7 @@ const inner: Handler = async (event) => {
         reason: reason || undefined,
         name: booking.name,
         phoneE164: booking.phoneE164,
-        serviceName: booking.serviceName,
+        serviceName: booking.combinedServicesLabel ?? booking.serviceName,
       });
     } catch (e) {
       console.error("[cancel-log]", e);
@@ -85,7 +85,8 @@ const inner: Handler = async (event) => {
     }
     const dateLine = formatSalon(new Date(booking.startISO), "dd.MM.yyyy. 'u' HH:mm");
     const reasonLine = reason ? ` (${reason})` : "";
-    message = `Draga ${booking.name}, moram otkazati naš termin za ${booking.serviceName}, ${dateLine}${reasonLine}. Izvinjavam se na neprijatnosti — javite se kad stignete da ugovorimo novi termin. Hvala na razumijevanju, srdačan pozdrav ✿ L'Essenza`;
+    const cancelLabel = booking.combinedServicesLabel ?? booking.serviceName;
+    message = `Draga ${booking.name}, moram otkazati naš termin za ${cancelLabel}, ${dateLine}${reasonLine}. Izvinjavam se na neprijatnosti — javite se kad stignete da ugovorimo novi termin. Hvala na razumijevanju, srdačan pozdrav ✿ L'Essenza`;
     if (booking.phoneE164) {
       whatsappLink = waLink(booking.phoneE164, message);
       viberLink = `viber://chat?number=${encodeURIComponent(booking.phoneE164)}`;

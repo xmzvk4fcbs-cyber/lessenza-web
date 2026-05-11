@@ -56,15 +56,18 @@ const inner: Handler = async (event) => {
   if (!service) return notFound("Unknown service");
 
   // Sum durations of all selected services (primary + additional).
-  const additionalIds = (body.additionalServiceIds ?? []).filter(Boolean);
+  // Dedupe, exclude the primary id, cap the array, and 404 on unknown — same
+  // contract as /api/book so admin and public stay in sync.
+  const rawExtras = (body.additionalServiceIds ?? []).filter((id): id is string => typeof id === "string" && id.length > 0);
+  if (rawExtras.length > 10) return badRequest("too-many-extras", "Max 10 dodatnih usluga");
+  const additionalIds = Array.from(new Set(rawExtras)).filter((id) => id !== body.serviceId);
   let totalMin = service.durationMinutes;
   const additionalNames: string[] = [];
   for (const id of additionalIds) {
     const extra = services.find((s) => s.id === id);
-    if (extra) {
-      totalMin += extra.durationMinutes;
-      additionalNames.push(extra.name);
-    }
+    if (!extra) return notFound(`Unknown service: ${id}`);
+    totalMin += extra.durationMinutes;
+    additionalNames.push(extra.name);
   }
   const endISO = new Date(start.getTime() + totalMin * 60_000).toISOString();
   const combinedServicesLabel = additionalNames.length

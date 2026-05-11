@@ -491,6 +491,12 @@ function renderDatePicker() {
 let slotRefreshTimer = null;
 
 async function loadSlots() {
+  // Bail early if primary service got cleared (e.g. user toggled everything off,
+  // or admin disabled the service between steps). The caller must catch this
+  // and route the user back to step 1 — never blow up.
+  if (!state.chosenService || !state.chosenService.id) {
+    throw new Error("Izaberi uslugu.");
+  }
   // Cache-bust: append timestamp so no CDN/browser caches this.
   const t0 = Date.now();
   ui.slotGrid.innerHTML = "";
@@ -575,6 +581,9 @@ function localToISO(dateKey, hhmm) {
 }
 
 async function submitBooking() {
+  if (!state.chosenService || !state.chosenService.id) {
+    throw new Error("Vrati se na prvi korak i izaberi uslugu.");
+  }
   const name = document.getElementById("f-name").value.trim();
   const dial = document.getElementById("f-dial").value;
   const local = document.getElementById("f-phone").value.trim();
@@ -616,8 +625,10 @@ async function submitInquiry() {
   const phone = `${dial}${local.replace(/\D+/g, "")}`;
   const hp2 = document.getElementById("i-hp-website")?.value || "";
   // Carry forward all services the user selected on step 1, not just the primary,
-  // so a Manikir+Pedikir inquiry stays a Manikir+Pedikir inquiry.
-  const primaryId = state.chosenService?.id ?? state.services[0]?.id;
+  // so a Manikir+Pedikir inquiry stays a Manikir+Pedikir inquiry. Falling back
+  // to services[0] would silently send the wrong service — better to refuse.
+  const primaryId = state.chosenService?.id;
+  if (!primaryId) throw new Error("Vrati se na prvi korak i izaberi uslugu.");
   const inquiryAdditional = state.chosenServiceIds.filter((id) => id !== primaryId);
   await apiPost("/api/inquiry", {
     serviceId: primaryId,

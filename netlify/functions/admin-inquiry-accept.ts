@@ -4,7 +4,7 @@ import { json, badRequest, notFound, methodNotAllowed, parseJson, serverError } 
 import { adminGuard } from "../lib/admin-guard";
 import { createCalendarClient, type CalendarClient } from "../lib/calendar";
 import { getMailerAsync, type Mailer } from "../lib/mailer";
-import { getInquiry, getServices, getSettings, updateInquiryStatus } from "../lib/config";
+import { getInquiry, getServices, getSettings, updateInquiryStatus, appendAudit } from "../lib/config";
 import { bookingToEvent, type Booking } from "../lib/calendar-domain";
 import { inquiryAcceptedToClient } from "../lib/email-templates";
 import { waLink } from "../lib/phone";
@@ -24,7 +24,7 @@ function getDeps(): Deps {
 
 const inner: Handler = async (event) => {
   if (event.httpMethod !== "POST") return methodNotAllowed(["POST"]);
-  let body: { inquiryId?: unknown; startISO?: unknown };
+  let body: { inquiryId?: unknown; startISO?: unknown; force?: unknown };
   try {
     body = parseJson(event.body);
   } catch {
@@ -32,6 +32,7 @@ const inner: Handler = async (event) => {
   }
   const inquiryId = typeof body.inquiryId === "string" ? body.inquiryId : "";
   const startISO = typeof body.startISO === "string" ? body.startISO : "";
+  const force = body.force === true;
   if (!inquiryId || !startISO) return badRequest("missing-args", "inquiryId and startISO required");
   const start = new Date(startISO);
   if (Number.isNaN(start.getTime())) return badRequest("bad-start", "startISO invalid");
@@ -77,14 +78,63 @@ const inner: Handler = async (event) => {
   };
 
   const { makeCalendar, makeMailer } = getDeps();
+  const cal = makeCalendar();
+
+  // Conflict check — same contract as admin-manual-booking. force=true to override.
+  if (!force) {
+    const existing = await cal.listEvents({ timeMin: start.toISOString(), timeMax: endISO });
+    const overlaps = existing.filter((e) => {
+      const s = new Date(e.start?.dateTime ?? e.start?.date ?? 0).getTime();
+      const en = new Date(e.end?.dateTime ?? e.end?.date ?? 0).getTime();
+      return s < new Date(endISO).getTime() && en > start.getTime();
+    });
+    const first = overlaps[0];
+    if (first) {
+      return json({
+        error: "conflict",
+        message: "Postoji termin u ovom vremenu — klikni 'Prihvati svejedno' da forsiraš.",
+        existing: {
+          summary: first.summary,
+          start: first.start?.dateTime,
+          end: first.end?.dateTime,
+        },
+      }, 409);
+    }
+  }
+
   let inserted;
   try {
-    inserted = await makeCalendar().insertEvent(bookingToEvent(booking));
+    inserted = await cal.insertEvent(bookingToEvent(booking));
   } catch (e) {
-    return serverError(`Calendar insert failed: ${(e as Error).message}`);
+    console.error("[inquiry-accept] calendar insert failed:", (e as Error).message);
+    return serverError("Calendar insert failed");
   }
   booking.calendarEventId = inserted.id ?? undefined;
   await updateInquiryStatus(inquiryId, "accepted");
+
+  // Activity feed entries — best-effort.
+  try {
+    const whenLabel = formatSalon(start, "dd.MM.yyyy. 'u' HH:mm");
+    await appendAudit({
+      kind: "inquiry.accepted",
+      summary: `Prihvaćen upit: ${combinedLabel} — ${inquiry.name} (${whenLabel})`,
+      meta: { eventId: booking.calendarEventId ?? "", inquiryId, forced: force ? "1" : "0" },
+    });
+    await appendAudit({
+      kind: "booking.created",
+      summary: `Novi termin (iz upita): ${combinedLabel} — ${inquiry.name} (${whenLabel})`,
+      meta: { eventId: booking.calendarEventId ?? "", phone: inquiry.phone, source: "inquiry" },
+    });
+    if (force) {
+      await appendAudit({
+        kind: "booking.overlap",
+        summary: `Termin se preklapa sa drugim — ${combinedLabel} · ${inquiry.name} (${whenLabel})`,
+        meta: { eventId: booking.calendarEventId ?? "" },
+      });
+    }
+  } catch (e) {
+    console.warn("[inquiry-accept][audit] failed:", (e as Error).message);
+  }
 
   let emailSent = false;
   let whatsappLink: string | null = null;

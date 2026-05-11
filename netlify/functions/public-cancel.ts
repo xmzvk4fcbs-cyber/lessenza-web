@@ -1,7 +1,7 @@
 import type { Handler } from "@netlify/functions";
 import { json, badRequest, notFound, methodNotAllowed, parseJson } from "../lib/http";
 import { verifyCancelToken } from "../lib/cancel-token";
-import { createCalendarClient, createCalendarClientAsync, type CalendarClient } from "../lib/calendar";
+import { createCalendarClient, createCalendarClientAsync, fetchEventById, type CalendarClient } from "../lib/calendar";
 import { eventToBooking } from "../lib/calendar-domain";
 import { getServices, getSettings, appendCancellation } from "../lib/config";
 import { getMailerAsync, type Mailer } from "../lib/mailer";
@@ -35,16 +35,14 @@ async function handleGet(token: string) {
   const cal = await getCal();
   const services = await getServices();
 
-  const now = new Date();
-  const events = await cal.listEvents({
-    timeMin: new Date(now.getTime() - 24 * 60 * 60 * 1000).toISOString(),
-    timeMax: new Date(now.getTime() + 365 * 24 * 60 * 60 * 1000).toISOString(),
-  });
-  const target = events.find((e) => e.id === v.eventId);
+  // Direct lookup — listEvents windows would silently miss bookings outside
+  // the chosen range (we saw this break cancellations in admin paths too).
+  const target = await fetchEventById(cal, v.eventId);
   if (!target) return notFound("not-found");
   const booking = eventToBooking(target, services);
   if (!booking) return notFound("not-found");
 
+  const now = new Date();
   const startMs = new Date(booking.startISO).getTime();
   const minLeadMs = MIN_LEAD_HOURS * 60 * 60 * 1000;
   if (startMs - now.getTime() < minLeadMs) {
@@ -57,7 +55,7 @@ async function handleGet(token: string) {
   }
 
   return json({
-    serviceName: booking.serviceName,
+    serviceName: booking.combinedServicesLabel ?? booking.serviceName,
     name: booking.name,
     whenLabel: formatSalon(new Date(booking.startISO), "EEEE, dd.MM.yyyy. 'u' HH:mm"),
   });
@@ -77,16 +75,12 @@ async function handlePost(token: string) {
   const services = await getServices();
   const settings = await getSettings();
 
-  const now = new Date();
-  const events = await cal.listEvents({
-    timeMin: new Date(now.getTime() - 24 * 60 * 60 * 1000).toISOString(),
-    timeMax: new Date(now.getTime() + 365 * 24 * 60 * 60 * 1000).toISOString(),
-  });
-  const target = events.find((e) => e.id === v.eventId);
+  const target = await fetchEventById(cal, v.eventId);
   if (!target) return notFound("not-found");
   const booking = eventToBooking(target, services);
   if (!booking) return notFound("not-found");
 
+  const now = new Date();
   const startMs = new Date(booking.startISO).getTime();
   const minLeadMs = MIN_LEAD_HOURS * 60 * 60 * 1000;
   if (startMs - now.getTime() < minLeadMs) {
@@ -109,7 +103,7 @@ async function handlePost(token: string) {
       kind: "by-client",
       name: booking.name,
       phoneE164: booking.phoneE164,
-      serviceName: booking.serviceName,
+      serviceName: booking.combinedServicesLabel ?? booking.serviceName,
     });
   } catch (e) {
     console.error("[cancel-log]", e);

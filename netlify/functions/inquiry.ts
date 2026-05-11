@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import type { Handler } from "@netlify/functions";
 import { json, badRequest, methodNotAllowed, parseJson, notFound } from "../lib/http";
-import { addInquiry, getServices, getSettings, isPhoneBlocked } from "../lib/config";
+import { addInquiry, getServices, getSettings, isPhoneBlocked, appendAudit } from "../lib/config";
 import { normalizePhone } from "../lib/phone";
 import { getMailerAsync, type Mailer } from "../lib/mailer";
 import { inquiryCreatedToOwner } from "../lib/email-templates";
@@ -81,8 +81,10 @@ export const handler: Handler = async (event) => {
   if (!service) return notFound("Unknown service");
 
   // Validate optional additional services.
-  const additionalIds = (body.additionalServiceIds ?? [])
+  const rawExtras = (body.additionalServiceIds ?? [])
     .filter((id): id is string => typeof id === "string" && id.length > 0 && id !== body.serviceId);
+  if (rawExtras.length > 10) return badRequest("too-many-extras", "Max 10 dodatnih usluga");
+  const additionalIds = Array.from(new Set(rawExtras));
   const additionalNames: string[] = [];
   const validAdditionalIds: string[] = [];
   for (const id of additionalIds) {
@@ -109,6 +111,17 @@ export const handler: Handler = async (event) => {
     status: "pending",
   };
   await addInquiry(inquiry);
+
+  // Activity feed entry — best-effort.
+  try {
+    await appendAudit({
+      kind: "inquiry.created",
+      summary: `Novi upit: ${combinedLabel} — ${inquiry.name} (želi: ${inquiry.desiredDateISO})`,
+      meta: { inquiryId: inquiry.id, phone: inquiry.phone },
+    });
+  } catch (e) {
+    console.warn("[inquiry][audit] failed:", (e as Error).message);
+  }
 
   if (settings.ownerEmail) {
     try {

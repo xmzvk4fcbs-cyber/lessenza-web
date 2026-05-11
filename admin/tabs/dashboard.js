@@ -350,12 +350,28 @@ function fmtRelativeShort(iso) {
   return new Date(iso).toLocaleDateString("sr-Latn", { day: "2-digit", month: "2-digit", year: "numeric" });
 }
 
+let _activityPoll = null;
+let _activityFirstLoad = true;
+
 async function renderActivityFeed() {
   const host = document.getElementById("activity-list");
   if (!host) return;
-  host.innerHTML = `<p class="muted">Učitavanje…</p>`;
+  // Show "Učitavanje…" only on first load — auto-refresh just swaps DOM to avoid
+  // flicker every 60s.
+  if (_activityFirstLoad) host.innerHTML = `<p class="muted">Učitavanje…</p>`;
   try {
-    const { events } = await must("/api/admin/audit?limit=20");
+    const res = await fetch("/api/admin/audit?limit=20", { credentials: "same-origin" });
+    if (res.status === 401) {
+      // Session expired — stop polling and surface a clean message. Login UI is
+      // handled elsewhere (admin.js redirects when other endpoints 401).
+      if (_activityPoll) { clearInterval(_activityPoll); _activityPoll = null; }
+      host.innerHTML = `<p class="muted">Sesija je istekla — osvježi stranicu.</p>`;
+      return;
+    }
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data = await res.json().catch(() => ({ events: [] }));
+    const events = Array.isArray(data.events) ? data.events : [];
+    _activityFirstLoad = false;
     if (!events.length) {
       host.innerHTML = `<p class="muted">Još nema aktivnosti.</p>`;
       return;
@@ -384,7 +400,7 @@ const _activityRefreshBtn = document.getElementById("activity-refresh");
 if (_activityRefreshBtn) {
   _activityRefreshBtn.addEventListener("click", () => renderActivityFeed());
 }
-setInterval(() => {
+_activityPoll = setInterval(() => {
   const dash = document.getElementById("screen-dashboard");
   if (dash && dash.classList.contains("is-active")) renderActivityFeed();
 }, 60_000);

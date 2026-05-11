@@ -8,12 +8,25 @@ import {
   getAuth,
   totpVerify,
 } from "../lib/auth";
+import { rateLimitAllow, clientIP } from "../lib/rate-limit";
 
 export const handler: Handler = async (event) => {
   if (event.httpMethod !== "POST") return methodNotAllowed(["POST"]);
   if (!(await isAdminInitialized())) {
     return json({ error: "not-initialized", message: "Admin not set up" }, 409);
   }
+
+  // Throttle brute-force: 8 attempts per 15 min per IP.
+  const ip = clientIP(event.headers as Record<string, string | undefined>);
+  const rl = await rateLimitAllow(ip, { key: "admin-login", limit: 8, windowSeconds: 900 });
+  if (!rl.allowed) {
+    return json(
+      { error: "rate-limited", message: "Previše pokušaja — probaj za par minuta." },
+      429,
+      { "retry-after": String(rl.retryAfterSec) }
+    );
+  }
+
   let body: { password?: unknown; totp?: unknown };
   try {
     body = parseJson(event.body);

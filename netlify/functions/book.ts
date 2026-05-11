@@ -99,8 +99,11 @@ export const handler: Handler = async (event) => {
   if (!service) return notFound("Unknown service");
 
   // Validate & accumulate optional additional services (multi-service booking).
-  const additionalIds = (body.additionalServiceIds ?? [])
+  // Hard cap so a malicious payload can't force the server to loop arbitrarily.
+  const rawExtras = (body.additionalServiceIds ?? [])
     .filter((id): id is string => typeof id === "string" && id.length > 0 && id !== body.serviceId);
+  if (rawExtras.length > 10) return badRequest("too-many-extras", "Max 10 dodatnih usluga");
+  const additionalIds = Array.from(new Set(rawExtras));
   let totalMin = service.durationMinutes;
   const additionalNames: string[] = [];
   const validAdditionalIds: string[] = [];
@@ -163,7 +166,10 @@ export const handler: Handler = async (event) => {
   try {
     inserted = await cal.insertEvent(bookingToEvent(booking));
   } catch (e) {
-    return serverError(`Calendar insert failed: ${(e as Error).message}`);
+    // Log the full Google API error server-side, but return a generic message
+    // so we don't leak calendar IDs, OAuth state, or rate-limit details to the public.
+    console.error("[book] calendar insert failed:", (e as Error).message);
+    return serverError("Greška pri kreiranju termina. Molim probajte ponovo.");
   }
   booking.calendarEventId = inserted.id ?? undefined;
 
