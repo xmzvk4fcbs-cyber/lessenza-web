@@ -8,6 +8,7 @@ import { reminderToClient } from "../lib/email-templates";
 import { store } from "../lib/blobs";
 import { withKeyLock } from "../lib/booking-lock";
 import { cronGuard } from "../lib/cron-guard";
+import { makeCancelToken } from "../lib/cancel-token";
 
 interface Deps {
   makeCalendar: () => CalendarClient | Promise<CalendarClient>;
@@ -90,13 +91,27 @@ const inner: Handler = async () => {
     const b = eventToBooking(e, services);
     if (!b) continue;
     if (!b.email) { skippedNoEmail++; continue; }
+    // Mint a self-cancel link the client can use straight from the reminder —
+    // saves them digging through old emails to find the original confirmation.
+    let cancelUrl: string | undefined;
+    if (b.calendarEventId) {
+      try {
+        const siteUrl = (process.env.SITE_URL || "https://lessenza.me").replace(/\/$/, "");
+        const eventEndMs = new Date(b.endISO).getTime();
+        const expiresAtISO = new Date(eventEndMs + 24 * 60 * 60 * 1000).toISOString();
+        const t = makeCancelToken(b.calendarEventId, { expiresAtISO });
+        cancelUrl = `${siteUrl}/cancel.html?t=${encodeURIComponent(t)}`;
+      } catch (e) {
+        console.warn("[reminder][cancel-token] not generated:", (e as Error).message);
+      }
+    }
     // Atomic check-then-act per bookingId so two overlapping scheduler ticks
     // (or a manual retry) can't both clear the dedup check and double-send.
     const outcome = await withKeyLock<"sent" | "already" | "failed">(`reminders-sent:${b.bookingId}`, async () => {
       if (await alreadySent(b.bookingId)) return "already";
       try {
         await mailer.send(
-          reminderToClient(b, { salonAddress: settings.salonAddress, ownerPhone: settings.ownerPhone, emailGreeting: settings.emailGreeting, emailClosing: settings.emailClosing, emailSignature: settings.emailSignature })
+          reminderToClient(b, { salonAddress: settings.salonAddress, ownerPhone: settings.ownerPhone, emailGreeting: settings.emailGreeting, emailClosing: settings.emailClosing, emailSignature: settings.emailSignature, cancelUrl })
         );
         await markSent(b.bookingId);
         return "sent";

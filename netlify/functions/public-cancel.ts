@@ -3,9 +3,9 @@ import { json, badRequest, notFound, methodNotAllowed, parseJson } from "../lib/
 import { verifyCancelToken } from "../lib/cancel-token";
 import { createCalendarClient, createCalendarClientAsync, fetchEventById, type CalendarClient } from "../lib/calendar";
 import { eventToBooking } from "../lib/calendar-domain";
-import { getServices, getSettings, appendCancellation } from "../lib/config";
+import { getServices, getSettings, appendCancellation, appendAudit, getPushSubscriptions, removePushSubscription } from "../lib/config";
 import { getMailerAsync, type Mailer } from "../lib/mailer";
-import { bookingCancelledByClientToOwner } from "../lib/email-templates";
+import { bookingCancelledByClientToOwner, bookingCancelledByClientToSelf } from "../lib/email-templates";
 import { formatSalon } from "../lib/time";
 
 interface Deps {
@@ -62,7 +62,7 @@ async function handleGet(token: string) {
 }
 
 /** POST → actually performs the cancellation. */
-async function handlePost(token: string) {
+async function handlePost(token: string, reason: string = "") {
   const v = verifyCancelToken(token);
   if (!v.ok) {
     if (v.reason === "malformed") return badRequest("malformed", "Token format invalid");
@@ -95,12 +95,14 @@ async function handlePost(token: string) {
 
   // Best-effort: log client cancellation. Failure must NOT abort the cancel
   // flow — the calendar event is already gone.
+  const trimmedReason = reason.trim().slice(0, 500);
   try {
     await appendCancellation({
       eventId: v.eventId,
       appointmentISO: booking.startISO,
       cancelledAt: new Date().toISOString(),
       kind: "by-client",
+      reason: trimmedReason || undefined,
       name: booking.name,
       phoneE164: booking.phoneE164,
       serviceName: booking.combinedServicesLabel ?? booking.serviceName,
@@ -109,12 +111,72 @@ async function handlePost(token: string) {
     console.error("[cancel-log]", e);
   }
 
+  // Activity feed entry — best-effort.
+  try {
+    const whenLabel = formatSalon(new Date(booking.startISO), "dd.MM.yyyy. 'u' HH:mm");
+    const svcLabel = booking.combinedServicesLabel ?? booking.serviceName;
+    await appendAudit({
+      kind: "booking.cancelled",
+      summary: `Klijent otkazao: ${svcLabel} — ${booking.name} (${whenLabel})${trimmedReason ? ` · razlog: ${trimmedReason}` : ""}`,
+      meta: { eventId: v.eventId, phone: booking.phoneE164 ?? "", source: "client-self" },
+    });
+  } catch (e) {
+    console.warn("[public-cancel][audit] failed:", (e as Error).message);
+  }
+
   // Notify owner — best effort.
   if (settings.ownerEmail) {
     try {
       const mailer = await getMailer();
-      await mailer.send(bookingCancelledByClientToOwner(booking, { ownerEmail: settings.ownerEmail }));
+      await mailer.send(bookingCancelledByClientToOwner(booking, { ownerEmail: settings.ownerEmail, reason: trimmedReason }));
     } catch { /* swallow — cancellation already happened */ }
+  }
+
+  // Send the client a confirmation email so they have a record.
+  if (booking.email) {
+    try {
+      const mailer = await getMailer();
+      await mailer.send(bookingCancelledByClientToSelf(booking, {
+        salonAddress: settings.salonAddress,
+        ownerPhone: settings.ownerPhone,
+        emailGreeting: settings.emailGreeting,
+        emailClosing: settings.emailClosing,
+        emailSignature: settings.emailSignature,
+      }));
+    } catch { /* swallow */ }
+  }
+
+  // Best-effort push to owner's PWA so she sees it immediately.
+  if (process.env.VAPID_PUBLIC_KEY && process.env.VAPID_PRIVATE_KEY) {
+    try {
+      const webpush = (await import("web-push")).default;
+      webpush.setVapidDetails(
+        process.env.VAPID_SUBJECT || "mailto:info@lessenza.me",
+        process.env.VAPID_PUBLIC_KEY,
+        process.env.VAPID_PRIVATE_KEY,
+      );
+      const subs = await getPushSubscriptions();
+      const whenLabel = formatSalon(new Date(booking.startISO), "dd.MM. 'u' HH:mm");
+      const bookingDayKey = formatSalon(new Date(booking.startISO), "yyyy-MM-dd");
+      const svcLabel = booking.combinedServicesLabel ?? booking.serviceName;
+      const payload = JSON.stringify({
+        title: "Otkazan termin",
+        body: `${booking.name} otkazala: ${svcLabel}, ${whenLabel}${trimmedReason ? ` (${trimmedReason})` : ""}`,
+        url: `/admin/?view=day&anchor=${bookingDayKey}#schedule`,
+      });
+      for (const s of subs) {
+        try {
+          await webpush.sendNotification({ endpoint: s.endpoint, keys: s.keys }, payload);
+        } catch (e: unknown) {
+          const err = e as { statusCode?: number };
+          if (err.statusCode === 404 || err.statusCode === 410) {
+            await removePushSubscription(s.endpoint);
+          }
+        }
+      }
+    } catch (e) {
+      console.warn("[public-cancel][push] failed:", (e as Error).message);
+    }
   }
 
   return json({ ok: true });
@@ -127,11 +189,12 @@ export const handler: Handler = async (event) => {
     return handleGet(token);
   }
   if (event.httpMethod === "POST") {
-    let body: { t?: unknown };
+    let body: { t?: unknown; reason?: unknown };
     try { body = parseJson(event.body); } catch { return badRequest("invalid-json", "Body must be JSON"); }
     const token = typeof body.t === "string" ? body.t.trim() : "";
     if (!token) return badRequest("missing-token", "t required");
-    return handlePost(token);
+    const reason = typeof body.reason === "string" ? body.reason : "";
+    return handlePost(token, reason);
   }
   return methodNotAllowed(["GET", "POST"]);
 };

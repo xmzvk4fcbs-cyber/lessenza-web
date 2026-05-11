@@ -90,6 +90,10 @@
         <span id="cs-name" style="color:#7A6F62;font-size:0.88rem;"></span>
       </div>
       <p style="text-align:center;margin:8px 0 0;color:#7A6F62;">Da li sigurno želite otkazati ovaj termin?</p>
+      <div style="margin:16px 0 0;">
+        <label for="cancel-reason" style="display:block;font-size:0.85rem;color:#7A6F62;margin-bottom:6px;">Razlog (opciono — pomaže nam da bolje organizujemo termine):</label>
+        <textarea id="cancel-reason" maxlength="500" rows="2" style="width:100%;padding:0.6rem 0.75rem;border:1px solid #D9C09A;border-radius:8px;background:#fff;font-family:inherit;font-size:16px;resize:vertical;min-height:60px;" placeholder="npr. bolest, hitan posao…"></textarea>
+      </div>
       <div class="cancel-actions">
         <button id="btn-cancel" class="btn btn-primary" type="button">Da, otkaži</button>
         <a class="btn btn-ghost" href="index.html">Ne, vrati me na sajt</a>
@@ -180,10 +184,11 @@
     $("btn-cancel").disabled = true;
     $("btn-cancel").textContent = "Otkazujem…";
     try {
+      const reason = ($("cancel-reason")?.value || "").trim().slice(0, 500);
       const r = await fetch("/api/public-cancel", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ t: token }),
+        body: JSON.stringify({ t: token, reason }),
       });
       const body = await r.json().catch(() => ({}));
       if (r.ok) return show("done");

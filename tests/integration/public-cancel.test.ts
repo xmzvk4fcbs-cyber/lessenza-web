@@ -121,9 +121,13 @@ describe("/api/public-cancel", () => {
     const r = await handler(ev("POST", { token: t, body: { t } }), {} as never);
     expect(r?.statusCode).toBe(200);
     expect(deleted).toEqual(["evt-go"]);
-    expect(mailer.sent).toHaveLength(1);
-    expect(mailer.sent[0]?.to).toBe("owner@example.com");
-    expect(mailer.sent[0]?.subject).toContain("Otkazan");
+    // Owner notify + client self-cancel confirmation (the booking fixture has
+    // an email set, so both should fire).
+    expect(mailer.sent).toHaveLength(2);
+    const ownerMail = mailer.sent.find((m) => m.to === "owner@example.com");
+    const clientMail = mailer.sent.find((m) => m.to !== "owner@example.com");
+    expect(ownerMail?.subject).toContain("Otkazan");
+    expect(clientMail?.subject).toContain("otkazan");
   });
 
   it("POST 409 too-late within 24h, does NOT delete or email", async () => {

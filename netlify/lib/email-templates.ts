@@ -540,9 +540,13 @@ export function dailyDigestToOwner(
   };
 }
 
-export function reminderToClient(b: Booking, ctx: ClientTemplateCtx): EmailMessage {
+export function reminderToClient(
+  b: Booking,
+  ctx: ClientTemplateCtx & { cancelUrl?: string }
+): EmailMessage {
   if (!b.email) throw new Error("Booking has no client email");
   const when = formatDateHuman(b.startISO);
+  const cancelUrl = ctx.cancelUrl;
   const text = [
     `Zdravo ${b.name},`,
     ``,
@@ -552,10 +556,18 @@ export function reminderToClient(b: Booking, ctx: ClientTemplateCtx): EmailMessa
     `Kada: ${when}`,
     `Gdje: ${ctx.salonAddress}`,
     ``,
+    cancelUrl ? `Ne možete doći? Otkažite termin (najkasnije 24h prije):\n${cancelUrl}\n` : "",
     `Ako nešto iskrsne — odgovorite na ovaj email.`,
     ``,
     `— L'Essenza`,
   ].filter(Boolean).join("\n");
+
+  const cancelBlock = cancelUrl
+    ? `<table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="margin:16px 0 8px;"><tr><td align="center">
+        <a href="${esc(cancelUrl)}" style="display:inline-block;font-family:Georgia,serif;font-size:13px;color:${BRAND.gold};text-decoration:none;border:1px solid ${BRAND.gold};padding:9px 22px;border-radius:6px;letter-spacing:0.04em;">Otkaži termin</a>
+        <div style="font-size:11px;color:${BRAND.sageSoft};margin-top:8px;">Otkazivanje moguće najkasnije 24h prije termina.</div>
+      </td></tr></table>`
+    : "";
 
   const inner = [
     paragraph(`Draga ${b.name},`),
@@ -565,6 +577,7 @@ export function reminderToClient(b: Booking, ctx: ClientTemplateCtx): EmailMessa
       ["Kada", when],
       ["Gdje", ctx.salonAddress],
     ]),
+    cancelBlock,
     softNote(`Ako nešto iskrsne, odgovorite na ovaj email i dogovorićemo novi termin.`),
     paragraph(`Vidimo se sutra!`),
     signOff(ctx?.emailSignature),
@@ -585,11 +598,12 @@ export function reminderToClient(b: Booking, ctx: ClientTemplateCtx): EmailMessa
  */
 export function bookingCancelledByClientToOwner(
   b: Booking,
-  ctx: { ownerEmail: string }
+  ctx: { ownerEmail: string; reason?: string }
 ): EmailMessage {
   const when = formatDateHuman(b.startISO);
   const phoneLine = b.phoneE164 ? `Telefon: ${b.phoneE164}` : "Telefon: —";
   const emailLine = b.email ? `Email: ${b.email}` : "Email: —";
+  const reasonLine = ctx.reason ? `Razlog: ${ctx.reason}` : "";
   const text = [
     `Klijentkinja je sama otkazala termin preko sajta.`,
     ``,
@@ -598,21 +612,24 @@ export function bookingCancelledByClientToOwner(
     phoneLine,
     emailLine,
     `Bio zakazan: ${when}`,
+    reasonLine,
     ``,
     `Slot je sad slobodan u Google kalendaru.`,
     ``,
     `— L'Essenza booking sistem`,
-  ].join("\n");
+  ].filter(Boolean).join("\n");
 
+  const rows: Array<[string, string]> = [
+    ["Termin", svc(b)],
+    ["Klijentkinja", b.name],
+    ["Telefon", b.phoneE164 || "—"],
+    ["Email", b.email || "—"],
+    ["Bio zakazan", when],
+  ];
+  if (ctx.reason) rows.push(["Razlog", ctx.reason]);
   const inner = [
     paragraph(`<strong>Klijentkinja je sama otkazala termin preko sajta.</strong>`),
-    detailsTable([
-      ["Termin", svc(b)],
-      ["Klijentkinja", b.name],
-      ["Telefon", b.phoneE164 || "—"],
-      ["Email", b.email || "—"],
-      ["Bio zakazan", when],
-    ]),
+    detailsTable(rows),
     softNote(`Slot je sad slobodan u Google kalendaru.`),
   ].filter(Boolean).join("\n");
 
@@ -621,6 +638,53 @@ export function bookingCancelledByClientToOwner(
     subject: `Otkazan termin — ${b.name}, ${svc(b)}`,
     text,
     html: renderShell({ heading: "Termin otkazan", preheader: `${b.name} · ${when}`, inner }),
+  };
+}
+
+/**
+ * Client-facing confirmation that they cancelled — closing the loop so they
+ * have a written receipt. Sent from the self-cancel flow.
+ */
+export function bookingCancelledByClientToSelf(
+  b: Booking,
+  ctx: ClientTemplateCtx
+): EmailMessage {
+  if (!b.email) throw new Error("self-cancel email requires booking.email");
+  const when = formatDateHuman(b.startISO);
+  const closing = ctx?.emailClosing?.trim() || "Hvala što ste nas obavijestili.";
+  const signature = ctx?.emailSignature?.trim() || "L'Essenza";
+  const text = [
+    `Zdravo ${b.name},`,
+    ``,
+    `Potvrđujemo da ste otkazali svoj termin:`,
+    ``,
+    `Usluga: ${svc(b)}`,
+    `Bio zakazan: ${when}`,
+    ``,
+    `Ako ovo nije bila vaša namjera, javite nam se odmah — možda još uspijemo da vratimo termin.`,
+    `Inače, slobodno zakažite drugi termin kad budete htjeli.`,
+    ``,
+    `${closing}`,
+    `— ${signature}`,
+  ].join("\n");
+
+  const inner = [
+    paragraph(`Zdravo ${esc(b.name)},`),
+    paragraph(`Potvrđujemo da ste otkazali svoj termin.`),
+    detailsTable([
+      ["Usluga", svc(b)],
+      ["Bio zakazan", when],
+    ]),
+    softNote(`Ako ovo nije bila vaša namjera, javite nam se odmah — možda još uspijemo da vratimo termin. Inače, slobodno zakažite drugi termin kad budete htjeli.`),
+    paragraph(esc(closing)),
+    signOff(signature),
+  ].filter(Boolean).join("\n");
+
+  return {
+    to: b.email,
+    subject: "L'Essenza — Vaš termin je otkazan",
+    text,
+    html: renderShell({ heading: "Termin otkazan", preheader: `${svc(b)} · ${when}`, inner }),
   };
 }
 

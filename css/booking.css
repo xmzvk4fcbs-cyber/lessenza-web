@@ -446,6 +446,21 @@
 }
 .field textarea { min-height: 88px; resize: vertical; }
 .field__hint { margin-top: 0.25rem; font-size: 0.8rem; color: var(--text-light); }
+
+/* Cancel-policy hint shown on step 4. Same tone as field hints but with a
+   subtle border on the left and slight padding so the rule stands out as a
+   "before-you-submit" notice, not just a placeholder. */
+.booking-policy {
+  margin: 1rem 0 0;
+  padding: 0.7rem 0.85rem;
+  background: var(--cream-soft, #F9F2E5);
+  border-left: 3px solid var(--gold, #C9A961);
+  border-radius: 0 8px 8px 0;
+  font-size: 0.86rem;
+  color: var(--text);
+  line-height: 1.5;
+}
+.booking-policy span { margin-right: 4px; color: var(--gold-dark, #8B6F2B); font-weight: 700; }
 .field__status {
   font-size: 0.82rem;
   margin: 0.3rem 0 0;
