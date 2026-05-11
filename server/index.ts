@@ -161,7 +161,12 @@ async function scheduleCrons(mounted: Mounted[]): Promise<void> {
         rawQuery: "",
         path: `/${name}`,
         httpMethod: "POST",
-        headers: { "x-internal-cron": "1" },
+        headers: {
+          "x-internal-cron": "1",
+          // Also pass the shared secret if set so cronGuard accepts the call
+          // even if a future change splits scheduler + handler across processes.
+          ...(process.env.CRON_SECRET ? { "x-cron-token": process.env.CRON_SECRET } : {}),
+        },
         multiValueHeaders: {},
         queryStringParameters: {},
         multiValueQueryStringParameters: {},

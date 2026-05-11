@@ -347,7 +347,9 @@ async function loadServices() {
     const btn = document.createElement("button");
     btn.type = "button";
     btn.className = "service-card";
-    btn.setAttribute("role", "listitem");
+    // Toggle-button pattern (W3C): regular <button> with aria-pressed. Screen
+    // readers announce "button, pressed/not pressed" without needing custom
+    // listbox keyboard nav. Container has role=group with a single aria-label.
     btn.setAttribute("aria-pressed", "false");
     btn.dataset.id = s.id;
     const priceLabel = typeof s.price === "number" ? ` · ${s.price} ${currency}` : "";

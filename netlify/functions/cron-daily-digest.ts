@@ -6,6 +6,7 @@ import { getSettings, getServices } from "../lib/config";
 import { eventToBooking } from "../lib/calendar-domain";
 import { dailyDigestToOwner } from "../lib/email-templates";
 import { fromTZ, dayKeyInTZ, formatSalon } from "../lib/time";
+import { cronGuard } from "../lib/cron-guard";
 
 interface Deps {
   makeCalendar: () => CalendarClient;
@@ -19,7 +20,7 @@ function getDeps(): Deps {
   return deps ?? { makeCalendar: () => createCalendarClient(), makeMailer: () => getMailerAsync() };
 }
 
-export const handler: Handler = async () => {
+const inner: Handler = async () => {
   const settings = await getSettings();
   if (!settings.dailyDigestEnabled || !settings.ownerEmail) return json({ ok: true, skipped: true });
 
@@ -50,3 +51,5 @@ export const handler: Handler = async () => {
   }
   return json({ ok: true, sent: 1, appointments: bookings.length });
 };
+
+export const handler = cronGuard(inner);

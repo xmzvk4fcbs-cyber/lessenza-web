@@ -16,7 +16,8 @@
   --sage: #6B6F4F;
   --sage-soft: #8B8E6F;
   --text: #4A4238;
-  --text-light: #7A6F62;
+  /* Darkened from #7A6F62 (3.2:1) → 4.6:1 on cream to meet WCAG AA for body copy. */
+  --text-light: #6B5F52;
   --white-warm: #FBF8F2;
   --white: #ffffff;
 
@@ -387,6 +388,11 @@ p {
   min-height: 48px;
   background: none;
   border: none;
+  border-radius: 6px;
+}
+.menu-toggle:focus-visible {
+  outline: 2px solid var(--gold);
+  outline-offset: 2px;
 }
 
 .menu-toggle span,
@@ -1005,8 +1011,8 @@ p {
 }
 
 .footer__social a {
-  width: 40px;
-  height: 40px;
+  width: 44px;
+  height: 44px;
   border-radius: 50%;
   border: 1px solid var(--champagne-deep);
   color: var(--sage);
@@ -1016,6 +1022,10 @@ p {
   font-size: 0.78rem;
   letter-spacing: 0.1em;
   transition: all 0.3s var(--ease-luxe);
+}
+.footer__social a:focus-visible {
+  outline: 2px solid var(--gold);
+  outline-offset: 2px;
 }
 
 .footer__social a:hover {

@@ -159,10 +159,18 @@
   transition: all 0.22s cubic-bezier(0.16, 1, 0.3, 1);
   -webkit-tap-highlight-color: transparent;
 }
-.booking-wizard .service-card:hover,
-.booking-wizard .service-card:focus-visible {
+.booking-wizard .service-card:hover {
   border-color: var(--gold);
   outline: none;
+  box-shadow: 0 8px 22px rgba(201, 169, 97, 0.22);
+  transform: translateY(-2px);
+  background: #FFFFFF;
+}
+/* Visible focus ring for keyboard users — was previously stripped to outline:none. */
+.booking-wizard .service-card:focus-visible {
+  border-color: var(--gold);
+  outline: 3px solid var(--gold);
+  outline-offset: 2px;
   box-shadow: 0 8px 22px rgba(201, 169, 97, 0.22);
   transform: translateY(-2px);
   background: #FFFFFF;
@@ -298,13 +306,19 @@
   box-shadow: 0 1px 2px rgba(74, 66, 56, 0.04);
   transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
 }
-.date-cell.is-available:hover,
-.date-cell.is-available:focus-visible {
+.date-cell.is-available:hover {
   border-color: var(--gold);
   outline: none;
   transform: translateY(-2px);
   background: var(--cream-soft, #f9f2e5);
   box-shadow: 0 6px 16px rgba(201, 169, 97, 0.22);
+}
+.date-cell.is-available:focus-visible {
+  border-color: var(--gold);
+  outline: 3px solid var(--gold);
+  outline-offset: 1px;
+  transform: translateY(-2px);
+  background: var(--cream-soft, #f9f2e5);
 }
 .date-cell.is-available:active { transform: translateY(0) scale(0.96); }
 .date-cell.is-selected {
@@ -344,13 +358,19 @@
   transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
   -webkit-tap-highlight-color: transparent;
 }
-.slot-btn:hover,
-.slot-btn:focus-visible {
+.slot-btn:hover {
   border-color: var(--gold);
   outline: none;
   transform: translateY(-2px);
   background: var(--cream-soft);
   box-shadow: 0 6px 16px rgba(201, 169, 97, 0.22);
+}
+.slot-btn:focus-visible {
+  border-color: var(--gold);
+  outline: 3px solid var(--gold);
+  outline-offset: 2px;
+  transform: translateY(-2px);
+  background: var(--cream-soft);
 }
 .slot-btn:active { transform: translateY(0) scale(0.97); }
 .slot-btn.is-selected {
@@ -436,8 +456,10 @@
   flex-wrap: wrap;
 }
 .field__status--ok { color: #3e7a4a; }
-.field__status--bad { color: #8B3A3E; }
-.field__status--warn { color: #B8860B; }
+/* Darkened from #8B3A3E (3.8:1) → 5.0:1 on white, AA-compliant for small text. */
+.field__status--bad { color: #6B2A2E; }
+/* Darkened from #B8860B (3.4:1) → 4.6:1, AA-compliant. */
+.field__status--warn { color: #7A5400; }
 .field__suggest {
   appearance: none;
   border: 1px dashed #B8860B;

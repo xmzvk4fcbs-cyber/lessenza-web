@@ -128,6 +128,9 @@ const inner: Handler = async (event) => {
       await mailer.send(bookingCancelledToClient(oldBooking, reason, {
         salonAddress: settings.salonAddress,
         ownerPhone: settings.ownerPhone,
+        emailGreeting: settings.emailGreeting,
+        emailClosing: settings.emailClosing,
+        emailSignature: settings.emailSignature,
       }));
       oldEmailSent = true;
     } catch { oldEmailSent = false; }
@@ -138,6 +141,9 @@ const inner: Handler = async (event) => {
       await mailer.send(bookingConfirmedToClient(newBooking, {
         salonAddress: settings.salonAddress,
         ownerPhone: settings.ownerPhone,
+        emailGreeting: settings.emailGreeting,
+        emailClosing: settings.emailClosing,
+        emailSignature: settings.emailSignature,
       }));
       newEmailSent = true;
     } catch { newEmailSent = false; }

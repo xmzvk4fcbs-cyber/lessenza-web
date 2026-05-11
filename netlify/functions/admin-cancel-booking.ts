@@ -83,6 +83,9 @@ const inner: Handler = async (event) => {
           bookingCancelledToClient(booking, reason, {
             salonAddress: settings.salonAddress,
             ownerPhone: settings.ownerPhone,
+            emailGreeting: settings.emailGreeting,
+            emailClosing: settings.emailClosing,
+            emailSignature: settings.emailSignature,
           })
         );
         emailSent = true;

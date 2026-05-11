@@ -69,7 +69,7 @@ describe("/api/admin/reject-booking", () => {
     expect(r?.statusCode).toBe(200);
     expect(deleted).toEqual(["gcal-1"]);
     expect(mailer.sent).toHaveLength(1);
-    expect(mailer.sent[0]?.subject).toContain("Termin");
+    expect(mailer.sent[0]?.subject).toContain("L'Essenza");
     const body = JSON.parse(r!.body as string);
     expect(body.blocked).toBe(false);
     expect(await getBlockedPhones()).toEqual([]);

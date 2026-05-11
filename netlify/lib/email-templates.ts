@@ -176,7 +176,7 @@ export function bookingConfirmedToClient(
     `Gdje: ${_ctx.salonAddress}`,
     ``,
     cancelUrl
-      ? `Ne mozete doci? Otkazi termin (najkasnije 24h prije):\n${cancelUrl}\n`
+      ? `Ne možete doći? Otkažite termin (najkasnije 24h prije):\n${cancelUrl}\n`
       : "",
     `Za izmjene — odgovorite na ovaj email.`,
     ``,
@@ -329,11 +329,14 @@ export function bookingCancelledToClient(
   ];
   if (reason) rows.push(["Razlog", reason]);
 
+  const greeting = _ctx?.emailGreeting?.trim() || "Izvinjavamo se, ali moramo otkazati vaš termin.";
+  const closing = _ctx?.emailClosing?.trim() || "Hvala na razumijevanju.";
   const inner = [
     paragraph(`Draga ${b.name},`),
-    paragraph(`Izvinjavamo se, ali moramo otkazati vaš termin.`),
+    paragraph(esc(greeting)),
     detailsTable(rows),
     softNote(`Odgovorite na ovaj email da dogovorimo novi termin koji Vam odgovara — biće nam drago da Vas ugostimo.`),
+    paragraph(esc(closing)),
     signOff(_ctx?.emailSignature),
   ].filter(Boolean).join("\n");
 
@@ -348,6 +351,8 @@ export function bookingCancelledToClient(
 export function bookingRejectedToClient(b: Booking, _ctx: ClientTemplateCtx): EmailMessage {
   if (!b.email) throw new Error("rejected email requires booking.email");
   const when = formatDateHuman(b.startISO);
+  const closing = _ctx?.emailClosing?.trim() || "Srdačno";
+  const signature = _ctx?.emailSignature?.trim() || "L'Essenza";
   const inner = `
     <p style="margin:0 0 16px;font-size:15px;line-height:1.7;">Draga ${esc(b.name)},</p>
     <p style="margin:0 0 16px;font-size:15px;line-height:1.7;">
@@ -357,17 +362,17 @@ export function bookingRejectedToClient(b: Booking, _ctx: ClientTemplateCtx): Em
       Nažalost, u narednom periodu ne mogu prihvatiti Vaš termin za <strong>${esc(svc(b))}</strong> (${esc(when)}).
     </p>
     ${replyNote()}
-    <p style="margin:24px 0 0;font-size:14px;color:${BRAND.sageSoft};">Srdačno ✿ L'Essenza</p>
+    <p style="margin:24px 0 0;font-size:14px;color:${BRAND.sageSoft};">${esc(closing)} ✿ ${esc(signature)}</p>
   `;
   return {
     to: b.email,
-    subject: `Termin — L'Essenza`,
-    html: renderShell({ heading: "Obavještenje o terminu", preheader: "Nažalost termin nije moguć.", inner }),
+    subject: `${svc(b)} nije moguć — L'Essenza`,
+    html: renderShell({ heading: "Obavještenje o terminu", preheader: `${svc(b)} nije moguć.`, inner }),
     text:
       `Draga ${b.name},\n\n` +
       `Hvala na interesovanju za L'Essenza. Nažalost, u narednom periodu ne mogu prihvatiti Vaš termin za ${svc(b)} (${when}).\n\n` +
       `Ako imate pitanja, slobodno odgovorite na ovaj email.\n\n` +
-      `Srdačno ✿ L'Essenza`,
+      `${closing} ✿ ${signature}`,
   };
 }
 

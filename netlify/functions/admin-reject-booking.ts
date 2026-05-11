@@ -53,7 +53,7 @@ const inner: Handler = async (event) => {
         kind: "rejected",
         name: booking.name,
         phoneE164: booking.phoneE164,
-        serviceName: booking.serviceName,
+        serviceName: booking.combinedServicesLabel ?? booking.serviceName,
       });
     } catch (e) {
       console.error("[cancel-log]", e);
@@ -86,6 +86,9 @@ const inner: Handler = async (event) => {
           bookingRejectedToClient(booking, {
             salonAddress: settings.salonAddress,
             ownerPhone: settings.ownerPhone,
+            emailGreeting: settings.emailGreeting,
+            emailClosing: settings.emailClosing,
+            emailSignature: settings.emailSignature,
           })
         );
         emailSent = true;
@@ -93,7 +96,8 @@ const inner: Handler = async (event) => {
         emailSent = false;
       }
     }
-    message = `Draga ${booking.name}, hvala na interesovanju. Nažalost u narednom periodu ne mogu prihvatiti Vaš termin za ${booking.serviceName}. Srdačno ✿ L'Essenza`;
+    const rejectLabel = booking.combinedServicesLabel ?? booking.serviceName;
+    message = `Draga ${booking.name}, hvala na interesovanju. Nažalost u narednom periodu ne mogu prihvatiti Vaš termin za ${rejectLabel}. Srdačno ✿ L'Essenza`;
     if (booking.phoneE164) {
       whatsappLink = waLink(booking.phoneE164, message);
       viberLink = `viber://chat?number=${encodeURIComponent(booking.phoneE164)}`;

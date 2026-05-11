@@ -7,6 +7,8 @@ import { createCalendarClient, createCalendarClientAsync, type CalendarClient } 
 import { eventToBooking } from "../lib/calendar-domain";
 import { getMailer, getMailerAsync, type Mailer } from "../lib/mailer";
 import { reviewNudgeToClient } from "../lib/email-templates";
+import { withKeyLock } from "../lib/booking-lock";
+import { cronGuard } from "../lib/cron-guard";
 
 interface Deps {
   makeCalendar: () => CalendarClient;
@@ -48,26 +50,34 @@ const inner: Handler = async (event) => {
     const endMs = new Date(b.endISO).getTime();
     if (endMs < windowStart.getTime() || endMs > windowEnd.getTime()) continue;
 
-    try {
-      await mailer.send(
-        reviewNudgeToClient(b, {
-          salonAddress: settings.salonAddress,
-          ownerPhone: settings.ownerPhone,
-          emailGreeting: settings.emailGreeting,
-          emailClosing: settings.emailClosing,
-          emailSignature: settings.emailSignature,
-          reviewLinkUrl: url,
-        })
-      );
-      await markReviewNudgeSent(b.calendarEventId);
-      sent++;
-      console.log(`[review-nudge] sent → ${b.email} (${b.calendarEventId})`);
-    } catch (e) {
-      console.error(`[review-nudge] FAILED → ${b.email}:`, (e as Error).message);
-    }
+    const eventId = b.calendarEventId;
+    // Per-event lock so two ticks can't both clear the dedup gate.
+    const didSend = await withKeyLock<boolean>(`review-nudge-sent:${eventId}`, async () => {
+      const fresh = await getReviewNudgesSent();
+      if (fresh[eventId]) return false;
+      try {
+        await mailer.send(
+          reviewNudgeToClient(b, {
+            salonAddress: settings.salonAddress,
+            ownerPhone: settings.ownerPhone,
+            emailGreeting: settings.emailGreeting,
+            emailClosing: settings.emailClosing,
+            emailSignature: settings.emailSignature,
+            reviewLinkUrl: url,
+          })
+        );
+        await markReviewNudgeSent(eventId);
+        console.log(`[review-nudge] sent → ${b.email} (${eventId})`);
+        return true;
+      } catch (e) {
+        console.error(`[review-nudge] FAILED → ${b.email}:`, (e as Error).message);
+        return false;
+      }
+    });
+    if (didSend) sent++;
   }
 
   return json({ ok: true, sent });
 };
 
-export const handler = inner;
+export const handler = cronGuard(inner);

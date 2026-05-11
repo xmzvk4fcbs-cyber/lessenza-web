@@ -131,6 +131,9 @@ const inner: Handler = async (event) => {
         bookingRescheduledToClient(original, updated, {
           salonAddress: settings.salonAddress,
           ownerPhone: settings.ownerPhone,
+          emailGreeting: settings.emailGreeting,
+          emailClosing: settings.emailClosing,
+          emailSignature: settings.emailSignature,
         })
       );
       emailSent = true;

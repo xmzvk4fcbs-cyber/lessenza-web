@@ -33,7 +33,7 @@
   <meta name="theme-color" content="#c9a96e">
 </head>
 <body>
-  <a href="#main-content" class="skip-link">Preskoči na sadržaj</a>
+  <a href="#wizard" class="skip-link">Preskoči na rezervaciju</a>
 
   <header class="header">
     <div class="header__inner">
@@ -86,7 +86,7 @@
         <section class="booking-step" id="step-1" aria-labelledby="step-1-title">
           <h2 id="step-1-title">Izaberi uslugu</h2>
           <p class="step-hint">Možete odabrati više usluga koje želite obaviti istovremeno.</p>
-          <div class="service-grid" id="service-grid" role="list" aria-multiselectable="true"></div>
+          <div class="service-grid" id="service-grid" role="group" aria-label="Izaberi jednu ili više usluga"></div>
           <div class="service-summary" id="service-summary" hidden aria-live="polite">
             <span class="service-summary__label">Odabrano</span>
             <span class="service-summary__value" id="service-summary-value"></span>
@@ -196,6 +196,8 @@
         </section>
 
         <div class="booking-nav" id="nav">
+          <!-- DOM order is back → next so screen-reader / keyboard Tab hits
+               them in reading order. Visual order matches DOM. -->
           <button type="button" class="btn btn-ghost" id="nav-back" hidden>Nazad</button>
           <button type="button" class="btn btn-primary" id="nav-next">Dalje</button>
         </div>
