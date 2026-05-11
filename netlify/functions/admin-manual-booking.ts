@@ -6,6 +6,8 @@ import { createCalendarClient, createCalendarClientAsync, type CalendarClient } 
 import { getServices, getSettings, appendAudit } from "../lib/config";
 import { bookingToEvent, type Booking } from "../lib/calendar-domain";
 import { normalizePhone } from "../lib/phone";
+import { withDayLock } from "../lib/booking-lock";
+import { dayKeyInTZ } from "../lib/time";
 
 let factory: (() => CalendarClient) | null = null;
 export function __setCalendarFactoryForTests(f: (() => CalendarClient) | null): void {
@@ -74,29 +76,6 @@ const inner: Handler = async (event) => {
     ? [service.name, ...additionalNames].join(" + ")
     : service.name;
 
-  // Check for conflicts — warn (409) unless force=true.
-  if (!body.force) {
-    const cal = await makeCalendar();
-    const existing = await cal.listEvents({ timeMin: start.toISOString(), timeMax: endISO });
-    const overlaps = existing.filter((e) => {
-      const s = new Date(e.start?.dateTime ?? e.start?.date ?? 0).getTime();
-      const en = new Date(e.end?.dateTime ?? e.end?.date ?? 0).getTime();
-      return s < new Date(endISO).getTime() && en > start.getTime();
-    });
-    const first = overlaps[0];
-    if (first) {
-      return json({
-        error: "conflict",
-        message: "Postoji termin u ovom vremenu — klikni 'Dodaj svejedno' da forsiras.",
-        existing: {
-          summary: first.summary,
-          start: first.start?.dateTime,
-          end: first.end?.dateTime,
-        },
-      }, 409);
-    }
-  }
-
   const bookingId = randomUUID();
   const booking: Booking = {
     bookingId,
@@ -113,13 +92,53 @@ const inner: Handler = async (event) => {
     source: "admin-manual",
   };
 
-  let inserted;
-  try {
-    inserted = await (await makeCalendar()).insertEvent(bookingToEvent(booking));
-  } catch (e) {
-    return serverError(`Calendar insert failed: ${(e as Error).message}`);
+  // Critical section — same per-day lock as /api/book so admin and public
+  // bookings can't race for the same slot.
+  const dayKey = dayKeyInTZ(start);
+  type LockResult =
+    | { kind: "conflict"; existing: { summary?: string | null; start?: string | null; end?: string | null } }
+    | { kind: "insert-failed"; message: string }
+    | { kind: "ok"; eventId: string | undefined };
+  const lockResult = await withDayLock<LockResult>(dayKey, async () => {
+    const cal = await makeCalendar();
+    if (!body.force) {
+      const existing = await cal.listEvents({ timeMin: start.toISOString(), timeMax: endISO });
+      const overlaps = existing.filter((e) => {
+        const s = new Date(e.start?.dateTime ?? e.start?.date ?? 0).getTime();
+        const en = new Date(e.end?.dateTime ?? e.end?.date ?? 0).getTime();
+        return s < new Date(endISO).getTime() && en > start.getTime();
+      });
+      const first = overlaps[0];
+      if (first) {
+        return {
+          kind: "conflict",
+          existing: {
+            summary: first.summary ?? null,
+            start: first.start?.dateTime ?? null,
+            end: first.end?.dateTime ?? null,
+          },
+        };
+      }
+    }
+    try {
+      const ins = await cal.insertEvent(bookingToEvent(booking));
+      return { kind: "ok", eventId: ins.id ?? undefined };
+    } catch (e) {
+      return { kind: "insert-failed", message: (e as Error).message };
+    }
+  });
+
+  if (lockResult.kind === "conflict") {
+    return json({
+      error: "conflict",
+      message: "Postoji termin u ovom vremenu — klikni 'Dodaj svejedno' da forsiras.",
+      existing: lockResult.existing,
+    }, 409);
   }
-  booking.calendarEventId = inserted.id ?? undefined;
+  if (lockResult.kind === "insert-failed") {
+    return serverError(`Calendar insert failed: ${lockResult.message}`);
+  }
+  booking.calendarEventId = lockResult.eventId;
   const whenLabel = new Date(booking.startISO).toLocaleString("sr-Latn", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" });
   const auditLabel = booking.combinedServicesLabel ?? booking.serviceName;
   // Best-effort audit — gcal already has the event, don't fail the request if

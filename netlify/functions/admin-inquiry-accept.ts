@@ -8,7 +8,8 @@ import { getInquiry, getServices, getSettings, updateInquiryStatus, appendAudit 
 import { bookingToEvent, type Booking } from "../lib/calendar-domain";
 import { inquiryAcceptedToClient } from "../lib/email-templates";
 import { waLink } from "../lib/phone";
-import { formatSalon } from "../lib/time";
+import { formatSalon, dayKeyInTZ } from "../lib/time";
+import { withDayLock } from "../lib/booking-lock";
 
 interface Deps {
   makeCalendar: () => CalendarClient;
@@ -80,36 +81,53 @@ const inner: Handler = async (event) => {
   const { makeCalendar, makeMailer } = getDeps();
   const cal = makeCalendar();
 
-  // Conflict check — same contract as admin-manual-booking. force=true to override.
-  if (!force) {
-    const existing = await cal.listEvents({ timeMin: start.toISOString(), timeMax: endISO });
-    const overlaps = existing.filter((e) => {
-      const s = new Date(e.start?.dateTime ?? e.start?.date ?? 0).getTime();
-      const en = new Date(e.end?.dateTime ?? e.end?.date ?? 0).getTime();
-      return s < new Date(endISO).getTime() && en > start.getTime();
-    });
-    const first = overlaps[0];
-    if (first) {
-      return json({
-        error: "conflict",
-        message: "Postoji termin u ovom vremenu — klikni 'Prihvati svejedno' da forsiraš.",
-        existing: {
-          summary: first.summary,
-          start: first.start?.dateTime,
-          end: first.end?.dateTime,
-        },
-      }, 409);
+  // Same per-day mutex as /api/book + /api/admin/manual-booking — keeps the
+  // listEvents → check → insertEvent block atomic across all booking sources.
+  const dayKey = dayKeyInTZ(start);
+  type LockResult =
+    | { kind: "conflict"; existing: { summary?: string | null; start?: string | null; end?: string | null } }
+    | { kind: "insert-failed"; message: string }
+    | { kind: "ok"; eventId: string | undefined };
+  const lockResult = await withDayLock<LockResult>(dayKey, async () => {
+    if (!force) {
+      const existing = await cal.listEvents({ timeMin: start.toISOString(), timeMax: endISO });
+      const overlaps = existing.filter((e) => {
+        const s = new Date(e.start?.dateTime ?? e.start?.date ?? 0).getTime();
+        const en = new Date(e.end?.dateTime ?? e.end?.date ?? 0).getTime();
+        return s < new Date(endISO).getTime() && en > start.getTime();
+      });
+      const first = overlaps[0];
+      if (first) {
+        return {
+          kind: "conflict",
+          existing: {
+            summary: first.summary ?? null,
+            start: first.start?.dateTime ?? null,
+            end: first.end?.dateTime ?? null,
+          },
+        };
+      }
     }
-  }
+    try {
+      const ins = await cal.insertEvent(bookingToEvent(booking));
+      return { kind: "ok", eventId: ins.id ?? undefined };
+    } catch (e) {
+      return { kind: "insert-failed", message: (e as Error).message };
+    }
+  });
 
-  let inserted;
-  try {
-    inserted = await cal.insertEvent(bookingToEvent(booking));
-  } catch (e) {
-    console.error("[inquiry-accept] calendar insert failed:", (e as Error).message);
+  if (lockResult.kind === "conflict") {
+    return json({
+      error: "conflict",
+      message: "Postoji termin u ovom vremenu — klikni 'Prihvati svejedno' da forsiraš.",
+      existing: lockResult.existing,
+    }, 409);
+  }
+  if (lockResult.kind === "insert-failed") {
+    console.error("[inquiry-accept] calendar insert failed:", lockResult.message);
     return serverError("Calendar insert failed");
   }
-  booking.calendarEventId = inserted.id ?? undefined;
+  booking.calendarEventId = lockResult.eventId;
   await updateInquiryStatus(inquiryId, "accepted");
 
   // Activity feed entries — best-effort.

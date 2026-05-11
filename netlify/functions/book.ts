@@ -3,6 +3,7 @@ import type { Handler } from "@netlify/functions";
 import webpush from "web-push";
 import { json, badRequest, notFound, methodNotAllowed, parseJson, serverError } from "../lib/http";
 import { getServices, getWorkingHours, getParallelPairs, getBlocks, getSettings, isPhoneBlocked, getPushSubscriptions, removePushSubscription, appendAudit } from "../lib/config";
+import { withDayLock } from "../lib/booking-lock";
 import { computeSlots } from "../lib/slots";
 import { createCalendarClient, createCalendarClientAsync, type CalendarClient } from "../lib/calendar";
 import { bookingToEvent, type Booking } from "../lib/calendar-domain";
@@ -126,24 +127,6 @@ export const handler: Handler = async (event) => {
   const dayStart = fromTZ(dateKey, "00:00");
   const dayEnd = fromTZ(dateKey, "23:59");
   const cal = deps?.makeCalendar ? deps.makeCalendar() : await getDefaultCalendar();
-  const events = await cal.listEvents({ timeMin: dayStart.toISOString(), timeMax: dayEnd.toISOString() });
-
-  const available = computeSlots({
-    serviceId: body.serviceId,
-    additionalServiceIds: validAdditionalIds,
-    date: dateKey,
-    services,
-    pairs,
-    hours,
-    blocks,
-    events,
-    settings,
-    now: new Date(),
-  });
-
-  if (!available.includes(startHHMM)) {
-    return json({ error: "slot-taken", message: "Taj termin više nije slobodan" }, 409);
-  }
 
   const bookingId = randomUUID();
   const endISO = new Date(startDate.getTime() + totalMin * 60_000).toISOString();
@@ -162,16 +145,46 @@ export const handler: Handler = async (event) => {
     source: "web",
   };
 
-  let inserted;
-  try {
-    inserted = await cal.insertEvent(bookingToEvent(booking));
-  } catch (e) {
-    // Log the full Google API error server-side, but return a generic message
-    // so we don't leak calendar IDs, OAuth state, or rate-limit details to the public.
-    console.error("[book] calendar insert failed:", (e as Error).message);
+  // Critical section — serialize per-day so two concurrent POSTs for the same
+  // slot can't both pass the availability check before either insertEvent commits.
+  // Returns a discriminated result so the rest of the handler can branch cleanly.
+  type LockResult =
+    | { kind: "taken" }
+    | { kind: "insert-failed"; message: string }
+    | { kind: "ok"; eventId: string | undefined };
+  const lockResult = await withDayLock<LockResult>(dateKey, async () => {
+    const events = await cal.listEvents({ timeMin: dayStart.toISOString(), timeMax: dayEnd.toISOString() });
+    const available = computeSlots({
+      serviceId: body.serviceId,
+      additionalServiceIds: validAdditionalIds,
+      date: dateKey,
+      services,
+      pairs,
+      hours,
+      blocks,
+      events,
+      settings,
+      now: new Date(),
+    });
+    if (!available.includes(startHHMM)) {
+      return { kind: "taken" };
+    }
+    try {
+      const ins = await cal.insertEvent(bookingToEvent(booking));
+      return { kind: "ok", eventId: ins.id ?? undefined };
+    } catch (e) {
+      console.error("[book] calendar insert failed:", (e as Error).message);
+      return { kind: "insert-failed", message: (e as Error).message };
+    }
+  });
+
+  if (lockResult.kind === "taken") {
+    return json({ error: "slot-taken", message: "Taj termin više nije slobodan" }, 409);
+  }
+  if (lockResult.kind === "insert-failed") {
     return serverError("Greška pri kreiranju termina. Molim probajte ponovo.");
   }
-  booking.calendarEventId = inserted.id ?? undefined;
+  booking.calendarEventId = lockResult.eventId;
 
   // Activity log — every public booking shows up in the dashboard feed.
   // Best-effort: a transient store failure here must NOT break a successful

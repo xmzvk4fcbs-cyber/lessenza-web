@@ -4,6 +4,7 @@ import { InMemoryStore, resetStoreForTests } from "../../netlify/lib/blobs";
 import { setServices, setWorkingHours, setSettings } from "../../netlify/lib/config";
 import { handler, __setDepsForTests } from "../../netlify/functions/book";
 import { createLogMailer, type LogMailer } from "../../netlify/lib/mailer";
+import { __resetLocksForTests } from "../../netlify/lib/booking-lock";
 
 function ev(body: unknown): HandlerEvent {
   return {
@@ -26,6 +27,7 @@ describe("POST /api/book", () => {
 
   beforeEach(async () => {
     resetStoreForTests(new InMemoryStore());
+    __resetLocksForTests();
     insertCalls = [];
     mailer = createLogMailer();
     __setDepsForTests({
@@ -150,5 +152,59 @@ describe("POST /api/book", () => {
     expect(r?.statusCode).toBe(200);
     expect(mailer.sent).toHaveLength(1);
     expect(mailer.sent[0]?.to).toBe("vlasnica@example.com");
+  });
+
+  /** Two clients race for the same 09:00 slot. With the per-day mutex, exactly
+   *  one insertEvent fires; the other request gets a 409 "slot-taken". The
+   *  mock insertEvent yields the event loop *before* committing so the second
+   *  handler has a real chance to enter its critical section before the first
+   *  one finishes — which is exactly when an unlocked TOCTOU would double-book. */
+  it("serialises concurrent bookings for the same slot (no double-book)", async () => {
+    const events: Array<{ id: string; start: string; end: string }> = [];
+    let nextId = 1;
+
+    __setDepsForTests({
+      makeCalendar: () => ({
+        async listEvents() {
+          // Snapshot what's currently committed; do NOT include in-flight inserts.
+          return events.map((e) => ({
+            id: e.id,
+            start: { dateTime: e.start },
+            end: { dateTime: e.end },
+            extendedProperties: { private: { serviceId: "manikir-gel" } },
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          })) as any;
+        },
+        async insertEvent(e) {
+          // Force a microtask hop so the second handler has a chance to start
+          // its critical section before this one's listEvents has returned.
+          await new Promise((r) => setTimeout(r, 5));
+          const id = `gcal-${nextId++}`;
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          events.push({ id, start: (e as any).start.dateTime, end: (e as any).end.dateTime });
+          return { ...e, id };
+        },
+        async deleteEvent() {},
+        async patchEvent(_id, e) { return e; },
+      }),
+      makeMailer: () => mailer,
+    });
+
+    const payload = (name: string) => ({
+      serviceId: "manikir-gel",
+      startISO: "2099-01-05T09:00:00.000Z",
+      name,
+      phone: "069123456",
+    });
+
+    const [r1, r2] = await Promise.all([
+      handler(ev(payload("Ana")), {} as never),
+      handler(ev(payload("Mara")), {} as never),
+    ]);
+
+    const codes = [r1?.statusCode, r2?.statusCode].sort();
+    expect(codes).toEqual([200, 409]);
+    // Calendar must reflect exactly one booking for this slot.
+    expect(events).toHaveLength(1);
   });
 });
