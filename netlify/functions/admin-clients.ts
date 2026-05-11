@@ -1,19 +1,19 @@
 import type { Handler } from "@netlify/functions";
 import { json, methodNotAllowed } from "../lib/http";
 import { adminGuard } from "../lib/admin-guard";
-import { createCalendarClient, type CalendarClient } from "../lib/calendar";
+import { createCalendarClient, createCalendarClientAsync, type CalendarClient } from "../lib/calendar";
 import { getServices } from "../lib/config";
 import { eventToBooking } from "../lib/calendar-domain";
 
 interface Deps {
-  makeCalendar: () => CalendarClient;
+  makeCalendar: () => CalendarClient | Promise<CalendarClient>;
 }
 let deps: Deps | null = null;
 export function __setDepsForTests(d: Deps | null): void {
   deps = d;
 }
 function getDeps(): Deps {
-  return deps ?? { makeCalendar: () => createCalendarClient() };
+  return deps ?? { makeCalendar: () => createCalendarClientAsync() };
 }
 
 interface ClientSummary {
@@ -30,7 +30,7 @@ const inner: Handler = async (event) => {
   if (event.httpMethod !== "GET") return methodNotAllowed(["GET"]);
 
   const { makeCalendar } = getDeps();
-  const cal = makeCalendar();
+  const cal = await makeCalendar();
   const services = await getServices();
 
   // Pull everything within the last 18 months + next 12 months — wide enough

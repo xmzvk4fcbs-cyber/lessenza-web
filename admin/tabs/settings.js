@@ -11,7 +11,7 @@ const SECTIONS = [
     fields: [
       ["salonAddress", "Ulica i broj (javno)", "text", {}],
       ["salonCity", "Grad (javno)", "text", {}],
-      ["mapQuery", "Mapa — pretraga (npr. 'Bajova 22, Cetinje, Montenegro')", "text", {}],
+      ["mapQuery", "Mapa — pretraga (npr. 'Bulevar Crnogorskih Junaka 15, Cetinje, Montenegro')", "text", {}],
       ["publicPhone", "Javni telefon (prikazuje se na sajtu)", "tel", {}],
       ["publicEmail", "Javni email (prikazuje se na sajtu)", "email", {}],
       ["whatsappPhone", "WhatsApp broj (npr. +38269123456)", "tel", {}],

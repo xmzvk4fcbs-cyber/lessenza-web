@@ -101,7 +101,7 @@ function renderShell(opts: { heading: string; preheader?: string; inner: string 
     <tr>
       <td style="background:#FBF5E8;padding:24px 32px;text-align:center;border-top:1px solid #EDE0C8;">
         <div style="font-size:12px;color:${BRAND.sageSoft};line-height:1.7;letter-spacing:0.02em;">
-          L'Essenza Beauty Salon &middot; Bajova 22, Cetinje<br>
+          L'Essenza Beauty Salon &middot; Bulevar Crnogorskih Junaka 15, Cetinje<br>
           <a href="https://lessenza.me" style="color:${BRAND.gold};text-decoration:none;">lessenza.me</a>
         </div>
       </td>

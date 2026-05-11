@@ -61,7 +61,10 @@ async function pruneOldReminders(): Promise<void> {
 
 const inner: Handler = async () => {
   const settings = await getSettings();
-  if (!settings.reminderEmailEnabled) return json({ ok: true, skipped: true });
+  if (!settings.reminderEmailEnabled) {
+    console.log("[reminder] disabled in settings — skipping");
+    return json({ ok: true, skipped: true });
+  }
 
   const nowMs = now().getTime();
   const windowStart = new Date(nowMs + 23 * 60 * 60 * 1000);
@@ -69,31 +72,46 @@ const inner: Handler = async () => {
 
   const services = await getServices();
   const { makeCalendar, makeMailer } = getDeps();
-  const events = await makeCalendar().listEvents({
+  const cal = await Promise.resolve(makeCalendar());
+  const events = await cal.listEvents({
     timeMin: windowStart.toISOString(),
     timeMax: windowEnd.toISOString(),
   });
+  console.log(`[reminder] window=${windowStart.toISOString()}..${windowEnd.toISOString()} — ${events.length} candidate events`);
   const mailer = await makeMailer();
   let sent = 0;
+  let skippedNoEmail = 0;
+  let skippedAlreadySent = 0;
+  let failed = 0;
   for (const e of events) {
     const b = eventToBooking(e, services);
-    if (!b || !b.email) continue;
+    if (!b) continue;
+    if (!b.email) { skippedNoEmail++; continue; }
     // Atomic check-then-act per bookingId so two overlapping scheduler ticks
     // (or a manual retry) can't both clear the dedup check and double-send.
-    const didSend = await withKeyLock<boolean>(`reminders-sent:${b.bookingId}`, async () => {
-      if (await alreadySent(b.bookingId)) return false;
+    const outcome = await withKeyLock<"sent" | "already" | "failed">(`reminders-sent:${b.bookingId}`, async () => {
+      if (await alreadySent(b.bookingId)) return "already";
       try {
         await mailer.send(
           reminderToClient(b, { salonAddress: settings.salonAddress, ownerPhone: settings.ownerPhone, emailGreeting: settings.emailGreeting, emailClosing: settings.emailClosing, emailSignature: settings.emailSignature })
         );
         await markSent(b.bookingId);
-        return true;
-      } catch {
-        return false;
+        return "sent";
+      } catch (err) {
+        console.error(`[reminder] FAILED → ${b.email}:`, (err as Error).message);
+        return "failed";
       }
     });
-    if (didSend) sent++;
+    if (outcome === "sent") {
+      sent++;
+      console.log(`[reminder] sent → ${b.email} (booking ${b.bookingId.slice(0, 8)}, ${b.startISO})`);
+    } else if (outcome === "already") {
+      skippedAlreadySent++;
+    } else {
+      failed++;
+    }
   }
+  console.log(`[reminder] summary: sent=${sent} alreadySent=${skippedAlreadySent} noEmail=${skippedNoEmail} failed=${failed}`);
   // Best-effort retention prune. Runs every tick but does nothing if the
   // store backend doesn't expose list()/delete() — small cost.
   await pruneOldReminders();

@@ -78,16 +78,16 @@ export const SettingsSchema = z.object({
   reminderEmailEnabled: z.boolean().default(true),
   dailyDigestEnabled: z.boolean().default(true),
   defaultCountryCode: z.string().regex(/^\+\d{1,4}$/).default("+382"),
-  salonAddress: z.string().default("Bajova 22"),
+  salonAddress: z.string().default("Bulevar Crnogorskih Junaka 15"),
   salonCity: z.string().default("Cetinje"),
-  mapQuery: z.string().default("Bajova 22, Cetinje, Montenegro"),
+  mapQuery: z.string().default("Bulevar Crnogorskih Junaka 15, Cetinje, Montenegro"),
   ownerEmail: z.string().email().optional(),
   ownerPhone: z.string().optional(),
   publicPhone: z.string().optional(),
   publicEmail: z.string().email().optional(),
   whatsappPhone: z.string().optional(),
   instagramUrl: z.string().url().optional(),
-  tagline: z.string().default("Beauty Salon · Bajova 22"),
+  tagline: z.string().default("Beauty Salon · Bulevar Crnogorskih Junaka 15"),
   // Free-form display-only hours shown on public site (e.g. on kontakt page
   // and for inspection posting). Falls back to rendered operational hours
   // when empty. Overrides operational hours purely for display.

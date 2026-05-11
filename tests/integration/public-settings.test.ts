@@ -30,10 +30,10 @@ describe("GET /api/public-settings", () => {
     const body = JSON.parse(r!.body as string);
     expect(body.bookingWindowDays).toBe(15);
     expect(body.defaultCountryCode).toBe("+382");
-    expect(body.salonAddress).toBe("Bajova 22");
+    expect(body.salonAddress).toBe("Bulevar Crnogorskih Junaka 15");
     expect(body.salonCity).toBe("Cetinje");
-    expect(body.mapQuery).toBe("Bajova 22, Cetinje, Montenegro");
-    expect(body.tagline).toBe("Beauty Salon · Bajova 22");
+    expect(body.mapQuery).toBe("Bulevar Crnogorskih Junaka 15, Cetinje, Montenegro");
+    expect(body.tagline).toBe("Beauty Salon · Bulevar Crnogorskih Junaka 15");
     expect(body.workingHours).toBeDefined();
     expect(body.workingHours.monday.open).toBe(true);
   });

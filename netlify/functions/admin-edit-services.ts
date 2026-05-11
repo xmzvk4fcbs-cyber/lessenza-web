@@ -1,21 +1,21 @@
 import type { Handler } from "@netlify/functions";
 import { json, badRequest, notFound, methodNotAllowed, parseJson } from "../lib/http";
 import { adminGuard } from "../lib/admin-guard";
-import { createCalendarClient, fetchEventById, type CalendarClient } from "../lib/calendar";
+import { createCalendarClient, createCalendarClientAsync, fetchEventById, type CalendarClient } from "../lib/calendar";
 import { getServices, getParallelPairs, getBlocks, getWorkingHours, appendAudit } from "../lib/config";
 import { eventToBooking, bookingToEvent, type Booking } from "../lib/calendar-domain";
 import { TZ, fromTZ, dayKeyInTZ, weekdayInTZ } from "../lib/time";
 import { withDayLock } from "../lib/booking-lock";
 
 interface Deps {
-  makeCalendar: () => CalendarClient;
+  makeCalendar: () => CalendarClient | Promise<CalendarClient>;
 }
 let deps: Deps | null = null;
 export function __setDepsForTests(d: Deps | null): void {
   deps = d;
 }
 function getDeps(): Deps {
-  return deps ?? { makeCalendar: () => createCalendarClient() };
+  return deps ?? { makeCalendar: () => createCalendarClientAsync() };
 }
 
 const inner: Handler = async (event) => {
@@ -36,7 +36,7 @@ const inner: Handler = async (event) => {
     : [];
 
   const { makeCalendar } = getDeps();
-  const cal = makeCalendar();
+  const cal = await makeCalendar();
   const services = await getServices();
   const target = await fetchEventById(cal, eventId);
   if (!target) return notFound("Event not found");

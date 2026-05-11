@@ -1,7 +1,7 @@
 import type { Handler } from "@netlify/functions";
 import { json, badRequest, notFound, methodNotAllowed, parseJson } from "../lib/http";
 import { adminGuard } from "../lib/admin-guard";
-import { createCalendarClient, fetchEventById, type CalendarClient } from "../lib/calendar";
+import { createCalendarClient, createCalendarClientAsync, fetchEventById, type CalendarClient } from "../lib/calendar";
 import { getMailerAsync, type Mailer } from "../lib/mailer";
 import { getServices, getSettings, getParallelPairs, appendAudit } from "../lib/config";
 import { eventToBooking, type Booking } from "../lib/calendar-domain";
@@ -12,7 +12,7 @@ import { formatSalon } from "../lib/time";
 import { withTwoDayLock } from "../lib/booking-lock";
 
 interface Deps {
-  makeCalendar: () => CalendarClient;
+  makeCalendar: () => CalendarClient | Promise<CalendarClient>;
   makeMailer: () => Mailer | Promise<Mailer>;
 }
 let deps: Deps | null = null;
@@ -20,7 +20,7 @@ export function __setDepsForTests(d: Deps | null): void {
   deps = d;
 }
 function getDeps(): Deps {
-  return deps ?? { makeCalendar: () => createCalendarClient(), makeMailer: () => getMailerAsync() };
+  return deps ?? { makeCalendar: () => createCalendarClientAsync(), makeMailer: () => getMailerAsync() };
 }
 
 const inner: Handler = async (event) => {
@@ -39,7 +39,7 @@ const inner: Handler = async (event) => {
   if (Number.isNaN(newStart.getTime())) return badRequest("bad-start", "newStartISO invalid");
 
   const { makeCalendar, makeMailer } = getDeps();
-  const cal = makeCalendar();
+  const cal = await makeCalendar();
   const services = await getServices();
   const settings = await getSettings();
 

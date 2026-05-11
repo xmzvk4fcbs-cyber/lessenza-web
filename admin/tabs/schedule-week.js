@@ -77,9 +77,10 @@ export async function renderWeekView(host, anchorKey, onItemClick) {
     ...appts.map((a) => ({ kind: "booking", ...a })),
     ...raws.map((r) => ({ kind: "raw", ...r })),
   ]);
-  const total = appts.length;
+  // Count both bookings AND raw events so the summary matches the per-day cards.
+  const total = appts.length + raws.length;
   const freeDays = Array.from({ length: 7 }, (_, i) => plusDays(monKey, i))
-    .filter((k) => !(byDay.get(k) || []).some((x) => x.kind === "booking")).length;
+    .filter((k) => (byDay.get(k) || []).length === 0).length;
 
   const sum = `<div class="wk-sum">
     <span class="wk-sum__num">${total}</span>
@@ -93,27 +94,31 @@ export async function renderWeekView(host, anchorKey, onItemClick) {
     const key = plusDays(monKey, i);
     const { dow, dom, month } = dayLabel(key);
     const items = byDay.get(key) || [];
-    const bookings = items.filter((x) => x.kind === "booking");
+    // Count EVERYTHING that's rendered — bookings AND raw Google Calendar
+    // entries — so the header number matches what the owner sees below.
+    // Previously we counted only kind==="booking" events, which silently
+    // omitted entries that lacked our serviceId metadata (e.g. bookings
+    // created during a past OAuth fallback, or events added directly in GCal).
     const isToday = key === today;
     const working = isWorkingDay(hours, i);
+    const count = items.length;
     const classes = [
       "wk__day",
       isToday ? "is-today" : "",
-      !working ? "is-closed" : "",
-      working && bookings.length === 0 ? "is-empty" : "",
+      !working && count === 0 ? "is-closed" : "",
+      working && count === 0 ? "is-empty" : "",
     ].filter(Boolean).join(" ");
 
-    const count = bookings.length;
-    const countLabel = !working
-      ? `<span class="wk__day-count">ne radi</span>`
-      : count === 0
-        ? `<span class="wk__day-count">slobodno</span>`
-        : `<span class="wk__day-count"><strong>${count}</strong> termin${count === 1 ? "" : count >= 2 && count <= 4 ? "a" : "a"}</span>`;
+    const countLabel = count > 0
+      ? `<span class="wk__day-count"><strong>${count}</strong> termin${count === 1 ? "" : count >= 2 && count <= 4 ? "a" : "a"}</span>`
+      : !working
+        ? `<span class="wk__day-count">ne radi</span>`
+        : `<span class="wk__day-count">slobodno</span>`;
 
     let body = "";
-    if (!working && items.length === 0) {
+    if (count === 0 && !working) {
       body = `<div class="wk__closed">ne radi</div>`;
-    } else if (items.length === 0) {
+    } else if (count === 0) {
       body = `<div class="wk__empty">slobodno</div>`;
     } else {
       body = `<div class="wk__items">${items.map((it) => renderItem(it)).join("")}</div>`;

@@ -11,7 +11,7 @@ import { normalizePhone, waLink } from "../lib/phone";
 import { formatSalon } from "../lib/time";
 
 interface Deps {
-  makeCalendar: () => CalendarClient;
+  makeCalendar: () => CalendarClient | Promise<CalendarClient>;
   makeMailer: () => Mailer | Promise<Mailer>;
 }
 let deps: Deps | null = null;
@@ -19,7 +19,7 @@ export function __setDepsForTests(d: Deps | null): void {
   deps = d;
 }
 function getDeps(): Deps {
-  return deps ?? { makeCalendar: () => createCalendarClient(), makeMailer: () => getMailerAsync() };
+  return deps ?? { makeCalendar: () => createCalendarClientAsync(), makeMailer: () => getMailerAsync() };
 }
 async function makeCalendarAsync(): Promise<CalendarClient> {
   return deps?.makeCalendar ? deps.makeCalendar() : createCalendarClientAsync();

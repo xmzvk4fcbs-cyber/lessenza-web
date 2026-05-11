@@ -1,7 +1,7 @@
 import type { Handler } from "@netlify/functions";
 import { json, badRequest, notFound, methodNotAllowed, parseJson } from "../lib/http";
 import { adminGuard } from "../lib/admin-guard";
-import { createCalendarClient, fetchEventById, type CalendarClient } from "../lib/calendar";
+import { createCalendarClient, createCalendarClientAsync, fetchEventById, type CalendarClient } from "../lib/calendar";
 import { getMailerAsync, type Mailer } from "../lib/mailer";
 import { getServices, getSettings, addBlockedPhone, appendCancellation } from "../lib/config";
 import { eventToBooking } from "../lib/calendar-domain";
@@ -9,7 +9,7 @@ import { bookingRejectedToClient } from "../lib/email-templates";
 import { waLink } from "../lib/phone";
 
 interface Deps {
-  makeCalendar: () => CalendarClient;
+  makeCalendar: () => CalendarClient | Promise<CalendarClient>;
   makeMailer: () => Mailer | Promise<Mailer>;
 }
 let deps: Deps | null = null;
@@ -17,7 +17,7 @@ export function __setDepsForTests(d: Deps | null): void {
   deps = d;
 }
 function getDeps(): Deps {
-  return deps ?? { makeCalendar: () => createCalendarClient(), makeMailer: () => getMailerAsync() };
+  return deps ?? { makeCalendar: () => createCalendarClientAsync(), makeMailer: () => getMailerAsync() };
 }
 
 const inner: Handler = async (event) => {
@@ -33,7 +33,7 @@ const inner: Handler = async (event) => {
   if (!eventId) return badRequest("missing-eventId", "eventId required");
 
   const { makeCalendar, makeMailer } = getDeps();
-  const cal = makeCalendar();
+  const cal = await makeCalendar();
   const services = await getServices();
   const settings = await getSettings();
 

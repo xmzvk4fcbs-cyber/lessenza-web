@@ -91,12 +91,35 @@ function setStep(step) {
   ui.navNext.disabled = false;
 }
 
+function resetWizardForAnotherBooking() {
+  // Keep the client's identity (name/phone/email) since they probably want to
+  // book again the same day for a different service — convenient repeat UX.
+  state.chosenServiceIds = [];
+  state.chosenService = null;
+  state.chosenDate = null;
+  state.chosenSlot = null;
+  state.slots = [];
+  // Reset visual selection
+  document.querySelectorAll(".service-card.is-selected").forEach((el) => {
+    el.classList.remove("is-selected");
+    el.setAttribute("aria-pressed", "false");
+  });
+  renderServiceSummary();
+  setStep(1);
+}
+
 function showSuccess(summary, withEmail) {
   [ui.step1, ui.step2, ui.step3, ui.step4, ui.stepInquiry, ui.stepInquirySuccess].forEach((el) => (el.hidden = true));
   ui.stepSuccess.hidden = false;
   ui.steps.forEach((el) => el.classList.remove("is-active"));
   ui.successSummary.textContent = summary;
   ui.successEmailNote.textContent = withEmail ? "Detalji su poslati na email." : "";
+  // Wire "book another" button now that the success screen is visible.
+  const bookAnotherBtn = document.getElementById("book-another");
+  if (bookAnotherBtn && !bookAnotherBtn.dataset.wired) {
+    bookAnotherBtn.dataset.wired = "1";
+    bookAnotherBtn.addEventListener("click", () => resetWizardForAnotherBooking());
+  }
   ui.navBack.hidden = true;
   ui.navNext.hidden = true;
 }

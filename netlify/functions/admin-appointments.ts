@@ -1,7 +1,7 @@
 import type { Handler } from "@netlify/functions";
 import { json, badRequest, methodNotAllowed } from "../lib/http";
 import { adminGuard } from "../lib/admin-guard";
-import { createCalendarClient, type CalendarClient } from "../lib/calendar";
+import { createCalendarClient, createCalendarClientAsync, type CalendarClient } from "../lib/calendar";
 import { getServices } from "../lib/config";
 import { eventToBooking } from "../lib/calendar-domain";
 import { fromTZ } from "../lib/time";
@@ -10,9 +10,9 @@ let factory: (() => CalendarClient) | null = null;
 export function __setCalendarFactoryForTests(f: (() => CalendarClient) | null): void {
   factory = f;
 }
-function makeCalendar(): CalendarClient {
+async function makeCalendar(): Promise<CalendarClient> {
   if (factory) return factory();
-  return createCalendarClient();
+  return createCalendarClientAsync();
 }
 
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
@@ -28,7 +28,8 @@ const inner: Handler = async (event) => {
   const services = await getServices();
   const tMin = fromTZ(from, "00:00").toISOString();
   const tMax = fromTZ(to, "23:59").toISOString();
-  const events = await makeCalendar().listEvents({ timeMin: tMin, timeMax: tMax });
+  const cal = await makeCalendar();
+  const events = await cal.listEvents({ timeMin: tMin, timeMax: tMax });
 
   const appointments = [];
   const rawEvents = [];

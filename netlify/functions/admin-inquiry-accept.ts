@@ -2,7 +2,7 @@ import { randomUUID } from "node:crypto";
 import type { Handler } from "@netlify/functions";
 import { json, badRequest, notFound, methodNotAllowed, parseJson, serverError } from "../lib/http";
 import { adminGuard } from "../lib/admin-guard";
-import { createCalendarClient, type CalendarClient } from "../lib/calendar";
+import { createCalendarClient, createCalendarClientAsync, type CalendarClient } from "../lib/calendar";
 import { getMailerAsync, type Mailer } from "../lib/mailer";
 import { getInquiry, getServices, getSettings, updateInquiryStatus, appendAudit } from "../lib/config";
 import { bookingToEvent, type Booking } from "../lib/calendar-domain";
@@ -12,7 +12,7 @@ import { formatSalon, dayKeyInTZ, fromTZ } from "../lib/time";
 import { withDayLock } from "../lib/booking-lock";
 
 interface Deps {
-  makeCalendar: () => CalendarClient;
+  makeCalendar: () => CalendarClient | Promise<CalendarClient>;
   makeMailer: () => Mailer | Promise<Mailer>;
 }
 let deps: Deps | null = null;
@@ -20,7 +20,7 @@ export function __setDepsForTests(d: Deps | null): void {
   deps = d;
 }
 function getDeps(): Deps {
-  return deps ?? { makeCalendar: () => createCalendarClient(), makeMailer: () => getMailerAsync() };
+  return deps ?? { makeCalendar: () => createCalendarClientAsync(), makeMailer: () => getMailerAsync() };
 }
 
 const inner: Handler = async (event) => {
@@ -79,7 +79,7 @@ const inner: Handler = async (event) => {
   };
 
   const { makeCalendar, makeMailer } = getDeps();
-  const cal = makeCalendar();
+  const cal = await makeCalendar();
 
   // Same per-day mutex as /api/book + /api/admin/manual-booking — keeps the
   // listEvents → check → insertEvent block atomic across all booking sources.
