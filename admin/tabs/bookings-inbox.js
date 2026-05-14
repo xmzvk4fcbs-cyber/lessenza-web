@@ -119,43 +119,104 @@ function renderBookingCard(a) {
       <div class="bk-row__actions">
         <a class="btn btn-ghost btn--xs" href="/admin/?view=day&anchor=${encodeURIComponent(day)}#schedule">Otvori</a>
         ${phone ? `<a class="btn btn-ghost btn--xs" href="tel:${escapeHtml(phone)}">Pozovi</a>` : ""}
+        <button class="btn btn-ghost btn--xs" type="button" data-action="reject" data-event-id="${escapeHtml(a.calendarEventId || "")}" data-name="${escapeHtml(a.name || "")}" data-phone="${escapeHtml(phone)}" data-svc="${escapeHtml(svcLabel)}" data-start="${escapeHtml(a.startISO || "")}">Odbij</button>
         <button class="btn btn-danger btn--xs" type="button" data-action="cancel" data-event-id="${escapeHtml(a.calendarEventId || "")}" data-name="${escapeHtml(a.name || "")}" data-phone="${escapeHtml(phone)}" data-svc="${escapeHtml(svcLabel)}" data-start="${escapeHtml(a.startISO || "")}">Otkaži</button>
       </div>
     </article>
   `;
 }
 
+/** Same message-actions modal pattern as today.js / inquiries.js — kept
+ *  local so this tab doesn't cross-import. */
+function showMessageActions(title, message, whatsappLink, viberLink) {
+  const waBtn = whatsappLink ? `<a class="btn btn-primary" href="${whatsappLink}" target="_blank" rel="noopener">📱 WhatsApp</a>` : "";
+  const viBtn = viberLink ? `<a class="btn btn-ghost" href="${viberLink}" target="_blank" rel="noopener">💜 Viber</a>` : "";
+  openModal(title, `
+    <p class="muted" style="font-size:0.88rem;">Poruka za klijentkinju:</p>
+    <textarea id="bk-msg-copy" readonly rows="5" style="width:100%;">${escapeHtml(message)}</textarea>
+    <div class="stack-card__actions" style="margin-top:0.75rem;flex-wrap:wrap;">
+      ${waBtn}
+      ${viBtn}
+      <button type="button" class="btn btn-ghost" id="bk-msg-copy-btn">📋 Kopiraj</button>
+      <button type="button" class="btn btn-ghost" data-close="1">Zatvori</button>
+    </div>
+  `);
+  const cbtn = document.getElementById("bk-msg-copy-btn");
+  cbtn?.addEventListener("click", async () => {
+    const ta = document.getElementById("bk-msg-copy");
+    try { await navigator.clipboard.writeText(ta.value); cbtn.textContent = "Kopirano ✓"; }
+    catch { ta.select(); document.execCommand("copy"); cbtn.textContent = "Kopirano ✓"; }
+    setTimeout(() => { cbtn.textContent = "📋 Kopiraj"; }, 1800);
+  });
+}
+
 // Wire actions (delegated).
 function wireActions() {
   document.getElementById("screen-bookings")?.addEventListener("click", async (e) => {
-    const t = e.target.closest("[data-action='cancel']");
+    const t = e.target.closest("[data-action]");
     if (!t) return;
     e.preventDefault();
+    const action = t.dataset.action;
     const eventId = t.dataset.eventId;
     const name = t.dataset.name;
+    const phone = t.dataset.phone;
     const svc = t.dataset.svc;
     const start = t.dataset.start;
     if (!eventId) { toast("Greška: termin nema ID.", "error"); return; }
-    openModal("Otkaži termin", `
-      <p><strong>${escapeHtml(svc)}</strong> — ${escapeHtml(name)}<br><span class="muted">${fmtDateTime(start)}</span></p>
-      <div class="field">
-        <label for="bk-cancel-reason">Razlog (opciono, šalje se klijentu)</label>
-        <input id="bk-cancel-reason" type="text" maxlength="200" placeholder="npr. bolest">
-      </div>
-      <div class="stack-card__actions" style="margin-top:0.75rem;">
-        <button class="btn btn-ghost" type="button" data-close="1">Nazad</button>
-        <button class="btn btn-danger" type="button" id="bk-confirm-cancel">Otkaži termin</button>
-      </div>
-    `);
-    document.getElementById("bk-confirm-cancel").addEventListener("click", async () => {
-      const reason = document.getElementById("bk-cancel-reason").value.trim();
-      try {
-        await must("/api/admin/cancel-booking", { method: "POST", body: { eventId, reason } });
-        closeModal();
-        toast("Termin otkazan.", "success");
-        await load();
-      } catch (err) { toast(err.message, "error"); }
-    });
+
+    if (action === "cancel") {
+      openModal("Otkaži termin", `
+        <p><strong>${escapeHtml(svc)}</strong> — ${escapeHtml(name)}<br><span class="muted">${fmtDateTime(start)}</span></p>
+        <div class="field">
+          <label for="bk-cancel-reason">Razlog (opciono, šalje se klijentu)</label>
+          <input id="bk-cancel-reason" type="text" maxlength="200" placeholder="npr. bolest">
+        </div>
+        <div class="stack-card__actions" style="margin-top:0.75rem;">
+          <button class="btn btn-ghost" type="button" data-close="1">Nazad</button>
+          <button class="btn btn-danger" type="button" id="bk-confirm-cancel">Otkaži termin</button>
+        </div>
+      `);
+      document.getElementById("bk-confirm-cancel").addEventListener("click", async () => {
+        const reason = document.getElementById("bk-cancel-reason").value.trim();
+        try {
+          const r = await must("/api/admin/cancel-booking", { method: "POST", body: { eventId, reason } });
+          closeModal();
+          toast("Termin otkazan.", "success");
+          if (r.message) showMessageActions("Obavijesti klijentkinju", r.message, r.whatsappLink, r.viberLink);
+          await load();
+        } catch (err) { toast(err.message, "error"); }
+      });
+      return;
+    }
+
+    if (action === "reject") {
+      // Same behaviour as Raspored → kartica → Odbij: refuses the booking,
+      // optionally blocks the phone so it can't book again. Client gets a
+      // "termin nije moguć" message — without an invitation to rebook.
+      openModal("Odbij termin", `
+        <p><strong>${escapeHtml(svc)}</strong> — ${escapeHtml(name)}<br><span class="muted">${fmtDateTime(start)}</span></p>
+        <p class="muted" style="font-size:0.88rem;">Klijent dobija poruku da termin nije moguć, bez poziva na novi termin.</p>
+        <label class="check-row" for="bk-reject-block" style="margin-top:0.5rem;">
+          <input id="bk-reject-block" type="checkbox">
+          <span>Blokiraj ovaj broj da više ne može zakazati</span>
+        </label>
+        <div class="stack-card__actions" style="margin-top:0.75rem;">
+          <button class="btn btn-ghost" type="button" data-close="1">Nazad</button>
+          <button class="btn btn-danger" type="button" id="bk-confirm-reject">Odbij termin</button>
+        </div>
+      `);
+      document.getElementById("bk-confirm-reject").addEventListener("click", async () => {
+        const block = document.getElementById("bk-reject-block").checked;
+        try {
+          const r = await must("/api/admin/reject-booking", { method: "POST", body: { eventId, block } });
+          closeModal();
+          toast(r.blocked ? "Termin odbijen i broj blokiran." : "Termin odbijen.", "success");
+          if (r.message) showMessageActions("Obavijesti klijentkinju", r.message, r.whatsappLink, r.viberLink);
+          await load();
+        } catch (err) { toast(err.message, "error"); }
+      });
+      return;
+    }
   });
 }
 
