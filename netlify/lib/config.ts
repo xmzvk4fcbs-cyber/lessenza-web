@@ -8,6 +8,7 @@ import {
   ParallelPairsSchema,
   BlocksSchema,
   InquirySchema,
+  CancelRequestSchema,
   BlockedPhoneSchema,
   BlockedPhonesSchema,
   GalleryResultsSchema,
@@ -27,6 +28,7 @@ import {
   type ParallelPair,
   type Block,
   type Inquiry,
+  type CancelRequest,
   type BlockedPhone,
   type GalleryResult,
   type GalleryItem,
@@ -158,6 +160,43 @@ export async function updateInquiryStatus(id: string, status: Inquiry["status"])
   if (!cur) throw new Error("not-found");
   const next: Inquiry = { ...cur, status };
   await store().setJSON(`${INQUIRY_PREFIX}${id}.json`, next);
+}
+
+// --- Cancel requests (clients without email link → owner-approved) ---
+const CANCEL_REQ_PREFIX = "cancel-requests/";
+
+export async function addCancelRequest(r: CancelRequest): Promise<void> {
+  CancelRequestSchema.parse(r);
+  await store().setJSON(`${CANCEL_REQ_PREFIX}${r.id}.json`, r);
+}
+
+export async function listCancelRequests(): Promise<CancelRequest[]> {
+  const keys = await store().list(CANCEL_REQ_PREFIX);
+  const out: CancelRequest[] = [];
+  for (const k of keys) {
+    const raw = await store().getJSON<unknown>(k);
+    if (!raw) continue;
+    const r = CancelRequestSchema.safeParse(raw);
+    if (r.success) out.push(r.data);
+  }
+  return out.sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+}
+
+export async function getCancelRequest(id: string): Promise<CancelRequest | null> {
+  const raw = await store().getJSON<unknown>(`${CANCEL_REQ_PREFIX}${id}.json`);
+  if (!raw) return null;
+  const r = CancelRequestSchema.safeParse(raw);
+  return r.success ? r.data : null;
+}
+
+export async function updateCancelRequest(id: string, patch: Partial<CancelRequest>): Promise<CancelRequest> {
+  return withKeyLock(`cancel-req:${id}`, async () => {
+    const cur = await getCancelRequest(id);
+    if (!cur) throw new Error("not-found");
+    const next = CancelRequestSchema.parse({ ...cur, ...patch });
+    await store().setJSON(`${CANCEL_REQ_PREFIX}${id}.json`, next);
+    return next;
+  });
 }
 
 // --- Day notes (free-form per-day reminder text for owner) ---

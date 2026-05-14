@@ -123,7 +123,43 @@
 
   <div id="bad-token" class="cancel-state cancel-state--err" hidden>
     <h2>Neispravan link</h2>
-    <p>Otkazivanje koristi link iz vašeg potvrdnog email-a. Otvorite link iz email-a još jednom, ili nas <a href="kontakt.html">kontaktirajte</a>.</p>
+    <p>Otkazivanje koristi link iz vašeg potvrdnog email-a. Otvorite link iz email-a još jednom, ili pošaljite <button type="button" id="open-request" style="background:none;border:0;color:var(--gold);text-decoration:underline;cursor:pointer;font:inherit;padding:0;">zahtjev za otkazivanje</button>.</p>
+  </div>
+
+  <!-- Phone-based cancel request (clients without email link). Owner approves
+       manually in admin — phone number alone is not an authenticator. -->
+  <div id="request-form" hidden>
+    <div class="cancel-card">
+      <h1>Zahtjev za otkazivanje</h1>
+      <p style="margin:0 0 16px;color:#7A6F62;font-size:0.92rem;line-height:1.5;">Pošaljite zahtjev, salon će ga ručno potvrditi. Pokušajte da pošaljete najmanje 24h prije termina.</p>
+      <div class="field">
+        <label for="req-name">Ime i prezime</label>
+        <input id="req-name" type="text" required maxlength="120" autocomplete="name">
+      </div>
+      <div class="field">
+        <label for="req-phone">Telefon</label>
+        <input id="req-phone" type="tel" required inputmode="tel" placeholder="069 123 456" autocomplete="tel-national">
+      </div>
+      <div class="field">
+        <label for="req-date">Datum termina</label>
+        <input id="req-date" type="date" required>
+      </div>
+      <div class="field">
+        <label for="req-reason">Razlog (opciono)</label>
+        <textarea id="req-reason" maxlength="500" rows="2" placeholder="npr. bolest, hitan posao…"></textarea>
+      </div>
+      <input type="text" id="req-hp" name="website" tabindex="-1" autocomplete="off" aria-hidden="true" style="position:absolute;left:-10000px;width:1px;height:1px;opacity:0;">
+      <div class="cancel-actions">
+        <button id="req-submit" class="btn btn-primary" type="button">Pošalji zahtjev</button>
+        <a class="btn btn-ghost" href="index.html">Odustani</a>
+      </div>
+      <div id="req-error" class="cancel-state cancel-state--err" hidden style="margin-top:16px;"></div>
+    </div>
+  </div>
+
+  <div id="request-done" class="cancel-state cancel-state--ok" hidden>
+    <h2>Zahtjev poslat ✓</h2>
+    <p>Salon će ga potvrditi i obavijestiti vas. Hvala što ste se javili.</p>
   </div>
 
   <div id="fail" class="cancel-state cancel-state--err" hidden>
@@ -140,11 +176,56 @@
   const token = params.get("t") || "";
 
   function show(id) {
-    ["loading","confirm","done","too-late","not-found","bad-token","fail"].forEach((x) => {
+    ["loading","confirm","done","too-late","not-found","bad-token","fail","request-form","request-done"].forEach((x) => {
       const el = $(x);
       if (el) el.hidden = (x !== id);
     });
   }
+
+  // "Pošalji zahtjev" path — for clients without email link.
+  $("open-request")?.addEventListener("click", () => {
+    // Default date = tomorrow (most likely intent).
+    const tomorrow = new Date(Date.now() + 86_400_000);
+    const yyyy = tomorrow.getFullYear();
+    const mm = String(tomorrow.getMonth() + 1).padStart(2, "0");
+    const dd = String(tomorrow.getDate()).padStart(2, "0");
+    $("req-date").value = `${yyyy}-${mm}-${dd}`;
+    show("request-form");
+  });
+  $("req-submit")?.addEventListener("click", async () => {
+    const name = ($("req-name").value || "").trim();
+    const phone = ($("req-phone").value || "").trim();
+    const desiredDateISO = ($("req-date").value || "").trim();
+    const reason = ($("req-reason").value || "").trim();
+    const hp = ($("req-hp").value || "");
+    const err = $("req-error");
+    err.hidden = true;
+    if (!name || !phone || !desiredDateISO) {
+      err.hidden = false;
+      err.textContent = "Popunite ime, telefon i datum.";
+      return;
+    }
+    $("req-submit").disabled = true;
+    $("req-submit").textContent = "Šaljem…";
+    try {
+      const r = await fetch("/api/public-cancel-request", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ name, phone, desiredDateISO, reason, website: hp }),
+      });
+      const body = await r.json().catch(() => ({}));
+      if (r.ok) return show("request-done");
+      err.hidden = false;
+      err.textContent = body.message || "Greška. Probajte ponovo.";
+      $("req-submit").disabled = false;
+      $("req-submit").textContent = "Pošalji zahtjev";
+    } catch (e) {
+      err.hidden = false;
+      err.textContent = e.message || "Mreža nedostupna.";
+      $("req-submit").disabled = false;
+      $("req-submit").textContent = "Pošalji zahtjev";
+    }
+  });
 
   if (!token) { show("bad-token"); return; }
 

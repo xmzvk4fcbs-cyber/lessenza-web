@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="sr-Latn">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Pomjeri termin — L'Essenza</title>
+  <meta name="robots" content="noindex,nofollow">
+  <link rel="canonical" href="https://lessenza.me/reschedule.html">
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="css/booking.css">
+  <link rel="icon" type="image/png" sizes="32x32" href="/img/favicon-32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/img/favicon-16.png">
+  <link rel="shortcut icon" href="/img/favicon.ico">
+  <meta name="theme-color" content="#c9a96e">
+  <style>
+    .rs-wrap { max-width: 540px; margin: 0 auto; padding: 60px 24px 80px; }
+    .rs-card {
+      background: var(--cream-soft, #F9F2E5);
+      border: 1px solid var(--champagne-deep, #D9C09A);
+      border-radius: 14px;
+      padding: 28px 24px;
+    }
+    .rs-card h1 {
+      font-family: 'Cormorant Garamond', Georgia, serif;
+      font-weight: 500;
+      color: var(--sage, #6B6F4F);
+      margin: 0 0 14px;
+      text-align: center;
+      font-size: 1.5rem;
+    }
+    .rs-current {
+      background: rgba(255, 255, 255, 0.7);
+      border-left: 3px solid var(--gold, #c9a96e);
+      padding: 12px 14px;
+      margin: 0 0 20px;
+      border-radius: 0 8px 8px 0;
+      font-size: 0.95rem;
+      line-height: 1.5;
+    }
+    .rs-current strong { color: var(--sage, #6B6F4F); display: block; margin-bottom: 4px; font-family: 'Cormorant Garamond', Georgia, serif; font-size: 1.1rem; }
+    .rs-state {
+      padding: 16px;
+      border-radius: 10px;
+      text-align: center;
+      font-size: 0.95rem;
+      line-height: 1.5;
+    }
+    .rs-state--ok { background: rgba(110, 156, 106, 0.12); color: #3e7a4a; border: 1px solid rgba(110, 156, 106, 0.3); }
+    .rs-state--err { background: rgba(139, 58, 62, 0.08); color: #6B2A2E; border: 1px solid rgba(139, 58, 62, 0.25); }
+    .rs-state--info { background: rgba(201, 169, 97, 0.08); color: var(--sage, #6B6F4F); border: 1px solid rgba(217, 192, 154, 0.45); }
+    .rs-state h2 { font-family: 'Cormorant Garamond', Georgia, serif; font-weight: 500; margin: 0 0 8px; font-size: 1.25rem; }
+    .rs-actions { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; margin-top: 18px; }
+    .rs-actions .btn { min-width: 140px; }
+    .rs-section { margin-bottom: 18px; }
+    .rs-section__label {
+      display: block;
+      font-size: 0.85rem;
+      color: var(--sage);
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      margin-bottom: 8px;
+      font-weight: 600;
+    }
+  </style>
+</head>
+<body>
+
+<header class="header">
+  <div class="header__inner">
+    <a href="index.html" class="header__logo" aria-label="L'Essenza Beauty Salon">
+      <img width="1600" height="640" decoding="async" src="img/logo-wordmark.png" alt="L'Essenza Beauty Salon">
+    </a>
+  </div>
+</header>
+
+<section class="rs-wrap">
+
+  <div id="loading" class="rs-state rs-state--info">
+    <h2>Učitavanje…</h2>
+    <p>Provjeravamo vaš termin.</p>
+  </div>
+
+  <div id="form" hidden>
+    <div class="rs-card">
+      <h1>Pomjeranje termina</h1>
+      <div class="rs-current">
+        <strong id="rs-svc">—</strong>
+        <span id="rs-when">—</span><br>
+        <span id="rs-name" style="color:#7A6F62;font-size:0.88rem;"></span>
+      </div>
+
+      <div class="rs-section">
+        <span class="rs-section__label">1. Izaberi novi datum</span>
+        <div id="rs-date-picker"></div>
+      </div>
+
+      <div class="rs-section" id="rs-slot-wrap" hidden>
+        <span class="rs-section__label">2. Izaberi novo vrijeme</span>
+        <div id="rs-slot-grid" class="slot-grid"></div>
+        <p class="slot-empty" id="rs-slot-empty" hidden>Nema slobodnih termina za ovaj datum. Probaj drugi.</p>
+      </div>
+
+      <div class="rs-actions">
+        <button id="rs-confirm" class="btn btn-primary" type="button" disabled>Potvrdi novo vrijeme</button>
+        <a class="btn btn-ghost" href="index.html">Otkaži</a>
+      </div>
+      <div id="rs-error" class="rs-state rs-state--err" hidden style="margin-top:16px;"></div>
+    </div>
+  </div>
+
+  <div id="done" class="rs-state rs-state--ok" hidden>
+    <h2>Termin pomjeren ✓</h2>
+    <p id="done-msg">Vaš termin je pomjeren.</p>
+    <p>Hvala što ste nas obavijestili.</p>
+  </div>
+
+  <div id="too-late" class="rs-state rs-state--info" hidden>
+    <h2>Pomjeranje uskoro</h2>
+    <p>Termin je manje od <strong>24 sata</strong> daleko, online pomjeranje više nije moguće.</p>
+    <p>Molimo vas <a id="too-late-tel" href="tel:">pozovite salon</a>.</p>
+  </div>
+
+  <div id="not-found" class="rs-state rs-state--err" hidden>
+    <h2>Termin nije pronađen</h2>
+    <p>Ovaj termin više ne postoji ili je već otkazan.</p>
+    <a href="index.html" style="color:var(--gold);">← Vrati se na sajt</a>
+  </div>
+
+  <div id="bad-token" class="rs-state rs-state--err" hidden>
+    <h2>Neispravan link</h2>
+    <p>Otvorite link iz potvrdnog email-a još jednom, ili nas <a href="kontakt.html">kontaktirajte</a>.</p>
+  </div>
+
+  <div id="fail" class="rs-state rs-state--err" hidden>
+    <h2>Greška</h2>
+    <p id="fail-msg">Nešto je pošlo po zlu. Probajte ponovo za par minuta ili nas pozovite.</p>
+  </div>
+
+</section>
+
+<script type="module" src="js/reschedule.js"></script>
+
+</body>
+</html>

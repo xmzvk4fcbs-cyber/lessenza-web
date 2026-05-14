@@ -161,11 +161,12 @@ function replyNote(): string {
 
 export function bookingConfirmedToClient(
   b: Booking,
-  _ctx: ClientTemplateCtx & { cancelUrl?: string }
+  _ctx: ClientTemplateCtx & { cancelUrl?: string; rescheduleUrl?: string }
 ): EmailMessage {
   if (!b.email) throw new Error("Booking has no client email");
   const dateLine = formatDateHuman(b.startISO);
   const cancelUrl = _ctx.cancelUrl;
+  const rescheduleUrl = _ctx.rescheduleUrl;
   const text = [
     `Zdravo ${b.name},`,
     ``,
@@ -175,21 +176,37 @@ export function bookingConfirmedToClient(
     `Kada: ${dateLine}`,
     `Gdje: ${_ctx.salonAddress}`,
     ``,
+    rescheduleUrl
+      ? `Treba vam drugi termin? Pomjerite (najkasnije 24h prije):\n${rescheduleUrl}\n`
+      : "",
     cancelUrl
       ? `Ne možete doći? Otkažite termin (najkasnije 24h prije):\n${cancelUrl}\n`
       : "",
-    `Za izmjene — odgovorite na ovaj email.`,
+    `Za sve ostalo — odgovorite na ovaj email.`,
     ``,
     `Vidimo se uskoro!`,
     `— L'Essenza`,
   ].filter(Boolean).join("\n");
 
-  const cancelBlock = cancelUrl
-    ? `<table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="margin:16px 0 8px;"><tr><td align="center">
-        <a href="${esc(cancelUrl)}" style="display:inline-block;font-family:Georgia,serif;font-size:13px;color:${BRAND.gold};text-decoration:none;border:1px solid ${BRAND.gold};padding:9px 22px;border-radius:6px;letter-spacing:0.04em;">Otkazi termin</a>
-        <div style="font-size:11px;color:${BRAND.sageSoft};margin-top:8px;">Otkazivanje moguce najkasnije 24h prije termina.</div>
-      </td></tr></table>`
-    : "";
+  // Two-button row when both links available; single button when only one.
+  let manageBlock = "";
+  if (rescheduleUrl || cancelUrl) {
+    const buttons: string[] = [];
+    if (rescheduleUrl) {
+      buttons.push(
+        `<a href="${esc(rescheduleUrl)}" style="display:inline-block;font-family:Georgia,serif;font-size:13px;color:#FFFFFF;background:${BRAND.gold};text-decoration:none;padding:9px 22px;border-radius:6px;letter-spacing:0.04em;margin:0 4px 6px;">Pomjeri termin</a>`
+      );
+    }
+    if (cancelUrl) {
+      buttons.push(
+        `<a href="${esc(cancelUrl)}" style="display:inline-block;font-family:Georgia,serif;font-size:13px;color:${BRAND.gold};text-decoration:none;border:1px solid ${BRAND.gold};padding:9px 22px;border-radius:6px;letter-spacing:0.04em;margin:0 4px 6px;">Otkaži termin</a>`
+      );
+    }
+    manageBlock = `<table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="margin:16px 0 8px;"><tr><td align="center">
+        ${buttons.join("")}
+        <div style="font-size:11px;color:${BRAND.sageSoft};margin-top:8px;">Pomjeranje i otkazivanje mogući najkasnije 24h prije termina.</div>
+      </td></tr></table>`;
+  }
 
   const greeting = _ctx.emailGreeting?.trim() || "Hvala što ste odabrali L'Essenza. Vaš termin je potvrđen.";
   const closing = _ctx.emailClosing?.trim() || "Radujemo se vašem dolasku.";
@@ -201,7 +218,7 @@ export function bookingConfirmedToClient(
       ["Kada", dateLine],
       ["Gdje", _ctx.salonAddress],
     ]),
-    cancelBlock,
+    manageBlock,
     replyNote(),
     paragraph(esc(closing)),
     signOff(_ctx.emailSignature),
@@ -542,11 +559,12 @@ export function dailyDigestToOwner(
 
 export function reminderToClient(
   b: Booking,
-  ctx: ClientTemplateCtx & { cancelUrl?: string }
+  ctx: ClientTemplateCtx & { cancelUrl?: string; rescheduleUrl?: string }
 ): EmailMessage {
   if (!b.email) throw new Error("Booking has no client email");
   const when = formatDateHuman(b.startISO);
   const cancelUrl = ctx.cancelUrl;
+  const rescheduleUrl = ctx.rescheduleUrl;
   const text = [
     `Zdravo ${b.name},`,
     ``,
@@ -556,18 +574,27 @@ export function reminderToClient(
     `Kada: ${when}`,
     `Gdje: ${ctx.salonAddress}`,
     ``,
+    rescheduleUrl ? `Treba vam drugi termin? Pomjerite ga ovdje:\n${rescheduleUrl}\n` : "",
     cancelUrl ? `Ne možete doći? Otkažite termin (najkasnije 24h prije):\n${cancelUrl}\n` : "",
     `Ako nešto iskrsne — odgovorite na ovaj email.`,
     ``,
     `— L'Essenza`,
   ].filter(Boolean).join("\n");
 
-  const cancelBlock = cancelUrl
-    ? `<table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="margin:16px 0 8px;"><tr><td align="center">
-        <a href="${esc(cancelUrl)}" style="display:inline-block;font-family:Georgia,serif;font-size:13px;color:${BRAND.gold};text-decoration:none;border:1px solid ${BRAND.gold};padding:9px 22px;border-radius:6px;letter-spacing:0.04em;">Otkaži termin</a>
-        <div style="font-size:11px;color:${BRAND.sageSoft};margin-top:8px;">Otkazivanje moguće najkasnije 24h prije termina.</div>
-      </td></tr></table>`
-    : "";
+  let manageBlock = "";
+  if (rescheduleUrl || cancelUrl) {
+    const buttons: string[] = [];
+    if (rescheduleUrl) {
+      buttons.push(`<a href="${esc(rescheduleUrl)}" style="display:inline-block;font-family:Georgia,serif;font-size:13px;color:#FFFFFF;background:${BRAND.gold};text-decoration:none;padding:9px 22px;border-radius:6px;letter-spacing:0.04em;margin:0 4px 6px;">Pomjeri termin</a>`);
+    }
+    if (cancelUrl) {
+      buttons.push(`<a href="${esc(cancelUrl)}" style="display:inline-block;font-family:Georgia,serif;font-size:13px;color:${BRAND.gold};text-decoration:none;border:1px solid ${BRAND.gold};padding:9px 22px;border-radius:6px;letter-spacing:0.04em;margin:0 4px 6px;">Otkaži termin</a>`);
+    }
+    manageBlock = `<table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="margin:16px 0 8px;"><tr><td align="center">
+        ${buttons.join("")}
+        <div style="font-size:11px;color:${BRAND.sageSoft};margin-top:8px;">Pomjeranje i otkazivanje mogući najkasnije 24h prije termina.</div>
+      </td></tr></table>`;
+  }
 
   const inner = [
     paragraph(`Draga ${b.name},`),
@@ -577,7 +604,7 @@ export function reminderToClient(
       ["Kada", when],
       ["Gdje", ctx.salonAddress],
     ]),
-    cancelBlock,
+    manageBlock,
     softNote(`Ako nešto iskrsne, odgovorite na ovaj email i dogovorićemo novi termin.`),
     paragraph(`Vidimo se sutra!`),
     signOff(ctx?.emailSignature),
@@ -685,6 +712,107 @@ export function bookingCancelledByClientToSelf(
     subject: "L'Essenza — Vaš termin je otkazan",
     text,
     html: renderShell({ heading: "Termin otkazan", preheader: `${svc(b)} · ${when}`, inner }),
+  };
+}
+
+/**
+ * Client-facing confirmation that they self-rescheduled — receipt with new
+ * date/time + a fresh cancel/reschedule link in case they need to change again.
+ */
+export function bookingRescheduledByClientToSelf(
+  original: Booking,
+  updated: Booking,
+  ctx: ClientTemplateCtx & { manageUrl?: string }
+): EmailMessage {
+  if (!updated.email) throw new Error("Booking has no client email");
+  const oldLine = formatDateHuman(original.startISO);
+  const newLine = formatDateHuman(updated.startISO);
+  const closing = ctx?.emailClosing?.trim() || "Vidimo se u novom terminu.";
+  const signature = ctx?.emailSignature?.trim() || "L'Essenza";
+  const manageUrl = ctx.manageUrl;
+  const text = [
+    `Zdravo ${updated.name},`,
+    ``,
+    `Potvrđujemo vaš novi termin:`,
+    ``,
+    `Usluga: ${svc(updated)}`,
+    `Stari termin: ${oldLine}`,
+    `Novi termin: ${newLine}`,
+    `Gdje: ${ctx.salonAddress}`,
+    ``,
+    manageUrl ? `Ako vam i ovaj termin ne odgovara, otkažite ili ponovo pomjerite:\n${manageUrl}\n` : "",
+    `${closing}`,
+    `— ${signature}`,
+  ].filter(Boolean).join("\n");
+
+  const manageBlock = manageUrl
+    ? `<table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="margin:16px 0 8px;"><tr><td align="center">
+        <a href="${esc(manageUrl)}" style="display:inline-block;font-family:Georgia,serif;font-size:13px;color:${BRAND.gold};text-decoration:none;border:1px solid ${BRAND.gold};padding:9px 22px;border-radius:6px;letter-spacing:0.04em;">Pomjeri ili otkaži</a>
+        <div style="font-size:11px;color:${BRAND.sageSoft};margin-top:8px;">Najkasnije 24h prije termina.</div>
+      </td></tr></table>`
+    : "";
+
+  const inner = [
+    paragraph(`Zdravo ${esc(updated.name)},`),
+    paragraph(`Potvrđujemo vaš novi termin u L'Essenza.`),
+    detailsTable([
+      ["Usluga", svc(updated)],
+      ["Stari termin", oldLine],
+      ["Novi termin", newLine],
+      ["Gdje", ctx.salonAddress],
+    ]),
+    manageBlock,
+    paragraph(esc(closing)),
+    signOff(signature),
+  ].filter(Boolean).join("\n");
+
+  return {
+    to: updated.email,
+    subject: "L'Essenza — Termin pomjeren",
+    text,
+    html: renderShell({ heading: "Termin je pomjeren", preheader: `${svc(updated)} · ${newLine}`, inner }),
+  };
+}
+
+/**
+ * Owner-facing notification when a client self-reschedules.
+ */
+export function bookingRescheduledByClientToOwner(
+  original: Booking,
+  updated: Booking,
+  ctx: { ownerEmail: string }
+): EmailMessage {
+  const oldLine = formatDateHuman(original.startISO);
+  const newLine = formatDateHuman(updated.startISO);
+  const text = [
+    `Klijentkinja je sama pomjerila svoj termin preko sajta.`,
+    ``,
+    `Klijentkinja: ${updated.name}`,
+    `Telefon: ${updated.phoneE164 || "—"}`,
+    `Usluga: ${svc(updated)}`,
+    `Bio zakazan: ${oldLine}`,
+    `Sad je: ${newLine}`,
+    ``,
+    `Stari slot je oslobođen u Google kalendaru.`,
+    ``,
+    `— L'Essenza booking sistem`,
+  ].join("\n");
+  const inner = [
+    paragraph(`<strong>Klijentkinja je sama pomjerila svoj termin preko sajta.</strong>`),
+    detailsTable([
+      ["Klijentkinja", updated.name],
+      ["Telefon", updated.phoneE164 || "—"],
+      ["Usluga", svc(updated)],
+      ["Bio zakazan", oldLine],
+      ["Sad je", newLine],
+    ]),
+    softNote(`Stari slot je oslobođen u Google kalendaru.`),
+  ].filter(Boolean).join("\n");
+  return {
+    to: ctx.ownerEmail,
+    subject: `Pomjeren termin — ${updated.name}, ${svc(updated)}`,
+    text,
+    html: renderShell({ heading: "Termin pomjeren", preheader: `${updated.name} · ${newLine}`, inner }),
   };
 }
 

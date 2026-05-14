@@ -209,18 +209,20 @@ export const handler: Handler = async (event) => {
     bookingId, startISO: booking.startISO, service: booking.serviceName,
     clientEmail: booking.email ?? "-", ownerEmail: settings.ownerEmail ?? "-",
   }));
-  // Build a self-cancel link the client can use from their email.
-  // Skipped silently if event id is missing or token signing isn't configured.
+  // Build self-cancel + self-reschedule links the client can use from their
+  // email. Both reuse the same token (per-eventId, expires 24h after end),
+  // pointing to /cancel.html and /reschedule.html respectively.
   let cancelUrl: string | undefined;
+  let rescheduleUrl: string | undefined;
   if (booking.calendarEventId) {
     try {
       const siteUrl = (process.env.SITE_URL || "https://lessenza.me").replace(/\/$/, "");
-      // Token expires 24h after the appointment ends — defense-in-depth so a
-      // leaked email link can't be replayed indefinitely.
       const eventEndMs = new Date(booking.endISO).getTime();
       const expiresAtISO = new Date(eventEndMs + 24 * 60 * 60 * 1000).toISOString();
       const t = makeCancelToken(booking.calendarEventId, { expiresAtISO });
-      cancelUrl = `${siteUrl}/cancel.html?t=${encodeURIComponent(t)}`;
+      const enc = encodeURIComponent(t);
+      cancelUrl = `${siteUrl}/cancel.html?t=${enc}`;
+      rescheduleUrl = `${siteUrl}/reschedule.html?t=${enc}`;
     } catch (e) {
       console.warn("[book][cancel-token] not generated:", (e as Error).message);
     }
@@ -230,7 +232,7 @@ export const handler: Handler = async (event) => {
   if (booking.email) {
     sends.push(
       mailer
-        .send(bookingConfirmedToClient(booking, { salonAddress: settings.salonAddress, ownerPhone: settings.ownerPhone, emailGreeting: settings.emailGreeting, emailClosing: settings.emailClosing, emailSignature: settings.emailSignature, cancelUrl }))
+        .send(bookingConfirmedToClient(booking, { salonAddress: settings.salonAddress, ownerPhone: settings.ownerPhone, emailGreeting: settings.emailGreeting, emailClosing: settings.emailClosing, emailSignature: settings.emailSignature, cancelUrl, rescheduleUrl }))
         .then((id) => console.log(`[book][client-confirm] sent → ${booking.email} id=${id}`))
         .catch((e) => console.error(`[book][client-confirm] FAILED → ${booking.email}:`, e.message))
     );

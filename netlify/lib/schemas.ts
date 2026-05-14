@@ -269,6 +269,29 @@ export const InquirySchema = z.object({
 });
 export type Inquiry = z.infer<typeof InquirySchema>;
 
+/**
+ * Cancellation request from a client who didn't book with an email (so no
+ * token-link works for them). They submit phone + name + appointment day +
+ * optional reason; the owner sees it in the admin and confirms / declines.
+ * No auto-cancellation — owner is the gate so the broker channel can't be
+ * abused by anyone who happens to know a phone number.
+ */
+export const CancelRequestSchema = z.object({
+  id: z.string().min(1),
+  createdAt: z.string().datetime(),
+  phone: z.string().min(4).max(32),
+  name: z.string().min(1).max(120),
+  /** Day of the appointment they want cancelled (YYYY-MM-DD, salon TZ). */
+  desiredDateISO: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+  reason: z.string().max(500).optional(),
+  status: z.enum(["pending", "approved", "declined"]),
+  /** Set when admin approves and the calendar event was actually deleted. */
+  resolvedAt: z.string().datetime().optional(),
+  /** Owner's note when declining (e.g. "couldn't find matching booking"). */
+  resolutionNote: z.string().max(500).optional(),
+});
+export type CancelRequest = z.infer<typeof CancelRequestSchema>;
+
 export const BlockedPhoneSchema = z.object({
   phoneE164: z.string().min(4).max(32),
   name: z.string().max(120).optional(),

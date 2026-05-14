@@ -91,16 +91,19 @@ const inner: Handler = async () => {
     const b = eventToBooking(e, services);
     if (!b) continue;
     if (!b.email) { skippedNoEmail++; continue; }
-    // Mint a self-cancel link the client can use straight from the reminder —
-    // saves them digging through old emails to find the original confirmation.
+    // Mint manage links (cancel + reschedule) so the client can act straight
+    // from the reminder without hunting for the original confirmation.
     let cancelUrl: string | undefined;
+    let rescheduleUrl: string | undefined;
     if (b.calendarEventId) {
       try {
         const siteUrl = (process.env.SITE_URL || "https://lessenza.me").replace(/\/$/, "");
         const eventEndMs = new Date(b.endISO).getTime();
         const expiresAtISO = new Date(eventEndMs + 24 * 60 * 60 * 1000).toISOString();
         const t = makeCancelToken(b.calendarEventId, { expiresAtISO });
-        cancelUrl = `${siteUrl}/cancel.html?t=${encodeURIComponent(t)}`;
+        const enc = encodeURIComponent(t);
+        cancelUrl = `${siteUrl}/cancel.html?t=${enc}`;
+        rescheduleUrl = `${siteUrl}/reschedule.html?t=${enc}`;
       } catch (e) {
         console.warn("[reminder][cancel-token] not generated:", (e as Error).message);
       }
@@ -111,7 +114,7 @@ const inner: Handler = async () => {
       if (await alreadySent(b.bookingId)) return "already";
       try {
         await mailer.send(
-          reminderToClient(b, { salonAddress: settings.salonAddress, ownerPhone: settings.ownerPhone, emailGreeting: settings.emailGreeting, emailClosing: settings.emailClosing, emailSignature: settings.emailSignature, cancelUrl })
+          reminderToClient(b, { salonAddress: settings.salonAddress, ownerPhone: settings.ownerPhone, emailGreeting: settings.emailGreeting, emailClosing: settings.emailClosing, emailSignature: settings.emailSignature, cancelUrl, rescheduleUrl })
         );
         await markSent(b.bookingId);
         return "sent";
