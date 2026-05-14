@@ -1,6 +1,31 @@
 import { registerTab, must, toast, openModal, closeModal, escapeHtml, getServices } from "../admin.js";
 import { renderClientCard } from "./client-card.js";
 
+/** Reusable message-helper modal (WhatsApp/Viber/Copy). Kept local to this
+ *  module so inquiries can offer "Obavijesti klijentkinju" without cross-module
+ *  coupling to today.js. */
+function showMessageActions(title, message, whatsappLink, viberLink) {
+  const waBtn = whatsappLink ? `<a class="btn btn-primary" href="${whatsappLink}" target="_blank" rel="noopener">📱 WhatsApp</a>` : "";
+  const viBtn = viberLink ? `<a class="btn btn-ghost" href="${viberLink}" target="_blank" rel="noopener">💜 Viber</a>` : "";
+  openModal(title, `
+    <p class="muted" style="font-size:0.88rem;">Poruka za klijentkinju:</p>
+    <textarea id="cr-msg-copy" readonly rows="5" style="width:100%;">${escapeHtml(message)}</textarea>
+    <div class="stack-card__actions" style="margin-top:0.75rem;flex-wrap:wrap;">
+      ${waBtn}
+      ${viBtn}
+      <button type="button" class="btn btn-ghost" id="cr-msg-copy-btn">📋 Kopiraj</button>
+      <button type="button" class="btn btn-ghost" data-close="1">Zatvori</button>
+    </div>
+  `);
+  const cbtn = document.getElementById("cr-msg-copy-btn");
+  cbtn?.addEventListener("click", async () => {
+    const ta = document.getElementById("cr-msg-copy");
+    try { await navigator.clipboard.writeText(ta.value); cbtn.textContent = "Kopirano ✓"; }
+    catch { ta.select(); document.execCommand("copy"); cbtn.textContent = "Kopirano ✓"; }
+    setTimeout(() => { cbtn.textContent = "📋 Kopiraj"; }, 1800);
+  });
+}
+
 const filter = document.getElementById("inq-filter");
 const dayFilter = document.getElementById("inq-day");
 const refresh = document.getElementById("inq-refresh");
@@ -110,26 +135,73 @@ async function resolveRequest(card, status) {
   const kind = card.dataset.kind || "cancel";
   if (status === "approved") {
     const isReschedule = kind === "reschedule";
-    const title = isReschedule ? "Pomjeri termin za klijentkinju" : "Otkaži termin za klijentkinju";
-    const action = isReschedule ? "pomjeranje" : "otkazivanje";
-    const instructions = isReschedule
-      ? `Otvorite raspored za taj datum, pronađite termin i pomjerite ga ručno (kartica → Pomjeri). Razgovarajte sa klijentkinjom o novom vremenu (pozovite ili WhatsApp). Kad je gotovo, kliknite "Označi kao obavljeno".`
-      : `Otvorite raspored za taj datum, pronađite termin i otkažite ga ručno (kartica → Otkaži termin). Kad je gotovo, kliknite "Označi kao obavljeno".`;
-    openModal(title, `
-      <p>Klijentkinja <strong>${escapeHtml(name)}</strong> (${escapeHtml(phone)}) traži ${action} za <strong>${escapeHtml(date)}</strong>.</p>
-      <p class="muted" style="font-size:0.88rem;line-height:1.5;">${instructions}</p>
-      <div class="stack-card__actions" style="margin-top:0.75rem;">
-        <a class="btn btn-ghost" href="/admin/?view=day&anchor=${encodeURIComponent(date)}#schedule">Idi na raspored</a>
-        <button class="btn btn-primary" type="button" id="cr-done">Označi kao obavljeno</button>
+
+    // RESCHEDULE — owner must handle manually (negotiate new time with client).
+    if (isReschedule) {
+      openModal("Pomjeri termin za klijentkinju", `
+        <p>Klijentkinja <strong>${escapeHtml(name)}</strong> (${escapeHtml(phone)}) želi <strong>pomjeriti</strong> termin za <strong>${escapeHtml(date)}</strong>.</p>
+        <p class="muted" style="font-size:0.88rem;line-height:1.5;">Pozovi je ili pošalji WhatsApp da dogovorite novo vrijeme. Onda otvori Raspored za taj dan, klikni na karticu termina → <strong>Pomjeri</strong>. Kad je gotovo, klikni "Označi kao obavljeno".</p>
+        <div class="stack-card__actions" style="margin-top:0.75rem;flex-wrap:wrap;">
+          <a class="btn btn-ghost" href="tel:${escapeHtml(phone)}">Pozovi</a>
+          <a class="btn btn-ghost" href="https://wa.me/${escapeHtml(phone).replace(/[^\d]/g, "")}" target="_blank" rel="noopener">WhatsApp</a>
+          <a class="btn btn-ghost" href="/admin/?view=day&anchor=${encodeURIComponent(date)}#schedule">Idi na raspored</a>
+          <button class="btn btn-primary" type="button" id="cr-done">Označi kao obavljeno</button>
+        </div>
+      `);
+      document.getElementById("cr-done").addEventListener("click", async () => {
+        try {
+          await must("/api/admin/cancel-requests", { method: "PATCH", body: { id, status: "approved" } });
+          closeModal();
+          toast("Zahtjev označen kao obavljen.", "success");
+          await renderCancelRequests();
+        } catch (e) { toast(e.message, "error"); }
+      });
+      return;
+    }
+
+    // CANCEL — one-click: server finds matching event, deletes it, notifies client.
+    openModal("Otkaži termin", `
+      <p>Otkazaću termin za <strong>${escapeHtml(name)}</strong> (${escapeHtml(phone)}) na <strong>${escapeHtml(date)}</strong>?</p>
+      <p class="muted" style="font-size:0.88rem;line-height:1.5;">Sistem će automatski pronaći termin u kalendaru, obrisati ga i poslati email klijentu (ako ga ima). Dobit ćeš WhatsApp/Viber link da joj pošalješ poruku.</p>
+      <div class="stack-card__actions" style="margin-top:0.75rem;flex-wrap:wrap;">
+        <button class="btn btn-ghost" type="button" data-close="1">Nazad</button>
+        <button class="btn btn-danger" type="button" id="cr-approve">Da, otkaži termin</button>
       </div>
+      <div id="cr-error" class="mb-conflict-banner" hidden style="margin-top:0.75rem;"></div>
     `);
-    document.getElementById("cr-done").addEventListener("click", async () => {
+    document.getElementById("cr-approve").addEventListener("click", async () => {
+      const btn = document.getElementById("cr-approve");
+      const err = document.getElementById("cr-error");
+      btn.disabled = true;
+      btn.textContent = "Otkazujem…";
+      err.hidden = true;
       try {
-        await must("/api/admin/cancel-requests", { method: "PATCH", body: { id, status: "approved" } });
+        const r = await must("/api/admin/cancel-requests", {
+          method: "PATCH",
+          body: { id, status: "approved", autoCancel: true },
+        });
         closeModal();
-        toast("Zahtjev označen kao obavljen.", "success");
+        if (r.cancelled) {
+          toast(`Termin otkazan. Email ${r.emailSent ? "poslat klijentkinji." : "nije poslat (nema adresu)."}`, "success");
+          // Offer the WhatsApp/Viber message to the client.
+          if (r.message) {
+            showMessageActions("Obavijesti klijentkinju", r.message, r.whatsappLink, r.viberLink);
+          }
+        } else if (r.ambiguous) {
+          toast(`Nađeno više termina za taj broj na ${date}. Otvori Raspored i otkažite ručno.`, "warning");
+          location.href = `/admin/?view=day&anchor=${encodeURIComponent(date)}#schedule`;
+        } else if (r.matches === 0) {
+          toast(`Nije nađen termin za ${name} na ${date}. Zahtjev je označen kao obavljen.`, "warning");
+        } else {
+          toast("Zahtjev obavljen.", "success");
+        }
         await renderCancelRequests();
-      } catch (e) { toast(e.message, "error"); }
+      } catch (e) {
+        btn.disabled = false;
+        btn.textContent = "Da, otkaži termin";
+        err.hidden = false;
+        err.innerHTML = `<strong>⚠️ Greška</strong><br>${escapeHtml(e.message)}`;
+      }
     });
     return;
   }
