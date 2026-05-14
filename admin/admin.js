@@ -381,13 +381,20 @@ document.getElementById("fab-add-booking").addEventListener("click", () => {
   if (btn) btn.click();
 });
 
-// ---------- Inquiries badge (count of pending) ----------
+// ---------- Inquiries badge (pending inquiries + pending cancel-requests) ----------
 async function refreshInquiryBadge() {
   try {
-    const { inquiries } = await must("/api/admin/inquiries?status=pending");
+    // Combine both kinds of "waiting for owner action" into one badge so the
+    // owner notices either via the Upiti tab.
+    const [inqRes, crRes] = await Promise.all([
+      must("/api/admin/inquiries?status=pending").catch(() => ({ inquiries: [] })),
+      must("/api/admin/cancel-requests").catch(() => ({ requests: [] })),
+    ]);
+    const inquiries = inqRes?.inquiries ?? [];
+    const pendingCr = (crRes?.requests ?? []).filter((r) => r.status === "pending");
+    const n = inquiries.length + pendingCr.length;
     const badge = document.getElementById("inq-badge");
     if (!badge) return;
-    const n = inquiries?.length ?? 0;
     badge.textContent = String(n);
     badge.classList.toggle("is-visible", n > 0);
   } catch {}

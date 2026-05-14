@@ -194,6 +194,9 @@ function localToISO(dateKey, hhmm) {
   $("rs-svc").textContent = state.booking.serviceName || "Termin";
   $("rs-when").textContent = "Trenutno: " + (state.booking.currentWhenLabel || "");
   $("rs-name").textContent = state.booking.name ? "za " + state.booking.name : "";
+  // Cross-link to cancel page with the same token (same threat model).
+  const gotoCancel = $("goto-cancel");
+  if (gotoCancel) gotoCancel.href = "/cancel.html?t=" + encodeURIComponent(token);
   show("form");
   renderDatePicker();
 

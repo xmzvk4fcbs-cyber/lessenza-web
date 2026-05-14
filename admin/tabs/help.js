@@ -8,16 +8,48 @@ const SECTIONS = [
     icon: "🌟",
     title: "Brzi vodič — gdje šta",
     body: `
-      <p>L'Essenza admin ima <strong>6 ekrana</strong> u donjoj navigaciji:</p>
+      <p>L'Essenza admin ima <strong>6 tabova</strong> u donjoj navigaciji:</p>
       <ul>
         <li><strong>Dnevnik (🏠)</strong> — sažetak dana, sljedeći termin, statistika, aktivnost.</li>
-        <li><strong>Raspored (📅)</strong> — svi termini, dodavanje, pomjeranje, otkazivanje.</li>
-        <li><strong>Upiti (✉)</strong> — zahtjevi klijenata (novi termini, otkazivanje preko broja).</li>
-        <li><strong>Klijenti (👥)</strong> — lista svih klijenata sa istorijom posjeta.</li>
+        <li><strong>Raspored (📅)</strong> — svi termini, dodavanje, pomjeranje, otkazivanje. Dan/Sedmica/Mjesec prikazi.</li>
+        <li><strong>Termini (📋)</strong> — nove rezervacije (zadnja 24h) + pretraga svih termina po imenu/telefonu/usluzi.</li>
+        <li><strong>Upiti (💬)</strong> — zahtjevi klijenata (novi termini, otkazivanje/pomjeranje preko broja telefona).</li>
+        <li><strong>Klijenti (👤)</strong> — lista svih klijenata sa istorijom posjeta.</li>
         <li><strong>Podešavanja (⚙)</strong> — radno vrijeme, usluge, cijene, pauze, kontakt, lozinka, sve.</li>
-        <li><strong>Pomoć (?)</strong> — ovaj ekran. Klikni "?" gore desno bilo kad.</li>
       </ul>
-      <p>Najvažnije: <strong>"?" dugme</strong> u gornjem desnom uglu te uvijek vraća ovdje.</p>
+      <p>U gornjem desnom uglu admina imaš <strong>?</strong> dugme — ono te uvijek vraća na ovaj Pomoć ekran. Pored njega je <strong>Odjava</strong>.</p>
+      <p>Crvene tačkice na tabovima znače da te nešto čeka — npr. <strong>Termini</strong> badge pokazuje broj novih rezervacija u zadnja 24h, <strong>Upiti</strong> badge pokazuje koliko zahtjeva čeka tvoju odluku.</p>
+    `,
+  },
+  {
+    id: "termini",
+    icon: "📋",
+    title: "Termini — nove rezervacije + pretraga svih",
+    body: `
+      <p>Ovaj tab ima <strong>dvije sekcije</strong>:</p>
+
+      <h4>Pristigle rezervacije (zadnja 24h)</h4>
+      <p>Kartice svih termina koje su <strong>rezervisane danas</strong> (bilo za koji datum). Najnoviji su na vrhu.</p>
+      <p>Za svaki termin imaš dugmad:</p>
+      <ul>
+        <li><strong>Otvori</strong> — otvara taj dan u Rasporedu (vidiš termin u kontekstu).</li>
+        <li><strong>Pozovi</strong> — telefonski poziv klijenta.</li>
+        <li><strong>Otkaži</strong> — modal sa razlogom. Klijentu se šalje email sa porukom.</li>
+      </ul>
+      <p>Broj na <strong>Termini</strong> tab badgeu pokazuje koliko ih ima — auto-osvježi se svakih 60s.</p>
+
+      <h4>Svi termini sa pretragom</h4>
+      <p>Tabela <strong>svih termina</strong>, sortirana po vremenu termina (najraniji prvo).</p>
+      <p><strong>Pretraga:</strong> ime, telefon, usluga, napomena, email. Radi i sa našim slovima (Đorđe = djordje).</p>
+      <p><strong>Brzi chip-ovi za period:</strong></p>
+      <ul>
+        <li><strong>Nadolazeći</strong> — od danas pa 90 dana naprijed (default).</li>
+        <li><strong>Danas</strong> — samo današnji.</li>
+        <li><strong>7 dana</strong> — ova sedmica.</li>
+        <li><strong>30 dana</strong> — naredni mjesec.</li>
+        <li><strong>Prošli (30d)</strong> — zadnjih mjesec — korisno za izvještaje "ko je bio".</li>
+      </ul>
+      <p>Klik na <strong>Otvori</strong> te šalje pravo na taj dan u Rasporedu.</p>
     `,
   },
   {
@@ -51,6 +83,7 @@ const SECTIONS = [
         <li><strong>Mjesec</strong> — cijeli kalendar sa tačkicama (zlatne = termini, sive = ostali događaji).</li>
       </ul>
       <p>Klikni <strong>Dan/Sedmica/Mjesec</strong> da promijeniš prikaz. Strelice ← → mijenjaju datum. <strong>Danas</strong> dugme te vraća na današnji.</p>
+      <p>Na Dan view imaš brze chip-ove iznad liste: <strong>Juče / Danas / Sjutra / Sedmica / +14 dana</strong>. "Juče" je korisno za pregled ko je juče bio i ko nije došao.</p>
 
       <h4>Termin kartica — šta sva dugmad rade</h4>
       <ul>
@@ -87,19 +120,20 @@ const SECTIONS = [
       <p>Postoje <strong>dva puta</strong> za klijenta:</p>
 
       <h4>1. Klijent koji je dao email</h4>
-      <p>U potvrdi email-a i u podsjetnik email-u (dan prije) imaju dva dugmeta:</p>
+      <p>U potvrdi email-a i u podsjetnik email-u (dan prije) imaju <strong>dva dugmeta</strong>:</p>
       <ul>
         <li><strong>Pomjeri termin</strong> — otvara stranicu gdje sami biraju novi datum + slot. Sistem automatski:
           <ul>
             <li>provjerava da li je slobodno,</li>
             <li>poštuje parallel-pair pravila,</li>
             <li>blokira pomjeranje manje od 24h prije termina,</li>
-            <li>tebi šalje push odmah,</li>
+            <li>tebi šalje <strong>push odmah</strong>,</li>
             <li>klijentu šalje email potvrdu novog vremena.</li>
           </ul>
         </li>
         <li><strong>Otkaži termin</strong> — opcioni razlog, slično: 24h ograničenje, push tebi, email potvrda klijentu.</li>
       </ul>
+      <p>Na obje stranice imaju <strong>međusobni link</strong> — npr. ako uđu na "Otkaži" pa se predomisle, klikom na "pomjerite umjesto da otkažete" prelaze odmah na reschedule sa istim token-om.</p>
 
       <h4>2. Klijent koji nije dao email (nema link)</h4>
       <p>Na cancel.html stranici imaju "Pošalji zahtjev za otkazivanje" link. Tu popune mini-formu:</p>
@@ -107,13 +141,14 @@ const SECTIONS = [
         <li><strong>Šta želi?</strong> — Otkazati ili Pomjeriti (pomjeranje znači "želim drugo vrijeme").</li>
         <li>Ime, telefon, datum termina, opcioni razlog (kod pomjeranja tu napišu poželjno novo vrijeme).</li>
       </ul>
-      <p>Tebi stigne <strong>push notifikacija odmah</strong>. Otvori <strong>Upiti</strong> tab — pending zahtjevi su <span style="color:#8B3A3E;">na vrhu sa crvenom tačkom</span>.</p>
-      <p>Za svaki zahtjev imaš dugmad:</p>
+      <p>Tebi stigne <strong>push notifikacija odmah</strong>. Crvena tačkica na <strong>Upiti</strong> tabu pokazuje broj pending zahtjeva.</p>
+      <p>Otvori <strong>Upiti</strong> — pending zahtjevi su <span style="color:#8B3A3E;">na vrhu</span>. Za svaki imaš dugmad:</p>
       <ul>
         <li><strong>Pozovi</strong> — ako želiš da provjeriš lično.</li>
-        <li><strong>Otkaži termin</strong> (ili <strong>Pomjeri termin</strong>) — vodi te u raspored za taj dan. Tu manuelno klikneš Otkaži / Pomjeri na pravoj kartici. Pa se vraćaš i klikneš "Označi kao obavljeno".</li>
+        <li><strong>Otkaži termin</strong> (ili <strong>Pomjeri termin</strong>) — vodi te u Raspored za taj dan. Tu klikneš na karticu termina → Otkaži / Pomjeri.</li>
         <li><strong>Odbij</strong> — sa opcionim razlogom.</li>
       </ul>
+      <p><strong>Auto-resolve:</strong> kad otkažeš termin iz Rasporeda koji se poklapa sa pending zahtjevom (isti telefon + isti dan), zahtjev se automatski označava kao obavljen — ne moraš se vraćati u Upiti i klikati "Označi kao obavljeno".</p>
       <p><strong>Zašto ručno?</strong> Telefon nije sigurna identifikacija — bilo ko zna nečiji broj. Ti si filter, niko ne može da iskoristi tuđi broj za otkazivanje.</p>
     `,
   },
@@ -272,6 +307,16 @@ const SECTIONS = [
       <p>Sad svaki novi termin se automatski upisuje u tvoj kalendar. Ako otkažeš/pomjeriš, sinhronizuje se.</p>
       <h4>Odjava</h4>
       <p>Klikni <strong>Prekini vezu</strong> — termini ostaju u tvom Google kalendaru ali se više ne sinhronizuju.</p>
+
+      <h4>"Google Calendar veza je istekla" baner</h4>
+      <p>Ako ovaj žuti baner iskoči na vrhu admin-a — znači da je Google odbio našu vezu (najčešće zato što:</p>
+      <ul>
+        <li>nisi koristila vezu 6+ mjeseci,</li>
+        <li>promijenila si Google lozinku,</li>
+        <li>ručno si je opozvala na <a href="https://myaccount.google.com/permissions" target="_blank" rel="noopener">myaccount.google.com/permissions</a>).</li>
+      </ul>
+      <p><strong>Šta se dešava:</strong> aplikacija nastavlja da radi normalno — termini se i dalje primaju, prikazuju i obrađuju — ali se NE sinhronizuju sa tvojim Google kalendarom dok ne reconnect-uješ.</p>
+      <p><strong>Kako da popraviš:</strong> klikni "Poveži ponovo" u baneru → ide pravo na Podešavanja → Google. Klikni "Poveži Google Calendar" → prati Google prijavu sa istim ili novim email-om. Baner nestane, sve se vraća u normalu. Termini koje si primila dok je veza bila prekinuta automatski počinju da sinhronizuju od trenutka reconnect-a.</p>
     `,
   },
   {

@@ -3,7 +3,7 @@ import { json, badRequest, notFound, methodNotAllowed, parseJson } from "../lib/
 import { adminGuard } from "../lib/admin-guard";
 import { createCalendarClient, createCalendarClientAsync, fetchEventById, type CalendarClient } from "../lib/calendar";
 import { getMailerAsync, type Mailer } from "../lib/mailer";
-import { getServices, getSettings, appendCancellation, appendAudit } from "../lib/config";
+import { getServices, getSettings, appendCancellation, appendAudit, listCancelRequests, updateCancelRequest } from "../lib/config";
 import { eventToBooking } from "../lib/calendar-domain";
 import { bookingCancelledToClient } from "../lib/email-templates";
 import { waLink } from "../lib/phone";
@@ -55,6 +55,28 @@ const inner: Handler = async (event) => {
   await withDayLock(dayKey, async () => {
     await cal.deleteEvent(eventId);
   });
+
+  // If owner just cancelled a booking that matches a pending cancel-request
+  // (same phone + same appointment day), auto-mark the request as resolved —
+  // owner doesn't have to come back to Upiti tab and click "Označi kao obavljeno".
+  if (booking && booking.phoneE164) {
+    try {
+      const bookingDay = booking.startISO ? booking.startISO.slice(0, 10) : "";
+      const requests = await listCancelRequests();
+      const match = requests.find(
+        (r) => r.status === "pending" && r.phone === booking.phoneE164 && r.desiredDateISO === bookingDay,
+      );
+      if (match) {
+        await updateCancelRequest(match.id, {
+          status: "approved",
+          resolvedAt: new Date().toISOString(),
+          resolutionNote: "Auto: termin otkazan iz rasporeda.",
+        });
+      }
+    } catch (e) {
+      console.warn("[cancel][auto-resolve-request] failed:", (e as Error).message);
+    }
+  }
 
   // Best-effort: log cancellation. Failure must NOT abort the cancel flow —
   // the calendar event is already gone.

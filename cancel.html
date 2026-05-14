@@ -90,6 +90,9 @@
         <span id="cs-name" style="color:#7A6F62;font-size:0.88rem;"></span>
       </div>
       <p style="text-align:center;margin:8px 0 0;color:#7A6F62;">Da li sigurno želite otkazati ovaj termin?</p>
+      <p style="text-align:center;margin:6px 0 0;font-size:0.9rem;">
+        Ili — <a id="goto-reschedule" href="#" style="color:var(--gold);text-decoration:underline;">pomjerite termin umjesto da otkažete</a>.
+      </p>
       <div style="margin:16px 0 0;">
         <label for="cancel-reason" style="display:block;font-size:0.85rem;color:#7A6F62;margin-bottom:6px;">Razlog (opciono — pomaže nam da bolje organizujemo termine):</label>
         <textarea id="cancel-reason" maxlength="500" rows="2" style="width:100%;padding:0.6rem 0.75rem;border:1px solid #D9C09A;border-radius:8px;background:#fff;font-family:inherit;font-size:16px;resize:vertical;min-height:60px;" placeholder="npr. bolest, hitan posao…"></textarea>
@@ -281,6 +284,10 @@
   $("cs-service").textContent = info.serviceName || "Termin";
   $("cs-when").textContent = info.whenLabel || "";
   $("cs-name").textContent = info.name ? "za " + info.name : "";
+  // Cross-link to reschedule page using the same token — same threat model
+  // (24h lead, signed token), different action.
+  const gotoRs = $("goto-reschedule");
+  if (gotoRs) gotoRs.href = "/reschedule.html?t=" + encodeURIComponent(token);
   show("confirm");
 
   // 3. Confirm → POST cancel.
