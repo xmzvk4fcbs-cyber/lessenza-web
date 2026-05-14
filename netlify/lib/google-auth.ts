@@ -59,6 +59,35 @@ export async function clearTokens(): Promise<void> {
   await store().delete(KEY_TOKENS);
 }
 
+/** Stable check whether a thrown error indicates the refresh_token is dead
+ *  (revoked / expired / Google account password changed). Used so admin
+ *  endpoints can return a clear "reconnect" signal instead of a 500. */
+export function isGoogleAuthDead(e: unknown): boolean {
+  if (!e) return false;
+  const err = e as { message?: string; response?: { data?: { error?: string } } };
+  const msg = String(err.message ?? "");
+  const oauthError = err.response?.data?.error;
+  return (
+    msg.includes("invalid_grant") ||
+    msg.includes("Token has been expired or revoked") ||
+    oauthError === "invalid_grant"
+  );
+}
+
+/** Mark stored OAuth tokens as needing re-auth. We don't delete the email
+ *  field so the admin UI can still tell the owner WHICH account died. */
+export async function markTokensDead(): Promise<void> {
+  const cur = await store().getJSON<GoogleTokens & { dead?: boolean }>(KEY_TOKENS);
+  if (cur) {
+    await store().setJSON(KEY_TOKENS, { ...cur, dead: true });
+  }
+}
+
+export async function areTokensDead(): Promise<boolean> {
+  const raw = await store().getJSON<GoogleTokens & { dead?: boolean }>(KEY_TOKENS);
+  return !!raw?.dead;
+}
+
 export function getRedirectUri(): string {
   const base = process.env.SITE_URL || "https://lessenza.me";
   return `${base.replace(/\/$/, "")}/api/admin/google-callback`;

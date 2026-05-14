@@ -3619,6 +3619,40 @@ html { scroll-behavior: smooth; scroll-padding-top: 88px; -webkit-font-smoothing
 }
 .faq-row__actions .btn { padding: 6px 12px; font-size: 0.8rem; min-height: 36px; }
 
+/* === Global admin banner (top of page) — for OAuth expiry, etc. === */
+.admin-banner {
+  margin: 8px 16px 0;
+  padding: 12px 16px;
+  background: linear-gradient(135deg, #FFF6E1, #FBEDD2);
+  border: 1px solid rgba(184, 134, 11, 0.5);
+  border-left: 4px solid #B8860B;
+  border-radius: 10px;
+  color: #6B4F00;
+  font-size: 0.92rem;
+  line-height: 1.5;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.admin-banner__msg { flex: 1; min-width: 200px; }
+.admin-banner__msg strong { color: #4A3300; }
+.admin-banner a {
+  color: #6B4F00;
+  text-decoration: underline;
+  font-weight: 600;
+}
+.admin-banner__close {
+  background: none;
+  border: 0;
+  color: #6B4F00;
+  cursor: pointer;
+  font-size: 1.2rem;
+  line-height: 1;
+  padding: 4px 8px;
+}
+
 /* === Dashboard activity feed === */
 .dash-activity {
   margin-top: 1.25rem;
@@ -3733,6 +3767,63 @@ html { scroll-behavior: smooth; scroll-padding-top: 88px; -webkit-font-smoothing
   align-items: center;
 }
 .es-summary:empty { display: none; }
+
+/* === Termini tab — booking rows === */
+.bk-row {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  grid-template-rows: auto auto;
+  gap: 8px 14px;
+  padding: 12px 14px;
+  background: #fff;
+  border: 1px solid rgba(217, 192, 154, 0.45);
+  border-radius: 12px;
+  margin-bottom: 8px;
+  box-shadow: 0 1px 2px rgba(74, 66, 56, 0.04);
+}
+.bk-row__when {
+  grid-row: 1 / 3;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-width: 64px;
+  padding: 4px 8px;
+  background: var(--cream-soft, #F9F2E5);
+  border-radius: 8px;
+}
+.bk-row__date { font-size: 0.7rem; color: var(--text-light); letter-spacing: 0.04em; }
+.bk-row__time { font-family: 'Cormorant Garamond', Georgia, serif; font-weight: 600; font-size: 1.25rem; color: var(--sage); }
+.bk-row__body { min-width: 0; }
+.bk-row__name { font-weight: 600; color: var(--text); margin-bottom: 2px; word-break: break-word; }
+.bk-row__svc { font-size: 0.92rem; color: var(--sage); margin-bottom: 4px; }
+.bk-row__phone, .bk-row__email, .bk-row__note {
+  font-size: 0.8rem;
+  color: var(--text-light);
+  margin-top: 2px;
+}
+.bk-row__actions {
+  grid-column: 1 / 3;
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-top: 4px;
+}
+.btn--xs {
+  min-height: 32px;
+  padding: 4px 12px;
+  font-size: 0.78rem;
+  letter-spacing: 0.04em;
+}
+.chip.is-active {
+  background: linear-gradient(135deg, #D4B575, #C9A961);
+  color: #fff;
+  border-color: var(--gold-dark);
+}
+@media (max-width: 380px) {
+  .bk-row { grid-template-columns: 56px 1fr; }
+  .bk-row__when { min-width: 56px; }
+}
 
 /* === Help section accordion === */
 .help-section {

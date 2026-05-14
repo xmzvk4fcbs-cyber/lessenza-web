@@ -29,7 +29,21 @@ const inner: Handler = async (event) => {
   const tMin = fromTZ(from, "00:00").toISOString();
   const tMax = fromTZ(to, "23:59").toISOString();
   const cal = await makeCalendar();
-  const events = await cal.listEvents({ timeMin: tMin, timeMax: tMax });
+  let events: Awaited<ReturnType<CalendarClient["listEvents"]>>;
+  try {
+    events = await cal.listEvents({ timeMin: tMin, timeMax: tMax });
+  } catch (e) {
+    const msg = (e as Error).message;
+    if (msg === "google-auth-dead") {
+      return json({
+        error: "google-disconnected",
+        message: "Google Calendar veza je istekla. Idite u Podešavanja → Google da se ponovo povežete.",
+        appointments: [],
+        rawEvents: [],
+      }, 503);
+    }
+    throw e;
+  }
 
   const appointments = [];
   const rawEvents = [];

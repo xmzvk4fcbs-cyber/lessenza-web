@@ -69,6 +69,10 @@
         </div>
       </header>
 
+      <!-- Global banner shown when something needs the owner's attention
+           (Google OAuth expired, etc). Hidden by default — admin.js toggles. -->
+      <div id="admin-banner" class="admin-banner" hidden></div>
+
       <div class="admin-main">
 
         <!-- ============== DNEVNIK (Dashboard) ============== -->
@@ -157,9 +161,10 @@
             <div id="briefing-host"></div>
 
             <div class="field">
-              <label for="today-day">Izaberi dan</label>
+              <label for="today-day">📅 Izaberi datum — termini tog dana</label>
               <input id="today-day" type="date">
               <div class="chip-row">
+                <button type="button" class="chip" data-quick="yesterday">Juče</button>
                 <button type="button" class="chip" data-quick="today">Danas</button>
                 <button type="button" class="chip" data-quick="tomorrow">Sjutra</button>
                 <button type="button" class="chip" data-quick="week">Sedmica</button>
@@ -661,6 +666,40 @@
           </section>
         </section>
 
+        <!-- ============== TERMINI (svi + nove rezervacije) ============== -->
+        <section id="screen-bookings" class="admin-screen">
+          <h2>Termini</h2>
+
+          <!-- Inbox: bookings created in the last 24h, regardless of when the
+               appointment is. Owner reviews and can reject within this window. -->
+          <section class="bookings-inbox-section">
+            <h3 style="font-family:'Cormorant Garamond',Georgia,serif;font-weight:500;color:var(--sage);font-size:1.2rem;margin:0 0 0.6rem;display:flex;align-items:center;gap:8px;">
+              <span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:var(--gold);box-shadow:0 0 8px var(--gold);"></span>
+              Pristigle rezervacije <span class="muted" style="font-weight:400;font-size:0.92rem;">(zadnja 24h)</span>
+            </h3>
+            <p class="muted" style="margin:0 0 0.75rem;font-size:0.88rem;">Pregledaj nove termine. Možeš ih otkazati ili odbiti ako ne želiš.</p>
+            <div id="bookings-inbox" class="stack"></div>
+          </section>
+
+          <!-- Full searchable list of upcoming + recent appointments. -->
+          <section style="margin-top:1.5rem;">
+            <h3 style="font-family:'Cormorant Garamond',Georgia,serif;font-weight:500;color:var(--sage);font-size:1.2rem;margin:0 0 0.6rem;">Svi termini</h3>
+            <div class="field">
+              <label for="bookings-search">🔍 Pretraga (ime, telefon, usluga, napomena)</label>
+              <input id="bookings-search" type="search" placeholder="npr. Ana, 069123, manikir…" autocomplete="off">
+            </div>
+            <div class="chip-row">
+              <button type="button" class="chip" data-bookings-range="upcoming">Nadolazeći</button>
+              <button type="button" class="chip" data-bookings-range="today">Danas</button>
+              <button type="button" class="chip" data-bookings-range="week">7 dana</button>
+              <button type="button" class="chip" data-bookings-range="month">30 dana</button>
+              <button type="button" class="chip" data-bookings-range="past">Prošli (30d)</button>
+            </div>
+            <div id="bookings-stats" class="muted" style="margin-top:0.5rem;font-size:0.85rem;"></div>
+            <div id="bookings-list" class="stack" style="margin-top:0.75rem;"></div>
+          </section>
+        </section>
+
         <!-- ============== POMOĆ ============== -->
         <section id="screen-help" class="admin-screen">
           <h2>Pomoć i uputstva</h2>
@@ -685,6 +724,11 @@
         <button type="button" class="bottom-nav__btn" data-screen="schedule">
           <span class="bottom-nav__icon">📅</span>
           <span>Raspored</span>
+        </button>
+        <button type="button" class="bottom-nav__btn" data-screen="bookings">
+          <span class="bottom-nav__icon">📋</span>
+          <span>Termini</span>
+          <span class="bottom-nav__badge" id="bookings-badge" hidden></span>
         </button>
         <button type="button" class="bottom-nav__btn" data-screen="inquiries">
           <span class="bottom-nav__icon">💬</span>

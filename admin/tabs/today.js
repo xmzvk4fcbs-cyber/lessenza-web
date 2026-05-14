@@ -152,6 +152,7 @@ document.querySelectorAll("[data-quick]").forEach((btn) => {
     const t = todayKey();
     const quick = btn.dataset.quick;
     if (quick === "today")    { fromInput.value = t; toInput.value = t; dayInput.value = t; loadDayNote(t); }
+    else if (quick === "yesterday") { const d = plusDays(t, -1); fromInput.value = d; toInput.value = d; dayInput.value = d; loadDayNote(d); }
     else if (quick === "tomorrow") { const d = plusDays(t, 1); fromInput.value = d; toInput.value = d; dayInput.value = d; loadDayNote(d); }
     else if (quick === "week")     { fromInput.value = t; toInput.value = plusDays(t, 6); dayInput.value = ""; if (noteWrap) noteWrap.hidden = true; }
     else if (quick === "next14")   { fromInput.value = t; toInput.value = plusDays(t, 14); dayInput.value = ""; if (noteWrap) noteWrap.hidden = true; }

@@ -165,11 +165,40 @@ function buildCalendarClientFromAuth(
  * that can await — book.ts, slots.ts, admin-day-view, etc.
  */
 export async function createCalendarClientAsync(opts?: { saB64?: string; calendarId?: string }): Promise<CalendarClient> {
-  const { getStoredTokens, getAuthenticatedClient } = await import("./google-auth");
+  const { getStoredTokens, getAuthenticatedClient, areTokensDead, markTokensDead, isGoogleAuthDead } = await import("./google-auth");
+  // If we previously detected a dead refresh_token, skip OAuth path entirely
+  // so we don't spam Google with doomed refresh requests. UI prompts owner to reconnect.
+  const tokensDead = await areTokensDead();
   const tokens = await getStoredTokens();
-  if (tokens && tokens.email) {
-    const auth = await getAuthenticatedClient();
-    return buildCalendarClientFromAuth({ type: "oauth", client: auth }, "primary");
+  if (tokens && tokens.email && !tokensDead) {
+    try {
+      const auth = await getAuthenticatedClient();
+      const cal = buildCalendarClientFromAuth({ type: "oauth", client: auth }, "primary");
+      // Wrap listEvents so a runtime invalid_grant gets converted into our
+      // marker — UI can then prompt reconnection without crashing.
+      const wrap = <T>(fn: () => Promise<T>): Promise<T> =>
+        fn().catch(async (e) => {
+          if (isGoogleAuthDead(e)) {
+            await markTokensDead();
+            throw new Error("google-auth-dead");
+          }
+          throw e;
+        });
+      return {
+        listEvents: (q) => wrap(() => cal.listEvents(q)),
+        insertEvent: (e) => wrap(() => cal.insertEvent(e)),
+        deleteEvent: (id) => wrap(() => cal.deleteEvent(id)),
+        patchEvent: (id, e) => wrap(() => cal.patchEvent(id, e)),
+        getEvent: cal.getEvent ? (id) => wrap(() => cal.getEvent!(id)) : undefined,
+      };
+    } catch (e) {
+      if (isGoogleAuthDead(e)) {
+        await markTokensDead();
+        // Fall through to in-memory so basic admin pages don't 500.
+      } else {
+        throw e;
+      }
+    }
   }
   const saB64 = opts?.saB64 ?? process.env.GOOGLE_SERVICE_ACCOUNT_JSON ?? "";
   const calendarId = opts?.calendarId ?? process.env.GOOGLE_CALENDAR_ID ?? "";

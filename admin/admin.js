@@ -20,8 +20,33 @@ function safeJson(s) {
 
 async function must(path, opts = {}) {
   const r = await api(path, opts);
+  // Hoist Google-disconnected detection up here so every screen that uses
+  // must() automatically surfaces the global banner. Don't throw — caller
+  // still gets a usable response shape, just empty.
+  if (r.status === 503 && r.data?.error === "google-disconnected") {
+    showGoogleDeadBanner();
+    return r.data;
+  }
   if (!r.ok) throw new Error(r.data?.message || `HTTP ${r.status}`);
   return r.data;
+}
+
+let _googleBannerShown = false;
+function showGoogleDeadBanner() {
+  if (_googleBannerShown) return;
+  _googleBannerShown = true;
+  const el = document.getElementById("admin-banner");
+  if (!el) return;
+  el.hidden = false;
+  el.innerHTML = `
+    <div class="admin-banner__msg">
+      <strong>⚠ Google Calendar veza je istekla.</strong>
+      Termini se i dalje vode u aplikaciji, ali se NE sinhronizuju sa vašim Google kalendarom dok se ponovo ne povežete.
+      <a href="#settings" id="banner-reconnect">Poveži ponovo</a>
+    </div>
+    <button class="admin-banner__close" type="button" aria-label="Sakrij">×</button>
+  `;
+  el.querySelector(".admin-banner__close")?.addEventListener("click", () => { el.hidden = true; });
 }
 
 // ---------- Toast ----------
@@ -303,7 +328,7 @@ export function registerTab(name, renderFn) {
 }
 
 // Screens (top-level tabs shown in the bottom nav).
-const screens = ["dashboard", "schedule", "inquiries", "clients", "settings", "help"];
+const screens = ["dashboard", "schedule", "bookings", "inquiries", "clients", "settings", "help"];
 const screenEls = Object.fromEntries(screens.map((s) => [s, document.getElementById(`screen-${s}`)]));
 const navBtns = Array.from(document.querySelectorAll(".bottom-nav__btn"));
 
@@ -311,6 +336,7 @@ const navBtns = Array.from(document.querySelectorAll(".bottom-nav__btn"));
 const screenTabs = {
   dashboard: ["dashboard"],
   schedule: ["today"],
+  bookings: ["bookings-inbox"],
   inquiries: ["inquiries"],
   clients: ["clients"],
   settings: ["hours", "services", "blocks", "pairs", "settings", "google", "gallery-items", "gallery-results", "reviews"],
@@ -383,6 +409,7 @@ async function initAdmin() {
   await import("./tabs/reviews.js");
   await import("./tabs/faq.js");
   await import("./tabs/clients.js");
+  await import("./tabs/bookings-inbox.js");
   await import("./tabs/help.js");
 
   const name = location.hash.replace(/^#/, "") || "dashboard";

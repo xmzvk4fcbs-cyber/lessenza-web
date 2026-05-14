@@ -19,6 +19,9 @@ export interface Booking {
   email?: string;
   note?: string;
   source: "web" | "admin-manual" | "admin-swap" | "inquiry";
+  /** When the calendar event was first created (gcal's `created` field).
+   *  Populated by eventToBooking when available — used to show "new bookings". */
+  createdAt?: string;
 }
 
 export function bookingToEvent(b: Booking): calendar_v3.Schema$Event {
@@ -100,6 +103,7 @@ export function eventToBooking(e: calendar_v3.Schema$Event, services: Service[])
     email,
     note,
     source: (priv.source ?? desc.source ?? "web") as Booking["source"],
+    createdAt: e.created ?? undefined,
   };
 }
 
