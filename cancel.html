@@ -130,8 +130,15 @@
        manually in admin — phone number alone is not an authenticator. -->
   <div id="request-form" hidden>
     <div class="cancel-card">
-      <h1>Zahtjev za otkazivanje</h1>
-      <p style="margin:0 0 16px;color:#7A6F62;font-size:0.92rem;line-height:1.5;">Pošaljite zahtjev, salon će ga ručno potvrditi. Pokušajte da pošaljete najmanje 24h prije termina.</p>
+      <h1>Zahtjev salonu</h1>
+      <p style="margin:0 0 16px;color:#7A6F62;font-size:0.92rem;line-height:1.5;">Salon će ručno potvrditi vaš zahtjev. Pokušajte da pošaljete najmanje 24h prije termina.</p>
+      <div class="field">
+        <label for="req-kind">Šta želite?</label>
+        <select id="req-kind">
+          <option value="cancel">Otkazati termin</option>
+          <option value="reschedule">Pomjeriti termin na drugo vrijeme</option>
+        </select>
+      </div>
       <div class="field">
         <label for="req-name">Ime i prezime</label>
         <input id="req-name" type="text" required maxlength="120" autocomplete="name">
@@ -145,7 +152,7 @@
         <input id="req-date" type="date" required>
       </div>
       <div class="field">
-        <label for="req-reason">Razlog (opciono)</label>
+        <label for="req-reason"><span id="req-reason-label">Razlog (opciono)</span></label>
         <textarea id="req-reason" maxlength="500" rows="2" placeholder="npr. bolest, hitan posao…"></textarea>
       </div>
       <input type="text" id="req-hp" name="website" tabindex="-1" autocomplete="off" aria-hidden="true" style="position:absolute;left:-10000px;width:1px;height:1px;opacity:0;">
@@ -192,10 +199,26 @@
     $("req-date").value = `${yyyy}-${mm}-${dd}`;
     show("request-form");
   });
+  // Adapt the reason label to the chosen kind — reschedulers need to write
+  // a preferred new time, cancellers can just say "bolest".
+  $("req-kind")?.addEventListener("change", () => {
+    const k = $("req-kind").value;
+    const lbl = $("req-reason-label");
+    const ta = $("req-reason");
+    if (k === "reschedule") {
+      if (lbl) lbl.textContent = "Kad bi vam odgovaralo? (poželjno vrijeme)";
+      if (ta) ta.placeholder = "npr. petak popodne, ili 17.05 u 14h";
+    } else {
+      if (lbl) lbl.textContent = "Razlog (opciono)";
+      if (ta) ta.placeholder = "npr. bolest, hitan posao…";
+    }
+  });
+
   $("req-submit")?.addEventListener("click", async () => {
     const name = ($("req-name").value || "").trim();
     const phone = ($("req-phone").value || "").trim();
     const desiredDateISO = ($("req-date").value || "").trim();
+    const kind = $("req-kind")?.value === "reschedule" ? "reschedule" : "cancel";
     const reason = ($("req-reason").value || "").trim();
     const hp = ($("req-hp").value || "");
     const err = $("req-error");
@@ -211,7 +234,7 @@
       const r = await fetch("/api/public-cancel-request", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ name, phone, desiredDateISO, reason, website: hp }),
+        body: JSON.stringify({ name, phone, desiredDateISO, kind, reason, website: hp }),
       });
       const body = await r.json().catch(() => ({}));
       if (r.ok) return show("request-done");

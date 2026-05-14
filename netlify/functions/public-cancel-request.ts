@@ -17,6 +17,7 @@ interface Req {
   phone: string;
   name: string;
   desiredDateISO: string;
+  kind?: "cancel" | "reschedule";
   reason?: string;
 }
 
@@ -58,6 +59,7 @@ export const handler: Handler = async (event) => {
   if (!phone) return badRequest("bad-phone", "Phone number is invalid");
 
   const reason = typeof body.reason === "string" ? body.reason.trim().slice(0, 500) : "";
+  const kind = body.kind === "reschedule" ? "reschedule" : "cancel";
 
   const req: CancelRequest = {
     id: randomUUID(),
@@ -65,6 +67,7 @@ export const handler: Handler = async (event) => {
     phone,
     name: body.name.trim().slice(0, 120),
     desiredDateISO: body.desiredDateISO,
+    kind,
     reason: reason || undefined,
     status: "pending",
   };
@@ -80,8 +83,9 @@ export const handler: Handler = async (event) => {
         process.env.VAPID_PRIVATE_KEY,
       );
       const subs = await getPushSubscriptions();
+      const title = kind === "reschedule" ? "Zahtjev za pomjeranje" : "Zahtjev za otkazivanje";
       const payload = JSON.stringify({
-        title: "Zahtjev za otkazivanje",
+        title,
         body: `${req.name} (${req.phone}) za ${req.desiredDateISO}${reason ? ` — ${reason}` : ""}`,
         url: "/admin/?screen=inquiries#cancel-requests",
       });

@@ -70,25 +70,29 @@ async function renderCancelRequests() {
     host.innerHTML = `
       <h3 style="font-family:'Cormorant Garamond',Georgia,serif;font-weight:500;color:#8B3A3E;font-size:1.2rem;margin:0 0 0.6rem;display:flex;align-items:center;gap:8px;">
         <span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#8B3A3E;"></span>
-        Zahtjevi za otkazivanje (${pending.length})
+        Zahtjevi od klijenata (${pending.length})
       </h3>
       <div class="stack" id="cancel-req-list">
-        ${pending.map((r) => `
-          <article class="stack-card" data-id="${escapeHtml(r.id)}" data-phone="${escapeHtml(r.phone)}" data-name="${escapeHtml(r.name)}" data-date="${escapeHtml(r.desiredDateISO)}">
+        ${pending.map((r) => {
+          const isReschedule = r.kind === "reschedule";
+          const kindLabel = isReschedule ? "🔄 Želi pomjeriti termin" : "✕ Želi otkazati termin";
+          const actionLabel = isReschedule ? "Pomjeri termin" : "Otkaži termin";
+          return `
+          <article class="stack-card" data-id="${escapeHtml(r.id)}" data-phone="${escapeHtml(r.phone)}" data-name="${escapeHtml(r.name)}" data-date="${escapeHtml(r.desiredDateISO)}" data-kind="${escapeHtml(r.kind || "cancel")}">
             <div class="stack-card__head">
               <div>
                 <div class="stack-card__title">${escapeHtml(r.name)} — ${escapeHtml(r.phone)}</div>
-                <div class="stack-card__meta">Želi otkazati termin za <strong>${escapeHtml(r.desiredDateISO)}</strong></div>
+                <div class="stack-card__meta"><strong>${kindLabel}</strong> za <strong>${escapeHtml(r.desiredDateISO)}</strong></div>
                 ${r.reason ? `<div class="stack-card__meta">📝 ${escapeHtml(r.reason)}</div>` : ""}
               </div>
             </div>
             <div class="stack-card__actions">
               <a class="btn btn-ghost" href="tel:${escapeHtml(r.phone)}">Pozovi</a>
-              <button class="btn btn-primary" type="button" data-approve>Otkaži termin</button>
+              <button class="btn btn-primary" type="button" data-approve>${actionLabel}</button>
               <button class="btn btn-ghost" type="button" data-decline>Odbij</button>
             </div>
           </article>
-        `).join("")}
+        `;}).join("")}
       </div>
     `;
     host.querySelectorAll("[data-approve]").forEach((b) => b.addEventListener("click", () => resolveRequest(b.closest(".stack-card"), "approved")));
@@ -103,13 +107,17 @@ async function resolveRequest(card, status) {
   const name = card.dataset.name;
   const phone = card.dataset.phone;
   const date = card.dataset.date;
+  const kind = card.dataset.kind || "cancel";
   if (status === "approved") {
-    // Walk the owner through finding and cancelling the right calendar event.
-    // We don't auto-delete because the phone might match multiple bookings or
-    // none — the owner is the verifier.
-    openModal("Otkaži termin za klijentkinju", `
-      <p>Klijentkinja <strong>${escapeHtml(name)}</strong> (${escapeHtml(phone)}) traži otkazivanje za <strong>${escapeHtml(date)}</strong>.</p>
-      <p class="muted" style="font-size:0.88rem;line-height:1.5;">Otvorite raspored za taj datum, pronađite termin i otkažite ga ručno (kartica → Otkaži termin). Kad je gotovo, kliknite "Označi kao obavljeno".</p>
+    const isReschedule = kind === "reschedule";
+    const title = isReschedule ? "Pomjeri termin za klijentkinju" : "Otkaži termin za klijentkinju";
+    const action = isReschedule ? "pomjeranje" : "otkazivanje";
+    const instructions = isReschedule
+      ? `Otvorite raspored za taj datum, pronađite termin i pomjerite ga ručno (kartica → Pomjeri). Razgovarajte sa klijentkinjom o novom vremenu (pozovite ili WhatsApp). Kad je gotovo, kliknite "Označi kao obavljeno".`
+      : `Otvorite raspored za taj datum, pronađite termin i otkažite ga ručno (kartica → Otkaži termin). Kad je gotovo, kliknite "Označi kao obavljeno".`;
+    openModal(title, `
+      <p>Klijentkinja <strong>${escapeHtml(name)}</strong> (${escapeHtml(phone)}) traži ${action} za <strong>${escapeHtml(date)}</strong>.</p>
+      <p class="muted" style="font-size:0.88rem;line-height:1.5;">${instructions}</p>
       <div class="stack-card__actions" style="margin-top:0.75rem;">
         <a class="btn btn-ghost" href="/admin/?view=day&anchor=${encodeURIComponent(date)}#schedule">Idi na raspored</a>
         <button class="btn btn-primary" type="button" id="cr-done">Označi kao obavljeno</button>

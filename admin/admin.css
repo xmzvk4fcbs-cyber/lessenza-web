@@ -3734,6 +3734,68 @@ html { scroll-behavior: smooth; scroll-padding-top: 88px; -webkit-font-smoothing
 }
 .es-summary:empty { display: none; }
 
+/* === Help section accordion === */
+.help-section {
+  background: #fff;
+  border: 1px solid rgba(217, 192, 154, 0.5);
+  border-radius: 12px;
+  margin-bottom: 10px;
+  overflow: hidden;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+.help-section[open] {
+  border-color: var(--gold, #C9A961);
+  box-shadow: 0 4px 12px rgba(201, 169, 97, 0.12);
+}
+.help-section__head {
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 16px;
+  font-family: 'Cormorant Garamond', Georgia, serif;
+  font-weight: 500;
+  font-size: 1.08rem;
+  color: var(--sage, #6B6F4F);
+  list-style: none;
+  min-height: 52px;
+}
+.help-section__head::-webkit-details-marker { display: none; }
+.help-section__icon {
+  flex: 0 0 28px;
+  font-size: 1.25rem;
+  text-align: center;
+}
+.help-section__title { flex: 1; min-width: 0; }
+.help-section__chev {
+  flex: 0 0 auto;
+  color: var(--gold-dark, #8B6F2B);
+  font-size: 0.9rem;
+  transition: transform 0.2s;
+}
+.help-section[open] .help-section__chev { transform: rotate(180deg); }
+.help-section__body {
+  padding: 0 18px 18px;
+  color: var(--text, #4A4238);
+  font-size: 0.95rem;
+  line-height: 1.6;
+}
+.help-section__body h4 {
+  font-family: 'Cormorant Garamond', Georgia, serif;
+  font-weight: 600;
+  color: var(--sage, #6B6F4F);
+  margin: 16px 0 8px;
+  font-size: 1.05rem;
+}
+.help-section__body p { margin: 0 0 10px; }
+.help-section__body ul, .help-section__body ol {
+  margin: 8px 0 12px;
+  padding-left: 22px;
+}
+.help-section__body li { margin-bottom: 6px; }
+.help-section__body strong { color: var(--text, #4A4238); font-weight: 600; }
+.help-section__body a { color: var(--gold-dark, #8B6F2B); text-decoration: underline; }
+
 /* === Audit log items === */
 .audit-item {
   display: flex;

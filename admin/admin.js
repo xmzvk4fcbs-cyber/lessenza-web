@@ -282,6 +282,11 @@ document.getElementById("logout-btn").addEventListener("click", async () => {
   location.reload();
 });
 
+// "?" button — open the help screen.
+document.getElementById("help-btn")?.addEventListener("click", () => {
+  location.hash = "#help";
+});
+
 // ---------- Screen + tab routing ----------
 
 // Underlying tabs (kept so tabs/*.js can register renderers by these names).
@@ -298,7 +303,7 @@ export function registerTab(name, renderFn) {
 }
 
 // Screens (top-level tabs shown in the bottom nav).
-const screens = ["dashboard", "schedule", "inquiries", "clients", "settings"];
+const screens = ["dashboard", "schedule", "inquiries", "clients", "settings", "help"];
 const screenEls = Object.fromEntries(screens.map((s) => [s, document.getElementById(`screen-${s}`)]));
 const navBtns = Array.from(document.querySelectorAll(".bottom-nav__btn"));
 
@@ -309,6 +314,7 @@ const screenTabs = {
   inquiries: ["inquiries"],
   clients: ["clients"],
   settings: ["hours", "services", "blocks", "pairs", "settings", "google", "gallery-items", "gallery-results", "reviews"],
+  help: ["help"],
 };
 
 async function activateScreen(name) {
@@ -377,6 +383,7 @@ async function initAdmin() {
   await import("./tabs/reviews.js");
   await import("./tabs/faq.js");
   await import("./tabs/clients.js");
+  await import("./tabs/help.js");
 
   const name = location.hash.replace(/^#/, "") || "dashboard";
   await activateScreen(name);

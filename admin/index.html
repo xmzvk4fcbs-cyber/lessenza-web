@@ -63,7 +63,10 @@
 
       <header class="admin-topbar">
         <img src="/img/logo-wordmark.png" alt="L'Essenza" class="admin-topbar__logo">
-        <button id="logout-btn" class="btn btn-ghost" type="button" style="min-height:40px;padding:0 0.9rem;font-size:0.85rem;">Odjava</button>
+        <div style="display:flex;gap:8px;align-items:center;">
+          <button id="help-btn" class="btn btn-ghost" type="button" aria-label="Pomoć i uputstva" title="Pomoć i uputstva" style="min-height:40px;width:40px;padding:0;font-size:1.1rem;font-weight:600;">?</button>
+          <button id="logout-btn" class="btn btn-ghost" type="button" style="min-height:40px;padding:0 0.9rem;font-size:0.85rem;">Odjava</button>
+        </div>
       </header>
 
       <div class="admin-main">
@@ -656,6 +659,13 @@
             <div id="cli-stats" class="muted" style="margin-top:0.25rem;font-size:0.85rem;"></div>
             <div id="cli-list" class="stack" style="margin-top:0.75rem;"></div>
           </section>
+        </section>
+
+        <!-- ============== POMOĆ ============== -->
+        <section id="screen-help" class="admin-screen">
+          <h2>Pomoć i uputstva</h2>
+          <p class="muted" style="margin:0 0 1rem;">Kratak vodič kroz sve funkcionalnosti aplikacije.</p>
+          <div id="help-content"></div>
         </section>
 
       </div>
