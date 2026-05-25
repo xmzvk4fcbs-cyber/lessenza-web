@@ -1,6 +1,7 @@
 // Pure suggestion detectors — no I/O. The caller fetches data and passes it in.
 
 import type { Inquiry, WorkingHours } from "./schemas";
+import { formatSalon } from "./time";
 
 const DOW_KEYS = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"] as const;
 const DOW_LABEL_SR = ["Ponedjeljak", "Utorak", "Srijeda", "Četvrtak", "Petak", "Subota", "Nedjelja"];
@@ -92,7 +93,8 @@ function dowLabel(d: Date): string {
 }
 
 function hhmm(d: Date): string {
-  return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
+  // Format in salon TZ — getHours() on the UTC server renders 2h early.
+  return formatSalon(d, "HH:mm");
 }
 
 function humanDateLabel(dateISO: string): string {

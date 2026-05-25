@@ -8,7 +8,11 @@
   <link rel="stylesheet" href="admin.css?v=20260423-multi-service">
   <link rel="icon" href="/img/favicon-32.png" type="image/png" sizes="32x32">
   <link rel="apple-touch-icon" sizes="180x180" href="/img/apple-touch-icon.png">
-  <link rel="manifest" href="/manifest.webmanifest">
+  <link rel="manifest" href="/admin/manifest.webmanifest">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="L'Essenza Admin">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
 </head>
 <body class="admin-body">
 
@@ -423,7 +427,21 @@
                   <button class="btn btn-primary" type="submit">Promijeni lozinku</button>
                 </form>
                 <div id="totp-host" style="margin-top:1rem;"></div>
-                <div id="push-host" style="margin-top:1rem;"></div>
+              </div>
+            </details>
+
+            <!-- Notifikacije (web push) -->
+            <details class="acc" data-acc="notifications">
+              <summary>
+                <span style="display:flex;align-items:center;gap:10px;">
+                  <span class="acc__icon">🔔</span>
+                  <span>Notifikacije</span>
+                </span>
+                <span class="acc__chev">▸</span>
+              </summary>
+              <div class="acc__body">
+                <p class="muted" style="font-size:0.86rem;">Dobijaj obavještenje na ovaj uređaj čim klijentkinja zakaže, otkaže ili pošalje upit. Uključi na svakom uređaju (telefon, tablet) posebno.</p>
+                <div id="push-host" style="margin-top:0.75rem;"></div>
               </div>
             </details>
 

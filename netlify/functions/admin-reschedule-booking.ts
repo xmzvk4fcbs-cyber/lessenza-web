@@ -7,7 +7,7 @@ import { getServices, getSettings, getParallelPairs, appendAudit } from "../lib/
 import { eventToBooking, type Booking } from "../lib/calendar-domain";
 import { bookingRescheduledToClient } from "../lib/email-templates";
 import { TZ, fromTZ, dayKeyInTZ } from "../lib/time";
-import { waLink } from "../lib/phone";
+import { waLink, viberShareLink } from "../lib/phone";
 import { formatSalon } from "../lib/time";
 import { withTwoDayLock } from "../lib/booking-lock";
 
@@ -146,7 +146,7 @@ const inner: Handler = async (event) => {
   const msg = `Draga ${updated.name}, moram pomjeriti naš termin za ${svcLabel} na ${newLine}. Molim Vas da mi javite da li Vam to odgovara, ili ćemo naći drugi termin. Izvinjavam se na neprijatnosti ✿ L'Essenza`;
   if (updated.phoneE164) {
     whatsappLink = waLink(updated.phoneE164, msg);
-    viberLink = `viber://chat?number=${encodeURIComponent(updated.phoneE164)}`;
+    viberLink = viberShareLink(msg);
   }
   try {
     await appendAudit({

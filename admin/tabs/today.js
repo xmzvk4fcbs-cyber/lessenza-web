@@ -641,8 +641,10 @@ async function onAction(e) {
     if (!phone) {
       openMessageModal("Broj nije unešen", msg);
     } else {
-      window.open(`viber://chat?number=${encodeURIComponent(phone)}`, "_blank");
-      // Also give option to copy message (Viber doesn't support pre-filled text)
+      // viber://chat?number= fails silently on iOS unless the phone is already
+      // a Viber contact. viber://forward?text= always opens Viber with the
+      // message prefilled — owner picks the recipient inside Viber.
+      window.location.href = `viber://forward?text=${encodeURIComponent(msg)}`;
       openCopyMessageToast(msg);
     }
     if (e.preventDefault) e.preventDefault();
@@ -745,7 +747,7 @@ async function onAction(e) {
           const when = fmtDateTime(start);
           const msg = `Draga ${name}, niste se pojavili na terminu (${service}, ${when}). Molim Vas da mi javite kad budete htjeli novi termin. Srdačno, L'Essenza ✿`;
           const wa = `https://wa.me/${phone.replace(/[^\d]/g, "")}?text=${encodeURIComponent(msg)}`;
-          const viber = `viber://chat?number=${encodeURIComponent(phone)}`;
+          const viber = `viber://forward?text=${encodeURIComponent(msg)}`;
           showMessageActions("Pošalji poruku klijentkinji (opciono)", msg, wa, viber);
         }
         await renderList();
@@ -1671,7 +1673,7 @@ function localToISO(dateKey, hhmm) {
 
 function showMessageActions(title, message, whatsappLink, viberLink) {
   const waBtn = whatsappLink ? `<a class="btn btn-primary" href="${whatsappLink}" target="_blank" rel="noopener">📱 Pošalji WhatsApp</a>` : "";
-  const viBtn = viberLink ? `<a class="btn btn-ghost" href="${viberLink}" target="_blank" rel="noopener">💜 Otvori Viber</a>` : "";
+  const viBtn = viberLink ? `<a class="btn btn-ghost" href="${viberLink}">💜 Otvori Viber</a>` : "";
   openModal(title, `
     <p class="muted" style="font-size:0.88rem;">Poruka za klijentkinju:</p>
     <textarea id="msg-copy" readonly rows="5" style="width:100%;">${escapeHtml(message)}</textarea>

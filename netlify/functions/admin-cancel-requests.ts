@@ -14,7 +14,7 @@ import { createCalendarClientAsync, type CalendarClient } from "../lib/calendar"
 import { eventToBooking } from "../lib/calendar-domain";
 import { getMailerAsync } from "../lib/mailer";
 import { bookingCancelledToClient } from "../lib/email-templates";
-import { waLink } from "../lib/phone";
+import { waLink, viberShareLink } from "../lib/phone";
 import { fromTZ, formatSalon } from "../lib/time";
 import { withDayLock } from "../lib/booking-lock";
 
@@ -144,7 +144,7 @@ const inner: Handler = async (event) => {
           const cancelLabel = booking.combinedServicesLabel ?? booking.serviceName;
           const msg = `Draga ${booking.name}, potvrđujemo da je vaš termin za ${cancelLabel}, ${dateLine}${reasonLine} otkazan na vaš zahtjev. Javite se kad budete htjeli novi. Hvala ✿ L'Essenza`;
           const wa = booking.phoneE164 ? waLink(booking.phoneE164, msg) : null;
-          const viber = booking.phoneE164 ? `viber://chat?number=${encodeURIComponent(booking.phoneE164)}` : null;
+          const viber = booking.phoneE164 ? viberShareLink(msg) : null;
           autoResult = {
             cancelled: true,
             whatsappLink: wa,

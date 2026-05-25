@@ -2,6 +2,7 @@
 // and passes them in.
 
 import type { Service } from "./schemas";
+import { formatSalon } from "./time";
 
 export interface StatBooking {
   startISO: string;
@@ -120,8 +121,9 @@ export function summarizeMonth(
   // Busiest hour-of-day.
   const hourCounts = new Array<number>(24).fill(0);
   for (const b of bookingsInMonth) {
-    const d = new Date(b.startISO);
-    hourCounts[d.getHours()]!++;
+    // Salon-TZ hour — getHours() on the UTC server buckets 2h early.
+    const hour = Number(formatSalon(new Date(b.startISO), "H"));
+    hourCounts[hour]!++;
   }
   let busiestHour: MonthlyStats["busiestHour"] = null;
   let bestHourCount = 0;

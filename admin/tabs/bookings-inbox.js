@@ -130,7 +130,7 @@ function renderBookingCard(a) {
  *  local so this tab doesn't cross-import. */
 function showMessageActions(title, message, whatsappLink, viberLink) {
   const waBtn = whatsappLink ? `<a class="btn btn-primary" href="${whatsappLink}" target="_blank" rel="noopener">📱 WhatsApp</a>` : "";
-  const viBtn = viberLink ? `<a class="btn btn-ghost" href="${viberLink}" target="_blank" rel="noopener">💜 Viber</a>` : "";
+  const viBtn = viberLink ? `<a class="btn btn-ghost" href="${viberLink}">💜 Viber</a>` : "";
   openModal(title, `
     <p class="muted" style="font-size:0.88rem;">Poruka za klijentkinju:</p>
     <textarea id="bk-msg-copy" readonly rows="5" style="width:100%;">${escapeHtml(message)}</textarea>

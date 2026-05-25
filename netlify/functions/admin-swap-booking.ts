@@ -7,7 +7,7 @@ import { getServices, getSettings, appendAudit } from "../lib/config";
 import { eventToBooking, bookingToEvent, type Booking } from "../lib/calendar-domain";
 import { getMailerAsync, type Mailer } from "../lib/mailer";
 import { bookingCancelledToClient, bookingConfirmedToClient } from "../lib/email-templates";
-import { normalizePhone, waLink } from "../lib/phone";
+import { normalizePhone, waLink, viberShareLink } from "../lib/phone";
 import { formatSalon } from "../lib/time";
 
 interface Deps {
@@ -160,7 +160,7 @@ const inner: Handler = async (event) => {
     oldMessage = `Draga ${oldBooking.name}, nažalost moram otkazati Vaš termin za ${oldLabel}, ${dateLine}${reasonLine}. Izvinjavam se — javite se da ugovorimo novi. Hvala na razumijevanju ✿ L'Essenza`;
     if (oldBooking.phoneE164) {
       oldWhatsappLink = waLink(oldBooking.phoneE164, oldMessage);
-      oldViberLink = `viber://chat?number=${encodeURIComponent(oldBooking.phoneE164)}`;
+      oldViberLink = viberShareLink(oldMessage);
     }
   }
 

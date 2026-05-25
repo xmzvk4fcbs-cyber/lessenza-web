@@ -7,7 +7,7 @@ import { getServices, getSettings, appendAudit } from "../lib/config";
 import { bookingToEvent, type Booking } from "../lib/calendar-domain";
 import { normalizePhone } from "../lib/phone";
 import { withDayLock } from "../lib/booking-lock";
-import { dayKeyInTZ, fromTZ } from "../lib/time";
+import { dayKeyInTZ, fromTZ, formatSalon } from "../lib/time";
 
 let factory: (() => CalendarClient) | null = null;
 export function __setCalendarFactoryForTests(f: (() => CalendarClient) | null): void {
@@ -143,7 +143,10 @@ const inner: Handler = async (event) => {
     return serverError(`Calendar insert failed: ${lockResult.message}`);
   }
   booking.calendarEventId = lockResult.eventId;
-  const whenLabel = new Date(booking.startISO).toLocaleString("sr-Latn", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" });
+  // Format in the salon timezone (Europe/Podgorica), not the server's TZ —
+  // toLocaleString without a timeZone renders UTC on the server (showed 15:00
+  // instead of 17:00).
+  const whenLabel = formatSalon(new Date(booking.startISO), "dd.MM.yyyy. HH:mm");
   const auditLabel = booking.combinedServicesLabel ?? booking.serviceName;
   // Best-effort audit — gcal already has the event, don't fail the request if
   // the activity log can't be written.

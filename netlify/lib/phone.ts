@@ -41,3 +41,11 @@ export function waLink(e164: string, text: string): string {
   const digits = digitsOnly(e164);
   return `https://wa.me/${digits}?text=${encodeURIComponent(text)}`;
 }
+
+export function viberShareLink(message: string): string {
+  // Viber's `chat?number=PHONE` deep link fails silently on iOS unless the
+  // phone is already in the user's Viber contacts. `forward?text=MSG` always
+  // opens Viber with the message prefilled — owner picks the recipient
+  // inside Viber's contact picker. Matches WhatsApp's "one tap, prefilled" UX.
+  return `viber://forward?text=${encodeURIComponent(message || "")}`;
+}

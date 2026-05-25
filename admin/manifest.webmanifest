@@ -1,0 +1,17 @@
+{
+  "name": "L'Essenza Admin",
+  "short_name": "Admin",
+  "description": "Admin panel za L'Essenza Beauty Salon.",
+  "start_url": "/admin/",
+  "scope": "/admin/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "theme_color": "#F9F2E5",
+  "background_color": "#FDF9F0",
+  "lang": "sr-Latn",
+  "icons": [
+    { "src": "/img/icon-192.png", "type": "image/png", "sizes": "192x192", "purpose": "any" },
+    { "src": "/img/icon-512.png", "type": "image/png", "sizes": "512x512", "purpose": "any" },
+    { "src": "/img/icon-512.png", "type": "image/png", "sizes": "512x512", "purpose": "maskable" }
+  ]
+}
