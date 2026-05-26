@@ -319,6 +319,40 @@ export function inquiryCreatedToOwner(i: InquiryForEmail, ctx: OwnerTemplateCtx)
   };
 }
 
+export function cancelRequestToOwner(
+  r: { name: string; phone: string; desiredDateISO: string; kind: "cancel" | "reschedule"; reason?: string },
+  ctx: OwnerTemplateCtx
+): EmailMessage {
+  const adminUrl = `${ctx.siteUrl.replace(/\/$/, "")}/admin/?screen=inquiries#cancel-requests`;
+  const kindLabel = r.kind === "reschedule" ? "pomjeranje" : "otkazivanje";
+  const text = [
+    `Klijent traži ${kindLabel} termina:`,
+    ``,
+    `Klijent: ${r.name}`,
+    `Telefon: ${r.phone}`,
+    `Datum termina: ${r.desiredDateISO}`,
+    `Razlog: ${r.reason ?? "—"}`,
+    ``,
+    `Potvrdi u adminu: ${adminUrl}`,
+  ].join("\n");
+  const inner = [
+    paragraph(`Klijent je sa sajta poslao zahtjev za <b>${kindLabel}</b> termina. Potvrdite ga u adminu.`),
+    detailsTable([
+      ["Klijent", r.name],
+      ["Telefon", r.phone],
+      ["Datum termina", r.desiredDateISO],
+      ["Razlog", r.reason ?? "—"],
+    ]),
+    btnLink(adminUrl, "Otvori u adminu"),
+  ].join("\n");
+  return {
+    to: ctx.ownerEmail,
+    subject: `Zahtjev za ${kindLabel} — ${r.name} (${r.desiredDateISO})`,
+    text,
+    html: renderShell({ heading: `Zahtjev za ${kindLabel}`, preheader: `${r.name} · ${r.desiredDateISO}`, inner }),
+  };
+}
+
 export function bookingCancelledToClient(
   b: Booking,
   reason: string,

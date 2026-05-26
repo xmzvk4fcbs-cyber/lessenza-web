@@ -2,6 +2,8 @@ import { randomUUID } from "node:crypto";
 import type { Handler } from "@netlify/functions";
 import { json, badRequest, methodNotAllowed, parseJson } from "../lib/http";
 import { addCancelRequest, getSettings, getPushSubscriptions, removePushSubscription } from "../lib/config";
+import { getMailerAsync } from "../lib/mailer";
+import { cancelRequestToOwner } from "../lib/email-templates";
 import { normalizePhone } from "../lib/phone";
 import { isHoneypotTriggered } from "../lib/honeypot";
 import { rateLimitAllow, clientIP } from "../lib/rate-limit";
@@ -72,6 +74,19 @@ export const handler: Handler = async (event) => {
     status: "pending",
   };
   await addCancelRequest(req);
+
+  // Email the owner — best-effort (so they're notified even with push off).
+  if (settings.ownerEmail) {
+    try {
+      const mailer = await getMailerAsync();
+      await mailer.send(cancelRequestToOwner(
+        { name: req.name, phone: req.phone, desiredDateISO: req.desiredDateISO, kind, reason: req.reason },
+        { ownerEmail: settings.ownerEmail, siteUrl: process.env.SITE_URL ?? "https://lessenza.me" }
+      ));
+    } catch (e) {
+      console.warn("[cancel-request][email] failed:", (e as Error).message);
+    }
+  }
 
   // Push to owner — best-effort.
   if (process.env.VAPID_PUBLIC_KEY && process.env.VAPID_PRIVATE_KEY) {

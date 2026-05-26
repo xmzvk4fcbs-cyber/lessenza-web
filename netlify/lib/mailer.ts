@@ -238,17 +238,10 @@ export function createGmailOAuthMailer(opts: {
 
 export async function getMailerAsync(settings?: { mailer?: "resend" | "gmail" | "smtp" }): Promise<Mailer> {
   if (process.env.NODE_ENV === "test") return createLogMailer();
-  // Prefer Google OAuth (Gmail) when owner has connected via admin UI.
-  try {
-    const { getStoredTokens, getAuthenticatedClient } = await import("./google-auth");
-    const tokens = await getStoredTokens();
-    if (tokens?.email && (tokens.scope ?? "").includes("gmail.send")) {
-      return createGmailOAuthMailer({
-        getAuth: async () => getAuthenticatedClient() as unknown as import("google-auth-library").OAuth2Client,
-        from: `L'Essenza <${tokens.email}>`,
-      });
-    }
-  } catch { /* fall through */ }
+  // Email ALWAYS goes via the site's own SMTP (e.g. info@lessenza.me). It must
+  // never depend on a per-salon Gmail OAuth token — those expire/revoke and then
+  // silently break every email. The Google connection is used for calendar sync
+  // only; if it dies, confirmations keep arriving from the salon's own address.
   return getMailer(settings);
 }
 
