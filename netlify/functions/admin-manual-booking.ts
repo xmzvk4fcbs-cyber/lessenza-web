@@ -8,6 +8,9 @@ import { bookingToEvent, type Booking } from "../lib/calendar-domain";
 import { normalizePhone } from "../lib/phone";
 import { withDayLock } from "../lib/booking-lock";
 import { dayKeyInTZ, fromTZ, formatSalon } from "../lib/time";
+import { getMailerAsync } from "../lib/mailer";
+import { bookingConfirmedToClient } from "../lib/email-templates";
+import { makeCancelToken } from "../lib/cancel-token";
 
 let factory: (() => CalendarClient) | null = null;
 export function __setCalendarFactoryForTests(f: (() => CalendarClient) | null): void {
@@ -171,7 +174,34 @@ const inner: Handler = async (event) => {
   } catch (e) {
     console.warn("[manual-booking][audit] failed:", (e as Error).message);
   }
-  return json({ ok: true, booking });
+
+  // If the owner entered an email, send the same confirmation a client gets when
+  // booking online (best-effort — never fails the manual booking).
+  let emailSent = false;
+  if (booking.email) {
+    try {
+      let cancelUrl: string | undefined;
+      let rescheduleUrl: string | undefined;
+      if (booking.calendarEventId) {
+        const siteUrl = (process.env.SITE_URL || "https://lessenza.me").replace(/\/$/, "");
+        const expiresAtISO = new Date(new Date(booking.endISO).getTime() + 24 * 60 * 60 * 1000).toISOString();
+        const enc = encodeURIComponent(makeCancelToken(booking.calendarEventId, { expiresAtISO }));
+        cancelUrl = `${siteUrl}/cancel.html?t=${enc}`;
+        rescheduleUrl = `${siteUrl}/reschedule.html?t=${enc}`;
+      }
+      const mailer = await getMailerAsync(settings);
+      await mailer.send(bookingConfirmedToClient(booking, {
+        salonAddress: settings.salonAddress, ownerPhone: settings.ownerPhone,
+        emailGreeting: settings.emailGreeting, emailClosing: settings.emailClosing,
+        emailSignature: settings.emailSignature, cancelUrl, rescheduleUrl,
+      }));
+      emailSent = true;
+    } catch (e) {
+      console.warn("[manual-booking][client-confirm] failed:", (e as Error).message);
+    }
+  }
+
+  return json({ ok: true, booking, emailSent });
 };
 
 export const handler = adminGuard(inner);

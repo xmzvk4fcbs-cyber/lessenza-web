@@ -17,6 +17,29 @@ export interface LogMailer extends Mailer {
   sent: EmailMessage[];
 }
 
+/** Wraps a real mailer so every send is recorded in the email log (success or
+ *  failure), with the full message kept for manual resend from the admin. */
+function wrapWithLog(inner: Mailer): Mailer {
+  return {
+    async send(msg) {
+      try {
+        const id = await inner.send(msg);
+        try {
+          const { appendEmailLog } = await import("./email-log");
+          await appendEmailLog({ to: msg.to, subject: msg.subject, ok: true, msg });
+        } catch { /* logging must never break sending */ }
+        return id;
+      } catch (e) {
+        try {
+          const { appendEmailLog } = await import("./email-log");
+          await appendEmailLog({ to: msg.to, subject: msg.subject, ok: false, error: (e as Error).message, msg });
+        } catch { /* ignore */ }
+        throw e;
+      }
+    },
+  };
+}
+
 export function createLogMailer(): LogMailer {
   const sent: EmailMessage[] = [];
   return {
@@ -265,16 +288,16 @@ export function getMailer(settings?: { mailer?: "resend" | "gmail" | "smtp" }): 
     // secure=true for port 465 (implicit TLS); false for 587 (STARTTLS upgrade).
     const secure = process.env.SMTP_SECURE ? process.env.SMTP_SECURE === "true" : port === 465;
     if (!host || !user || !pass) return createLogMailer();
-    return createSmtpMailer({ host, port, secure, user, pass, from });
+    return wrapWithLog(createSmtpMailer({ host, port, secure, user, pass, from }));
   }
   if (which === "gmail") {
     const user = process.env.GMAIL_USER ?? "";
     const pass = process.env.GMAIL_APP_PASSWORD ?? "";
     if (!user || !pass) return createLogMailer();
-    return createGmailMailer({ user, pass });
+    return wrapWithLog(createGmailMailer({ user, pass }));
   }
   const apiKey = process.env.RESEND_API_KEY ?? "";
   const from = process.env.RESEND_FROM ?? "L'Essenza <info@lessenza.me>";
   if (!apiKey) return createLogMailer();
-  return createResendMailer({ apiKey, from });
+  return wrapWithLog(createResendMailer({ apiKey, from }));
 }
