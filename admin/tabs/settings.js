@@ -205,47 +205,69 @@ async function renderAuditCard() {
 }
 
 // ---------- Email log card ----------
+let _emailLogEntries = [];
+
 async function renderEmailLogCard() {
   const host = document.getElementById("email-log-list");
   if (!host) return;
   host.innerHTML = `<p class="muted">Učitavanje…</p>`;
   try {
-    const { entries } = await must("/api/admin/email-log?limit=60");
-    if (!entries.length) {
-      host.innerHTML = `<p class="muted">Još nema poslatih emailova.</p>`;
-      return;
+    const { entries } = await must("/api/admin/email-log?limit=120");
+    _emailLogEntries = entries || [];
+    const search = document.getElementById("email-log-search");
+    if (search && !search.dataset.wired) {
+      search.dataset.wired = "1";
+      search.addEventListener("input", () => renderEmailLogList(search.value));
     }
-    host.innerHTML = entries.map((e) => {
-      const when = new Date(e.at).toLocaleString("sr-Latn", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" });
-      const badge = e.ok
-        ? `<span style="color:#3f7d4f;">✓ poslat</span>`
-        : `<span style="color:#8B3A3E;">✗ nije poslat${e.error ? ` (${escapeHtml(e.error)})` : ""}</span>`;
-      const btn = e.ok ? "" : `<button class="btn btn-ghost" type="button" data-resend="${escapeHtml(e.id)}" style="min-height:32px;padding:0 0.7rem;font-size:0.8rem;white-space:nowrap;">Pošalji ponovo</button>`;
-      return `<article class="audit-item" style="align-items:center;">
-        <span class="audit-item__icon">${e.ok ? "✉️" : "⚠️"}</span>
-        <div class="audit-item__body" style="flex:1;min-width:0;">
-          <div class="audit-item__summary">${escapeHtml(e.subject)}</div>
-          <div class="audit-item__meta">${escapeHtml(e.to)} · ${escapeHtml(when)} · ${badge}</div>
-        </div>
-        ${btn}
-      </article>`;
-    }).join("");
-    host.querySelectorAll("[data-resend]").forEach((b) => {
-      b.addEventListener("click", async () => {
-        b.disabled = true; b.textContent = "Šaljem…";
-        try {
-          const r = await must("/api/admin/email-resend", { method: "POST", body: { id: b.dataset.resend } });
-          if (r.ok) { toast("Email ponovo poslat ✓", "success"); await renderEmailLogCard(); }
-          else { toast(r.message || "Nije uspjelo.", "error"); b.disabled = false; b.textContent = "Pošalji ponovo"; }
-        } catch (err) {
-          toast(err.message || "Nije uspjelo.", "error");
-          b.disabled = false; b.textContent = "Pošalji ponovo";
-        }
-      });
-    });
+    renderEmailLogList(search ? search.value : "");
   } catch (e) {
     host.innerHTML = `<p class="muted">Ne mogu učitati: ${escapeHtml(e.message)}</p>`;
   }
+}
+
+function renderEmailLogList(query) {
+  const host = document.getElementById("email-log-list");
+  if (!host) return;
+  if (!_emailLogEntries.length) {
+    host.innerHTML = `<p class="muted">Još nema poslatih emailova.</p>`;
+    return;
+  }
+  const q = (query || "").trim().toLowerCase();
+  const list = q
+    ? _emailLogEntries.filter((e) => `${e.to || ""} ${e.subject || ""}`.toLowerCase().includes(q))
+    : _emailLogEntries;
+  if (!list.length) {
+    host.innerHTML = `<p class="muted">Nema rezultata za „${escapeHtml(query)}".</p>`;
+    return;
+  }
+  host.innerHTML = list.map((e) => {
+    const when = new Date(e.at).toLocaleString("sr-Latn", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" });
+    const badge = e.ok
+      ? `<span style="color:#3f7d4f;">✓ poslat</span>`
+      : `<span style="color:#8B3A3E;">✗ nije poslat${e.error ? ` (${escapeHtml(e.error)})` : ""}</span>`;
+    const btn = e.ok ? "" : `<button class="btn btn-ghost" type="button" data-resend="${escapeHtml(e.id)}" style="min-height:32px;padding:0 0.7rem;font-size:0.8rem;white-space:nowrap;">Pošalji ponovo</button>`;
+    return `<article class="audit-item" style="align-items:center;">
+      <span class="audit-item__icon">${e.ok ? "✉️" : "⚠️"}</span>
+      <div class="audit-item__body" style="flex:1;min-width:0;">
+        <div class="audit-item__summary">${escapeHtml(e.subject)}</div>
+        <div class="audit-item__meta">${escapeHtml(e.to)} · ${escapeHtml(when)} · ${badge}</div>
+      </div>
+      ${btn}
+    </article>`;
+  }).join("");
+  host.querySelectorAll("[data-resend]").forEach((b) => {
+    b.addEventListener("click", async () => {
+      b.disabled = true; b.textContent = "Šaljem…";
+      try {
+        const r = await must("/api/admin/email-resend", { method: "POST", body: { id: b.dataset.resend } });
+        if (r.ok) { toast("Email ponovo poslat ✓", "success"); await renderEmailLogCard(); }
+        else { toast(r.message || "Nije uspjelo.", "error"); b.disabled = false; b.textContent = "Pošalji ponovo"; }
+      } catch (err) {
+        toast(err.message || "Nije uspjelo.", "error");
+        b.disabled = false; b.textContent = "Pošalji ponovo";
+      }
+    });
+  });
 }
 
 function wireSettingsTabs() {
