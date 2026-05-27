@@ -425,6 +425,7 @@ function escapeHtml(s) {
 // --- Step 2: date picker (simple list for next N days) ---
 
 function renderDatePicker() {
+  clearTimeFirst();
   ui.datePicker.innerHTML = "";
   const today = new Date();
   today.setHours(0, 0, 0, 0);
@@ -669,6 +670,86 @@ async function submitInquiry() {
   showInquirySuccess();
 }
 
+// --- Step 2 helpers: find by time-of-day / earliest free ---
+
+async function loadSlotsWindow() {
+  if (!state.chosenService || !state.chosenService.id) throw new Error("Izaberi uslugu.");
+  const additionalIds = state.chosenServiceIds.slice(1);
+  const addParam = additionalIds.length ? `&additionalServiceIds=${encodeURIComponent(additionalIds.join(","))}` : "";
+  const { days } = await apiGet(`/api/slots-window?serviceId=${encodeURIComponent(state.chosenService.id)}${addParam}&_=${Date.now()}`);
+  return days || [];
+}
+
+function inWindow(hhmm, win) {
+  const h = parseInt(hhmm.slice(0, 2), 10);
+  if (win === "morning") return h < 12;
+  if (win === "afternoon") return h >= 12 && h < 17;
+  if (win === "evening") return h >= 17;
+  return true;
+}
+
+const SR_DOW = ["Ned", "Pon", "Uto", "Sri", "Čet", "Pet", "Sub"];
+const SR_MON = ["jan", "feb", "mar", "apr", "maj", "jun", "jul", "avg", "sep", "okt", "nov", "dec"];
+function dayLabel(key) {
+  const [y, m, d] = key.split("-").map(Number);
+  const dt = new Date(y, m - 1, d);
+  return `${SR_DOW[dt.getDay()]} ${d}. ${SR_MON[m - 1]}`;
+}
+
+function clearTimeFirst() {
+  const host = document.getElementById("time-first-results");
+  if (host) host.innerHTML = "";
+  document.querySelectorAll("#window-chips .chip").forEach((c) => c.classList.remove("is-active"));
+}
+
+async function findEarliest() {
+  const btn = document.getElementById("earliest-btn");
+  showError(null);
+  const orig = btn.textContent;
+  btn.disabled = true; btn.textContent = "Tražim…";
+  try {
+    const days = await loadSlotsWindow();
+    if (!days.length || !days[0].slots.length) { showError("Trenutno nema slobodnih termina u narednom periodu."); return; }
+    state.chosenDate = days[0].date;
+    state.chosenSlot = days[0].slots[0];
+    setStep(4);
+  } catch (e) {
+    showError(e.message || "Greška. Probaj ponovo.");
+  } finally {
+    btn.disabled = false; btn.textContent = orig;
+  }
+}
+
+async function findByWindow(win, chipEl) {
+  const host = document.getElementById("time-first-results");
+  document.querySelectorAll("#window-chips .chip").forEach((c) => c.classList.toggle("is-active", c === chipEl));
+  showError(null);
+  host.innerHTML = `<p class="step-hint">Tražim slobodne dane…</p>`;
+  try {
+    const days = await loadSlotsWindow();
+    const matches = days
+      .map((d) => ({ date: d.date, slots: d.slots.filter((s) => inWindow(s, win)) }))
+      .filter((d) => d.slots.length);
+    if (!matches.length) {
+      host.innerHTML = `<p class="slot-empty" style="display:block;">Nema slobodnih termina u tom dijelu dana u narednom periodu. Probaj drugi.</p>`;
+      return;
+    }
+    host.innerHTML = matches.map((d) => `
+      <div class="tf-day">
+        <div class="tf-day__label">${dayLabel(d.date)}</div>
+        <div class="tf-day__slots">${d.slots.map((s) => `<button type="button" class="slot-btn" data-date="${d.date}" data-slot="${s}">${s}</button>`).join("")}</div>
+      </div>`).join("");
+    host.querySelectorAll(".slot-btn").forEach((b) => b.addEventListener("click", () => {
+      state.chosenDate = b.dataset.date;
+      state.chosenSlot = b.dataset.slot;
+      setStep(4);
+    }));
+  } catch (e) {
+    host.innerHTML = "";
+    showError(e.message || "Greška. Probaj ponovo.");
+  }
+}
+
 // --- Navigation ---
 
 async function onNext() {
@@ -734,6 +815,12 @@ ui.inquiryOpen.addEventListener("click", (e) => {
   e.preventDefault();
   showInquiry();
 });
+
+// Step 2 advanced filters: earliest free + find by part-of-day.
+document.getElementById("earliest-btn")?.addEventListener("click", findEarliest);
+document.querySelectorAll("#window-chips .chip").forEach((c) =>
+  c.addEventListener("click", () => findByWindow(c.dataset.window, c))
+);
 
 // Init
 (async () => {

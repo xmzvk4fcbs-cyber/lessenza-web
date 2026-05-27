@@ -71,7 +71,7 @@
 
   <section class="section">
     <div class="section__inner">
-      <link rel="stylesheet" href="css/booking.css?v=20260511-multi">
+      <link rel="stylesheet" href="css/booking.css?v=20260527-timefilter">
 
       <div class="booking-wizard" id="wizard">
         <ol class="booking-steps" aria-label="Koraci rezervacije">
@@ -95,6 +95,19 @@
 
         <section class="booking-step" id="step-2" hidden aria-labelledby="step-2-title">
           <h2 id="step-2-title">Izaberi datum</h2>
+
+          <div class="time-first">
+            <button type="button" id="earliest-btn" class="btn btn-outline block">⚡ Najraniji slobodan termin</button>
+            <p class="time-first__or">— ili nađi po dijelu dana —</p>
+            <div class="chip-row" id="window-chips">
+              <button type="button" class="chip" data-window="morning">Jutro · do 12h</button>
+              <button type="button" class="chip" data-window="afternoon">Popodne · 12–17h</button>
+              <button type="button" class="chip" data-window="evening">Veče · poslije 17h</button>
+            </div>
+            <div id="time-first-results"></div>
+          </div>
+
+          <p class="time-first__or">— ili izaberi tačan datum —</p>
           <div id="date-picker"></div>
           <a class="inquiry-link" href="#" id="inquiry-open">Trebam kasniji datum → pošalji upit</a>
         </section>
@@ -265,7 +278,7 @@
     </div>
   </footer>
 
-  <script src="js/booking.js?v=20260511-multi" type="module"></script>
+  <script src="js/booking.js?v=20260527-timefilter" type="module"></script>
   <script src="js/site-config.js"></script>
   <script src="js/main.js"></script>
 </body>
