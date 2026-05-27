@@ -115,15 +115,21 @@ export interface BusyInterval {
   startMs: number;
   endMs: number;
   serviceId?: string;
+  /** True when this booking bundles more than one service. Such bookings keep
+   *  the (single) therapist hands-on, so they must never be treated as
+   *  parallel-allowed even if their primary service is in a parallel pair. */
+  combined?: boolean;
 }
 
 export function eventBusyInterval(e: calendar_v3.Schema$Event): BusyInterval | null {
   const s = e.start?.dateTime;
   const en = e.end?.dateTime;
   if (!s || !en) return null;
+  const extra = e.extendedProperties?.private?.additionalServiceIds;
   return {
     startMs: new Date(s).getTime(),
     endMs: new Date(en).getTime(),
     serviceId: extractServiceId(e),
+    combined: !!(extra && extra.trim().length > 0),
   };
 }

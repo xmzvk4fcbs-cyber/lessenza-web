@@ -274,10 +274,10 @@ describe("computeSlots", () => {
       expect(slots).not.toContain("12:00");
     });
 
-    it("multi-service primary inherits parallel rules of the primary id only", () => {
-      // primary=manikir-gel, additional=laser. manikir-gel ↔ body-sculpt are paired.
-      // A body-sculpt event running in parallel — should remain allowed because
-      // we look at parallel rules of the primary service id.
+    it("a COMBINED (multi-service) booking never inherits parallel allowance", () => {
+      // primary=manikir-gel + additional=laser. Even though manikir-gel ↔
+      // body-sculpt are paired, a multi-service booking keeps the single
+      // therapist hands-on the whole time → must NOT overlap anything.
       const slots = computeSlots({
         ...base(),
         additionalServiceIds: ["laser"],
@@ -290,8 +290,40 @@ describe("computeSlots", () => {
           } as never,
         ],
       });
-      // Multi-service slot 12:00 is 90 min long → 12:00–13:30. Overlap is with the
-      // 12:00–13:00 body-sculpt event, but pair rule allows it.
+      expect(slots).not.toContain("12:00");
+    });
+
+    it("parallel overlap NOT allowed when the existing event is combined", () => {
+      // New single body-sculpt vs an existing COMBINED manikir-gel booking.
+      // The existing client is hands-on (multi-service) → no parallel.
+      const slots = computeSlots({
+        ...base(),
+        pairs: [{ serviceIdA: "body-sculpt", serviceIdB: "manikir-gel" }],
+        events: [
+          {
+            start: { dateTime: "2026-04-20T10:00:00Z" }, // 12:00 local
+            end:   { dateTime: "2026-04-20T11:00:00Z" },
+            extendedProperties: { private: { serviceId: "body-sculpt", additionalServiceIds: "laser" } },
+          } as never,
+        ],
+      });
+      expect(slots).not.toContain("12:00");
+    });
+
+    it("parallel overlap IS allowed for two single paired services", () => {
+      // New single body-sculpt vs existing single manikir-gel — both single,
+      // paired → the passive machine can run alongside → overlap allowed.
+      const slots = computeSlots({
+        ...base(),
+        pairs: [{ serviceIdA: "body-sculpt", serviceIdB: "manikir-gel" }],
+        events: [
+          {
+            start: { dateTime: "2026-04-20T10:00:00Z" }, // 12:00 local
+            end:   { dateTime: "2026-04-20T11:00:00Z" },
+            extendedProperties: { private: { serviceId: "body-sculpt" } },
+          } as never,
+        ],
+      });
       expect(slots).toContain("12:00");
     });
 

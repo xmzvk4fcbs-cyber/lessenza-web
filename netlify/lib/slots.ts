@@ -48,10 +48,17 @@ export function computeSlots(input: ComputeSlotsInput): string[] {
   const granMs = settings.slotGranularityMinutes * 60_000;
   const minLeadMs = settings.minLeadHours * 60 * 60_000;
 
+  // Parallel pairs only make sense for a SINGLE passive service (e.g. the Body
+  // Sculpt machine running while one other service is done). A combined booking
+  // keeps the single therapist hands-on the whole time, so it can never overlap
+  // anything — disable parallel allowance entirely when extra services exist.
+  const newIsCombined = (additionalServiceIds ?? []).length > 0;
   const parallelAllowed = new Set<string>();
-  for (const p of pairs) {
-    if (p.serviceIdA === serviceId) parallelAllowed.add(p.serviceIdB);
-    if (p.serviceIdB === serviceId) parallelAllowed.add(p.serviceIdA);
+  if (!newIsCombined) {
+    for (const p of pairs) {
+      if (p.serviceIdA === serviceId) parallelAllowed.add(p.serviceIdB);
+      if (p.serviceIdB === serviceId) parallelAllowed.add(p.serviceIdA);
+    }
   }
 
   const blockIntervals = blocks.map((b) => ({
@@ -86,7 +93,9 @@ export function computeSlots(input: ComputeSlotsInput): string[] {
 
       for (const ev of eventIntervals) {
         if (ev.endMs <= tMs || ev.startMs >= slotEndWithBufferMs) continue;
-        if (ev.serviceId && parallelAllowed.has(ev.serviceId)) continue;
+        // Allow overlap only when BOTH sides are single-service and paired —
+        // a combined existing booking keeps the therapist busy, so no parallel.
+        if (!ev.combined && ev.serviceId && parallelAllowed.has(ev.serviceId)) continue;
         conflict = true;
         break;
       }
