@@ -3,7 +3,7 @@ import { json, badRequest, notFound, methodNotAllowed } from "../lib/http";
 import { getServices, getWorkingHours, getParallelPairs, getBlocks, getSettings } from "../lib/config";
 import { computeSlots } from "../lib/slots";
 import { createCalendarClient, createCalendarClientAsync, type CalendarClient } from "../lib/calendar";
-import { fromTZ } from "../lib/time";
+import { fromTZ, formatSalon } from "../lib/time";
 
 let factory: (() => CalendarClient) | null = null;
 export function __setCalendarFactoryForTests(f: (() => CalendarClient) | null): void {
@@ -85,5 +85,15 @@ export const handler: Handler = async (event) => {
     return false;
   });
 
-  return json({ slots, recommended });
+  // Busy intervals (HH:MM, salon TZ) so the client can spot needless gaps and
+  // be nudged toward a slot that abuts an existing booking.
+  const busy = events
+    .map((e) => {
+      const s = e.start?.dateTime, en = e.end?.dateTime;
+      if (!s || !en) return null;
+      return { start: formatSalon(new Date(s), "HH:mm"), end: formatSalon(new Date(en), "HH:mm") };
+    })
+    .filter((x): x is { start: string; end: string } => x !== null);
+
+  return json({ slots, recommended, busy });
 };

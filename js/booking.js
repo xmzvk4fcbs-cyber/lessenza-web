@@ -53,6 +53,7 @@ const ui = {
   datePicker: document.getElementById("date-picker"),
   slotGrid: document.getElementById("slot-grid"),
   slotEmpty: document.getElementById("slot-empty"),
+  slotSuggest: document.getElementById("slot-suggest"),
   detailsForm: document.getElementById("details-form"),
   inquiryOpen: document.getElementById("inquiry-open"),
   inquiryForm: document.getElementById("inquiry-form"),
@@ -527,6 +528,7 @@ async function loadSlots() {
   const t0 = Date.now();
   ui.slotGrid.innerHTML = "";
   ui.slotEmpty.hidden = true;
+  if (ui.slotSuggest) { ui.slotSuggest.hidden = true; ui.slotSuggest.innerHTML = ""; }
   // Clean any legend from previous render to avoid duplicates.
   ui.slotGrid.parentNode.querySelectorAll(".slot-legend").forEach((el) => el.remove());
   // Update step-3 context line: "Manikir + Pedikir · 105 min".
@@ -546,8 +548,9 @@ async function loadSlots() {
     ? `&additionalServiceIds=${encodeURIComponent(additionalIds.join(","))}`
     : "";
   const url = `/api/slots?serviceId=${encodeURIComponent(state.chosenService.id)}&date=${encodeURIComponent(state.chosenDate)}${addParam}&_=${t0}`;
-  const { slots, recommended = [] } = await apiGet(url);
+  const { slots, recommended = [], busy = [] } = await apiGet(url);
   state.slots = slots;
+  state.busy = busy;
   const recSet = new Set(recommended);
 
   if (slots.length === 0) {
@@ -567,6 +570,7 @@ async function loadSlots() {
       state.chosenSlot = t;
       ui.slotGrid.querySelectorAll(".slot-btn").forEach((el) => el.classList.remove("is-selected"));
       btn.classList.add("is-selected");
+      maybeSuggestSnug(t);
     });
     ui.slotGrid.appendChild(btn);
   }
@@ -668,6 +672,67 @@ async function submitInquiry() {
     website: hp2,
   });
   showInquirySuccess();
+}
+
+// --- Smart gap nudge: suggest a slot that abuts an existing booking ---
+
+const GAP_MAX_MIN = 30;
+function toMin(hhmm) { const [h, m] = hhmm.split(":").map(Number); return h * 60 + m; }
+function pad2(n) { return String(n).padStart(2, "0"); }
+function toHHMM(min) { return `${pad2(Math.floor(min / 60))}:${pad2(min % 60)}`; }
+
+function applySnug(slot) {
+  state.chosenSlot = slot;
+  ui.slotGrid.querySelectorAll(".slot-btn").forEach((el) => el.classList.toggle("is-selected", el.textContent === slot));
+  if (ui.slotSuggest) { ui.slotSuggest.hidden = true; ui.slotSuggest.innerHTML = ""; }
+}
+
+function maybeSuggestSnug(picked) {
+  const host = ui.slotSuggest;
+  if (!host) return;
+  host.hidden = true; host.innerHTML = "";
+  const busy = state.busy || [];
+  if (!busy.length) return;
+  const dur = combinedDurationMin();
+  const P = toMin(picked);
+  const end = P + dur;
+  const free = new Set(state.slots);
+
+  let sug = null, kind = null;
+  // Case A — small gap AFTER a previous booking → suggest its end (abut it).
+  let bestEnd = -1;
+  for (const b of busy) {
+    const be = toMin(b.end);
+    if (be < P && (P - be) <= GAP_MAX_MIN && free.has(b.end) && be > bestEnd) bestEnd = be;
+  }
+  if (bestEnd >= 0 && toHHMM(bestEnd) !== picked) { sug = toHHMM(bestEnd); kind = "after"; }
+
+  // Case B — small gap BEFORE a next booking → start so the new one abuts it.
+  if (!sug) {
+    let bestStart = Infinity;
+    for (const b of busy) {
+      const bs = toMin(b.start);
+      if (bs >= end && (bs - end) <= GAP_MAX_MIN && bs < bestStart) {
+        const cand = toHHMM(bs - dur);
+        if (free.has(cand) && cand !== picked) bestStart = bs;
+      }
+    }
+    if (bestStart !== Infinity) { sug = toHHMM(bestStart - dur); kind = "before"; }
+  }
+  if (!sug) return;
+
+  const msg = kind === "after"
+    ? `💡 Možeš i u <b>${sug}</b> — odmah poslije prethodnog termina, bez praznine.`
+    : `💡 Možeš u <b>${sug}</b> — da se lijepo nadoveže na sljedeći termin, bez praznine.`;
+  host.innerHTML = `
+    <p class="slot-suggest__msg">${msg}</p>
+    <div class="slot-suggest__actions">
+      <button type="button" class="btn btn-primary" id="snug-take">Da, ${sug}</button>
+      <button type="button" class="btn btn-ghost" id="snug-keep">Ostajem na ${picked}</button>
+    </div>`;
+  host.hidden = false;
+  document.getElementById("snug-take").addEventListener("click", () => applySnug(sug));
+  document.getElementById("snug-keep").addEventListener("click", () => { host.hidden = true; host.innerHTML = ""; });
 }
 
 // --- Step 2 helpers: find by time-of-day / earliest free ---

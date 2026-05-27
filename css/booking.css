@@ -684,3 +684,14 @@
   font-weight: 600; color: var(--sage, #6B6F4F); font-size: 1.1rem; margin-bottom: 0.45rem;
 }
 .tf-day__slots { display: flex; flex-wrap: wrap; gap: 0.45rem; }
+
+/* Smart gap nudge */
+.slot-suggest {
+  margin-top: 0.9rem; padding: 0.9rem 1rem;
+  background: linear-gradient(160deg, #FFFDF8, #FBF5E9);
+  border: 1px solid rgba(201,169,97,0.5); border-radius: 14px;
+  box-shadow: 0 4px 14px rgba(74,66,56,0.07);
+}
+.slot-suggest__msg { margin: 0 0 0.7rem; color: var(--text,#4A4238); font-size: 0.95rem; line-height: 1.45; }
+.slot-suggest__actions { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+.slot-suggest__actions .btn { min-height: 44px; }
