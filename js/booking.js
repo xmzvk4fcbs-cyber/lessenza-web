@@ -702,18 +702,54 @@ function clearTimeFirst() {
   document.querySelectorAll("#window-chips .chip").forEach((c) => c.classList.remove("is-active"));
 }
 
+function selectSlot(date, slot) {
+  state.chosenDate = date;
+  state.chosenSlot = slot;
+  setStep(4);
+}
+
+/** Render a list of days, each with selectable slot buttons. */
+function renderDayMatches(matches, emptyMsg) {
+  const host = document.getElementById("time-first-results");
+  if (!matches.length) {
+    host.innerHTML = `<p class="slot-empty" style="display:block;">${emptyMsg}</p>`;
+    return;
+  }
+  host.innerHTML = matches.map((d) => `
+    <div class="tf-day">
+      <div class="tf-day__label">${dayLabel(d.date)}</div>
+      <div class="tf-day__slots">${d.slots.map((s) => `<button type="button" class="slot-btn" data-date="${d.date}" data-slot="${s}">${s}</button>`).join("")}</div>
+    </div>`).join("");
+  host.querySelectorAll(".slot-btn").forEach((b) =>
+    b.addEventListener("click", () => selectSlot(b.dataset.date, b.dataset.slot)));
+}
+
 async function findEarliest() {
   const btn = document.getElementById("earliest-btn");
+  const host = document.getElementById("time-first-results");
+  document.querySelectorAll("#window-chips .chip").forEach((c) => c.classList.remove("is-active"));
   showError(null);
   const orig = btn.textContent;
   btn.disabled = true; btn.textContent = "Tražim…";
+  host.innerHTML = `<p class="step-hint">Tražim…</p>`;
   try {
     const days = await loadSlotsWindow();
-    if (!days.length || !days[0].slots.length) { showError("Trenutno nema slobodnih termina u narednom periodu."); return; }
-    state.chosenDate = days[0].date;
-    state.chosenSlot = days[0].slots[0];
-    setStep(4);
+    // First 3 available slots in chronological order — let the client pick.
+    const flat = [];
+    for (const d of days) {
+      for (const s of d.slots) { flat.push({ date: d.date, slot: s }); if (flat.length >= 3) break; }
+      if (flat.length >= 3) break;
+    }
+    if (!flat.length) {
+      host.innerHTML = `<p class="slot-empty" style="display:block;">Trenutno nema slobodnih termina u narednom periodu.</p>`;
+      return;
+    }
+    host.innerHTML = `<div class="tf-day"><div class="tf-day__label">Najraniji slobodni termini</div>
+      <div class="tf-day__slots">${flat.map((o) => `<button type="button" class="slot-btn" data-date="${o.date}" data-slot="${o.slot}">${dayLabel(o.date)} · ${o.slot}</button>`).join("")}</div></div>`;
+    host.querySelectorAll(".slot-btn").forEach((b) =>
+      b.addEventListener("click", () => selectSlot(b.dataset.date, b.dataset.slot)));
   } catch (e) {
+    host.innerHTML = "";
     showError(e.message || "Greška. Probaj ponovo.");
   } finally {
     btn.disabled = false; btn.textContent = orig;
@@ -730,20 +766,27 @@ async function findByWindow(win, chipEl) {
     const matches = days
       .map((d) => ({ date: d.date, slots: d.slots.filter((s) => inWindow(s, win)) }))
       .filter((d) => d.slots.length);
-    if (!matches.length) {
-      host.innerHTML = `<p class="slot-empty" style="display:block;">Nema slobodnih termina u tom dijelu dana u narednom periodu. Probaj drugi.</p>`;
-      return;
-    }
-    host.innerHTML = matches.map((d) => `
-      <div class="tf-day">
-        <div class="tf-day__label">${dayLabel(d.date)}</div>
-        <div class="tf-day__slots">${d.slots.map((s) => `<button type="button" class="slot-btn" data-date="${d.date}" data-slot="${s}">${s}</button>`).join("")}</div>
-      </div>`).join("");
-    host.querySelectorAll(".slot-btn").forEach((b) => b.addEventListener("click", () => {
-      state.chosenDate = b.dataset.date;
-      state.chosenSlot = b.dataset.slot;
-      setStep(4);
-    }));
+    renderDayMatches(matches, "Nema slobodnih termina u tom dijelu dana u narednom periodu. Probaj drugi.");
+  } catch (e) {
+    host.innerHTML = "";
+    showError(e.message || "Greška. Probaj ponovo.");
+  }
+}
+
+async function findByExactTime() {
+  const t = (document.getElementById("exact-time").value || "").trim();
+  const host = document.getElementById("time-first-results");
+  if (!t) { showError("Izaberi vrijeme."); return; }
+  document.querySelectorAll("#window-chips .chip").forEach((c) => c.classList.remove("is-active"));
+  showError(null);
+  host.innerHTML = `<p class="step-hint">Tražim dane sa terminom od ${t}…</p>`;
+  try {
+    const days = await loadSlotsWindow();
+    // Slots are "HH:MM" — lexicographic compare == chronological for same format.
+    const matches = days
+      .map((d) => ({ date: d.date, slots: d.slots.filter((s) => s >= t) }))
+      .filter((d) => d.slots.length);
+    renderDayMatches(matches, `Nema slobodnih termina od ${t} u narednom periodu. Probaj ranije vrijeme.`);
   } catch (e) {
     host.innerHTML = "";
     showError(e.message || "Greška. Probaj ponovo.");
@@ -816,11 +859,15 @@ ui.inquiryOpen.addEventListener("click", (e) => {
   showInquiry();
 });
 
-// Step 2 advanced filters: earliest free + find by part-of-day.
+// Step 2 advanced filters: earliest free + part-of-day + exact time.
 document.getElementById("earliest-btn")?.addEventListener("click", findEarliest);
 document.querySelectorAll("#window-chips .chip").forEach((c) =>
   c.addEventListener("click", () => findByWindow(c.dataset.window, c))
 );
+document.getElementById("exact-time-btn")?.addEventListener("click", findByExactTime);
+document.getElementById("exact-time")?.addEventListener("keydown", (e) => {
+  if (e.key === "Enter") { e.preventDefault(); findByExactTime(); }
+});
 
 // Init
 (async () => {
