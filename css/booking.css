@@ -607,22 +607,80 @@
   .booking-wizard { padding: 1.5rem; }
 }
 
-/* Step 2 advanced filters: earliest free + find by part-of-day */
-.time-first { margin-bottom: 0.5rem; }
+/* Step 2 advanced filters — find by time / earliest free */
+.time-first {
+  background: linear-gradient(160deg, #FFFDF8, #FBF5E9);
+  border: 1px solid rgba(201, 169, 97, 0.35);
+  border-radius: 16px;
+  padding: 1.1rem 1rem 1.2rem;
+  box-shadow: 0 4px 16px rgba(74, 66, 56, 0.06);
+  margin-bottom: 0.6rem;
+}
+/* "— or —" divider with flanking gold rules */
 .time-first__or {
-  text-align: center; color: var(--text-light, #6B5F52);
-  font-size: 0.82rem; letter-spacing: 0.5px; margin: 1rem 0 0.6rem;
+  display: flex; align-items: center; gap: 0.7rem;
+  color: var(--sage, #6B6F4F); font-size: 0.74rem;
+  letter-spacing: 1px; text-transform: uppercase; margin: 1rem 0 0.7rem;
 }
+.time-first__or::before, .time-first__or::after {
+  content: ""; flex: 1; height: 1px;
+  background: linear-gradient(to right, transparent, rgba(201,169,97,0.55), transparent);
+}
+/* Earliest free CTA */
+#earliest-btn {
+  display: flex; align-items: center; justify-content: center; gap: 0.4rem;
+  border: 1.5px solid var(--gold, #C9A961); background: #fff;
+  color: var(--gold-dark, #8B6F2B); font-weight: 600; letter-spacing: 0.3px;
+  border-radius: 12px; min-height: 50px;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+#earliest-btn:hover {
+  background: linear-gradient(135deg, #D4B575, #C9A961); color: #fff;
+  transform: translateY(-2px); box-shadow: 0 8px 20px rgba(201,169,97,0.35);
+}
+#earliest-btn:disabled { opacity: 0.6; transform: none; box-shadow: none; }
+/* Part-of-day chips */
+.chip-row { display: flex; flex-wrap: wrap; gap: 0.5rem; }
 #window-chips { justify-content: center; }
-#time-first-results { margin-top: 0.6rem; }
-.tf-day { padding: 0.6rem 0; border-bottom: 1px solid rgba(201,169,97,0.22); }
-.tf-day:last-child { border-bottom: 0; }
-.tf-day__label { font-weight: 600; color: var(--text, #4A4238); font-size: 0.92rem; margin-bottom: 0.4rem; }
-.tf-day__slots { display: flex; flex-wrap: wrap; gap: 0.4rem; }
-
-.tf-exact { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem; justify-content: center; margin-top: 0.7rem; }
-.tf-exact label { font-size: 0.86rem; color: var(--text, #4A4238); }
-.tf-exact input[type="time"] {
-  padding: 0.45rem 0.6rem; border: 1px solid #D9C09A; border-radius: 8px;
-  background: #fff; font-family: inherit; font-size: 16px;
+.booking-wizard .chip {
+  appearance: none; cursor: pointer; min-height: 40px;
+  padding: 0.5rem 1rem; border: 1px solid rgba(201,169,97,0.55);
+  border-radius: 999px; background: #fff; color: var(--text, #4A4238);
+  font-family: inherit; font-size: 0.9rem; font-weight: 500;
+  transition: all 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+  -webkit-tap-highlight-color: transparent;
 }
+.booking-wizard .chip:hover { border-color: var(--gold, #C9A961); background: var(--cream-soft, #F9F2E5); transform: translateY(-1px); }
+.booking-wizard .chip.is-active {
+  background: linear-gradient(135deg, #D4B575, #C9A961); color: #fff;
+  border-color: var(--gold, #C9A961); font-weight: 600;
+  box-shadow: 0 4px 12px rgba(201,169,97,0.4);
+}
+/* Exact-time row */
+.tf-exact {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem;
+  justify-content: center; margin-top: 0.9rem;
+}
+.tf-exact label { font-size: 0.85rem; color: var(--sage, #6B6F4F); font-weight: 500; }
+.tf-exact input[type="time"] {
+  padding: 0.5rem 0.7rem; border: 1px solid rgba(201,169,97,0.55);
+  border-radius: 10px; background: #fff; font-family: inherit; font-size: 16px;
+  color: var(--text, #4A4238);
+}
+.tf-exact input[type="time"]:focus {
+  outline: none; border-color: var(--gold, #C9A961);
+  box-shadow: 0 0 0 3px rgba(201,169,97,0.18);
+}
+#exact-time-btn { min-height: 42px; border-radius: 10px; }
+/* Results: day groups */
+#time-first-results:not(:empty) {
+  margin-top: 0.9rem; padding-top: 0.7rem;
+  border-top: 1px dashed rgba(201,169,97,0.4);
+}
+.tf-day { padding: 0.55rem 0; }
+.tf-day + .tf-day { border-top: 1px solid rgba(201,169,97,0.18); }
+.tf-day__label {
+  font-family: var(--font-display, 'Cormorant Garamond', Georgia, serif);
+  font-weight: 600; color: var(--sage, #6B6F4F); font-size: 1.1rem; margin-bottom: 0.45rem;
+}
+.tf-day__slots { display: flex; flex-wrap: wrap; gap: 0.45rem; }
