@@ -320,36 +320,35 @@ export function inquiryCreatedToOwner(i: InquiryForEmail, ctx: OwnerTemplateCtx)
 }
 
 export function cancelRequestToOwner(
-  r: { name: string; phone: string; desiredDateISO: string; kind: "cancel" | "reschedule"; reason?: string },
+  r: { name: string; phone: string; desiredDateISO: string; desiredTime?: string; kind: "cancel" | "reschedule"; reason?: string },
   ctx: OwnerTemplateCtx
 ): EmailMessage {
   const adminUrl = `${ctx.siteUrl.replace(/\/$/, "")}/admin/?screen=inquiries#cancel-requests`;
   const kindLabel = r.kind === "reschedule" ? "pomjeranje" : "otkazivanje";
+  const dateLabel = r.desiredTime ? `${r.desiredDateISO} u ${r.desiredTime}` : r.desiredDateISO;
+  const rows: Array<[string, string]> = [
+    ["Klijent", r.name],
+    ["Telefon", r.phone],
+    [r.kind === "reschedule" ? "Željeno novo vrijeme" : "Datum termina", dateLabel],
+    ["Razlog", r.reason ?? "—"],
+  ];
   const text = [
     `Klijent traži ${kindLabel} termina:`,
     ``,
-    `Klijent: ${r.name}`,
-    `Telefon: ${r.phone}`,
-    `Datum termina: ${r.desiredDateISO}`,
-    `Razlog: ${r.reason ?? "—"}`,
+    ...rows.map(([k, v]) => `${k}: ${v}`),
     ``,
     `Potvrdi u adminu: ${adminUrl}`,
   ].join("\n");
   const inner = [
     paragraph(`Klijent je sa sajta poslao zahtjev za <b>${kindLabel}</b> termina. Potvrdite ga u adminu.`),
-    detailsTable([
-      ["Klijent", r.name],
-      ["Telefon", r.phone],
-      ["Datum termina", r.desiredDateISO],
-      ["Razlog", r.reason ?? "—"],
-    ]),
+    detailsTable(rows),
     btnLink(adminUrl, "Otvori u adminu"),
   ].join("\n");
   return {
     to: ctx.ownerEmail,
-    subject: `Zahtjev za ${kindLabel} — ${r.name} (${r.desiredDateISO})`,
+    subject: `Zahtjev za ${kindLabel} — ${r.name} (${dateLabel})`,
     text,
-    html: renderShell({ heading: `Zahtjev za ${kindLabel}`, preheader: `${r.name} · ${r.desiredDateISO}`, inner }),
+    html: renderShell({ heading: `Zahtjev za ${kindLabel}`, preheader: `${r.name} · ${dateLabel}`, inner }),
   };
 }
 

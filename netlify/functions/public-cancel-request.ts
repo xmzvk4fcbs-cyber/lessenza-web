@@ -1,10 +1,13 @@
 import { randomUUID } from "node:crypto";
 import type { Handler } from "@netlify/functions";
 import { json, badRequest, methodNotAllowed, parseJson } from "../lib/http";
-import { addCancelRequest, getSettings, getPushSubscriptions, removePushSubscription } from "../lib/config";
+import { addCancelRequest, getSettings, getPushSubscriptions, removePushSubscription, getWorkingHours, getBlocks } from "../lib/config";
 import { getMailerAsync } from "../lib/mailer";
 import { cancelRequestToOwner } from "../lib/email-templates";
 import { normalizePhone } from "../lib/phone";
+import { computeDayAvailability } from "../lib/availability";
+import { createCalendarClientAsync } from "../lib/calendar";
+import { fromTZ } from "../lib/time";
 import { isHoneypotTriggered } from "../lib/honeypot";
 import { rateLimitAllow, clientIP } from "../lib/rate-limit";
 import type { CancelRequest } from "../lib/schemas";
@@ -19,11 +22,13 @@ interface Req {
   phone: string;
   name: string;
   desiredDateISO: string;
+  desiredTime?: string; // "HH:MM" — set when client picked a live slot
   kind?: "cancel" | "reschedule";
   reason?: string;
 }
 
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
+const TIME_RE = /^\d{2}:\d{2}$/;
 
 export const handler: Handler = async (event) => {
   if (event.httpMethod !== "POST") return methodNotAllowed(["POST"]);
@@ -63,12 +68,37 @@ export const handler: Handler = async (event) => {
   const reason = typeof body.reason === "string" ? body.reason.trim().slice(0, 500) : "";
   const kind = body.kind === "reschedule" ? "reschedule" : "cancel";
 
+  // For reschedule: validate the picked time is still in live availability — the
+  // form only offers free slots, but we re-check to protect against stale data.
+  let desiredTime: string | undefined;
+  if (kind === "reschedule" && typeof body.desiredTime === "string" && body.desiredTime) {
+    if (!TIME_RE.test(body.desiredTime)) return badRequest("bad-time", "desiredTime must be HH:MM");
+    try {
+      const [hours, blocks, cal] = await Promise.all([getWorkingHours(), getBlocks(), createCalendarClientAsync()]);
+      const events = await cal.listEvents({
+        timeMin: fromTZ(body.desiredDateISO, "00:00").toISOString(),
+        timeMax: fromTZ(body.desiredDateISO, "23:59").toISOString(),
+      });
+      const free = computeDayAvailability({ date: body.desiredDateISO, hours, blocks, events, settings, now: new Date() });
+      if (!free.includes(body.desiredTime)) {
+        return json({ error: "slot-taken", message: "Taj termin više nije slobodan. Izaberi drugi." }, 409);
+      }
+      desiredTime = body.desiredTime;
+    } catch (e) {
+      console.warn("[cancel-request][availability] check failed:", (e as Error).message);
+      // If availability lookup fails (e.g. calendar offline), don't block the
+      // request — let the owner manually verify on approval.
+      desiredTime = body.desiredTime;
+    }
+  }
+
   const req: CancelRequest = {
     id: randomUUID(),
     createdAt: new Date().toISOString(),
     phone,
     name: body.name.trim().slice(0, 120),
     desiredDateISO: body.desiredDateISO,
+    desiredTime,
     kind,
     reason: reason || undefined,
     status: "pending",
@@ -80,7 +110,7 @@ export const handler: Handler = async (event) => {
     try {
       const mailer = await getMailerAsync();
       await mailer.send(cancelRequestToOwner(
-        { name: req.name, phone: req.phone, desiredDateISO: req.desiredDateISO, kind, reason: req.reason },
+        { name: req.name, phone: req.phone, desiredDateISO: req.desiredDateISO, desiredTime: req.desiredTime, kind, reason: req.reason },
         { ownerEmail: settings.ownerEmail, siteUrl: process.env.SITE_URL ?? "https://lessenza.me" }
       ));
     } catch (e) {

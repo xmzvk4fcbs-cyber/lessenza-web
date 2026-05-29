@@ -283,6 +283,9 @@ export const CancelRequestSchema = z.object({
   name: z.string().min(1).max(120),
   /** Day of the appointment they want cancelled (YYYY-MM-DD, salon TZ). */
   desiredDateISO: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+  /** Preferred new time (HH:MM, salon TZ) — set when the client picked a live
+   *  available slot in the reschedule form. Validated server-side. */
+  desiredTime: z.string().regex(/^\d{2}:\d{2}$/).optional(),
   /** What they're asking for. Default is cancel; reschedule clients write
    *  their preferred new time in the reason field — owner handles manually. */
   kind: z.enum(["cancel", "reschedule"]).default("cancel"),
