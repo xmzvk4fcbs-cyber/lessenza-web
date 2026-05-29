@@ -71,7 +71,7 @@
 
   <section class="section">
     <div class="section__inner">
-      <link rel="stylesheet" href="css/booking.css?v=20260527-snug">
+      <link rel="stylesheet" href="css/booking.css?v=20260529-cal">
 
       <div class="booking-wizard" id="wizard">
         <ol class="booking-steps" aria-label="Koraci rezervacije">
@@ -166,7 +166,9 @@
             <p id="success-summary"></p>
             <p id="success-email-note"></p>
             <p>Vidimo se u Bulevaru Crnogorskih Junaka 15.</p>
-            <div style="margin-top:20px;">
+            <div class="success-actions" style="margin-top:20px;display:flex;flex-direction:column;gap:0.6rem;align-items:center;">
+              <a id="add-to-cal" class="btn btn-primary" download="termin.ics" hidden>📅 Dodaj u kalendar</a>
+              <span class="step-hint" id="add-to-cal-hint" hidden style="margin:0;">Otvori fajl da ga dodaš u Apple, Google ili drugi kalendar — sa podsjetnikom 1h prije.</span>
               <button type="button" class="btn btn-ghost" id="book-another">Zakaži još jedan termin</button>
             </div>
           </div>
@@ -284,7 +286,7 @@
     </div>
   </footer>
 
-  <script src="js/booking.js?v=20260527-snug" type="module"></script>
+  <script src="js/booking.js?v=20260529-cal" type="module"></script>
   <script src="js/site-config.js"></script>
   <script src="js/main.js"></script>
 </body>

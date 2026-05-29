@@ -639,6 +639,38 @@ async function submitBooking() {
   const when = d.toLocaleString("sr-Latn", { weekday: "long", day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" });
   const label = booking.combinedServicesLabel || booking.serviceName;
   showSuccess(`${label} — ${when}.`, Boolean(email));
+  setAddToCalendarLink(booking, combinedDurationMin(), label);
+}
+
+/** Build a downloadable .ics for the booking (with a 1h-before reminder)
+ *  and wire it to the "Dodaj u kalendar" link on the success step. */
+function setAddToCalendarLink(booking, durationMin, label) {
+  const link = document.getElementById("add-to-cal");
+  const hint = document.getElementById("add-to-cal-hint");
+  if (!link) return;
+  const start = new Date(booking.startISO);
+  const end = new Date(start.getTime() + (durationMin || 60) * 60_000);
+  const z = (d) => d.toISOString().replace(/[-:]/g, "").replace(/\.\d{3}/, "");
+  const title = label || booking.combinedServicesLabel || booking.serviceName || "Termin";
+  const loc = "L'Essenza Beauty Salon · Bulevar Crnogorskih Junaka 15, Cetinje";
+  const uid = "lessenza-" + start.getTime() + "@lessenza.me";
+  const ics = [
+    "BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//L'Essenza//Booking//SR", "METHOD:PUBLISH", "CALSCALE:GREGORIAN",
+    "BEGIN:VEVENT",
+    "UID:" + uid,
+    "DTSTAMP:" + z(new Date()),
+    "DTSTART:" + z(start),
+    "DTEND:" + z(end),
+    "SUMMARY:" + title,
+    "LOCATION:" + loc,
+    "DESCRIPTION:L'Essenza Beauty Salon — " + title,
+    "BEGIN:VALARM", "ACTION:DISPLAY", "DESCRIPTION:Podsjetnik na termin", "TRIGGER:-PT1H", "END:VALARM",
+    "END:VEVENT", "END:VCALENDAR",
+  ].join("\r\n");
+  const blob = new Blob([ics], { type: "text/calendar;charset=utf-8" });
+  link.href = URL.createObjectURL(blob);
+  link.hidden = false;
+  if (hint) hint.hidden = false;
 }
 
 async function submitInquiry() {

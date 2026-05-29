@@ -259,13 +259,13 @@ export function createGmailOAuthMailer(opts: {
   };
 }
 
-export async function getMailerAsync(settings?: { mailer?: "resend" | "gmail" | "smtp" }): Promise<Mailer> {
+export async function getMailerAsync(_settings?: { mailer?: "resend" | "gmail" | "smtp" }): Promise<Mailer> {
   if (process.env.NODE_ENV === "test") return createLogMailer();
-  // Email ALWAYS goes via the site's own SMTP (e.g. info@lessenza.me). It must
-  // never depend on a per-salon Gmail OAuth token — those expire/revoke and then
-  // silently break every email. The Google connection is used for calendar sync
-  // only; if it dies, confirmations keep arriving from the salon's own address.
-  return getMailer(settings);
+  // Email ALWAYS goes via the site's own SMTP (e.g. info@lessenza.me). Ignore any
+  // settings.mailer hint — if it's set to "resend" but RESEND_API_KEY is missing,
+  // getMailer would silently fall through to a log mailer and EVERY email would
+  // be lost (that's the bug that ate booking confirmations). Auto-detect by env.
+  return getMailer();
 }
 
 export function getMailer(settings?: { mailer?: "resend" | "gmail" | "smtp" }): Mailer {
