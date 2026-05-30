@@ -44,7 +44,8 @@
     .field { margin: 0 0 14px; }
     .field label { display: block; font-size: 0.85rem; color: var(--sage, #6B6F4F); font-weight: 600; letter-spacing: 0.02em; margin-bottom: 6px; }
     .field input, .field textarea {
-      width: 100%; padding: 0.65rem 0.8rem;
+      width: 100%; max-width: 100%; box-sizing: border-box;
+      padding: 0.65rem 0.8rem;
       border: 1px solid rgba(201,169,97,0.45); border-radius: 10px;
       background: #fff; font-family: inherit; font-size: 16px; color: var(--text, #4A4238);
     }
@@ -85,6 +86,19 @@
       font-size: 0.95rem; color: var(--text, #4A4238);
     }
     .selected-pill .x { background: none; border: 0; color: #A8863F; font-size: 1.2rem; cursor: pointer; padding: 0 6px; }
+    .match-card {
+      display: block; width: 100%; text-align: left; padding: 14px 16px;
+      background: #fff; border: 1px solid rgba(201,169,97,0.5); border-radius: 12px;
+      margin-bottom: 8px; cursor: pointer; font-family: inherit;
+      transition: all 0.18s ease; -webkit-tap-highlight-color: transparent;
+    }
+    .match-card:hover { border-color: var(--gold, #C9A961); transform: translateY(-1px); box-shadow: 0 6px 14px rgba(201,169,97,0.18); }
+    .match-card strong {
+      display: block; font-family: 'Cormorant Garamond', Georgia, serif;
+      font-size: 1.15rem; font-weight: 600; color: var(--sage, #6B6F4F); margin-bottom: 4px;
+    }
+    .match-card span { font-size: 0.92rem; color: var(--text, #4A4238); }
+    .block { display: block; width: 100%; }
     .cancel-summary { background: rgba(255,255,255,0.75); border-left: 3px solid var(--gold, #C9A961); padding: 14px 16px; margin: 0 0 18px; border-radius: 0 10px 10px 0; font-size: 0.95rem; line-height: 1.5; }
     .cancel-summary strong { color: var(--sage, #6B6F4F); display: block; margin-bottom: 4px; font-family: 'Cormorant Garamond', Georgia, serif; font-size: 1.15rem; }
     .cancel-actions { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; margin-top: 16px; }
@@ -171,52 +185,76 @@
   <div id="request-form" hidden>
     <div class="cancel-card">
       <h1>Zahtjev salonu</h1>
-      <p class="lead">Salon će ručno potvrditi tvoj zahtjev. Pošalji najkasnije 24h prije termina.</p>
+      <p class="lead">Pronaći ćemo tvoj termin po broju telefona ili emailu.</p>
 
       <div class="kind-toggle" role="tablist" aria-label="Šta želiš">
         <button type="button" class="kind-chip is-active" data-kind="cancel" aria-selected="true">Otkaži termin</button>
         <button type="button" class="kind-chip" data-kind="reschedule" aria-selected="false">Pomjeri termin</button>
       </div>
 
-      <div class="field">
-        <label for="req-name">Ime i prezime</label>
-        <input id="req-name" type="text" required maxlength="120" autocomplete="name">
-      </div>
-      <div class="field">
-        <label for="req-phone">Telefon</label>
-        <input id="req-phone" type="tel" required inputmode="tel" placeholder="069 123 456" autocomplete="tel-national">
+      <!-- STEP 1: Identify -->
+      <div id="step-identify">
+        <div class="field">
+          <label for="req-name">Ime i prezime</label>
+          <input id="req-name" type="text" required maxlength="120" autocomplete="name">
+        </div>
+        <div class="field">
+          <label for="req-phone">Telefon</label>
+          <input id="req-phone" type="tel" inputmode="tel" placeholder="069 123 456" autocomplete="tel-national">
+        </div>
+        <div class="field">
+          <label for="req-email">Ili email <span style="color:var(--sage,#6B6F4F);font-weight:400;">(ako nemaš ovaj broj)</span></label>
+          <input id="req-email" type="email" placeholder="tvoj@email.com" autocomplete="email">
+        </div>
+        <input type="text" id="req-hp" name="website" tabindex="-1" autocomplete="off" aria-hidden="true" style="position:absolute;left:-10000px;width:1px;height:1px;opacity:0;">
+        <button id="find-btn" type="button" class="btn btn-primary block">Pronađi moj termin</button>
+        <div id="find-error" class="cancel-state cancel-state--err" hidden style="margin-top:10px;font-size:0.88rem;padding:10px 14px;"></div>
       </div>
 
-      <!-- Cancel mode: just the date of the existing booking -->
-      <div id="cancel-fields">
-        <div class="field">
-          <label for="req-date">Datum termina koji otkazuješ</label>
-          <input id="req-date" type="date" required>
+      <!-- STEP 2: Pick existing booking -->
+      <div id="step-matches" hidden>
+        <p class="resched-hint">Izaberi termin za koji šalješ zahtjev:</p>
+        <div id="matches-list"></div>
+        <button type="button" id="back-to-identify" class="btn btn-ghost block" style="margin-top:10px;">← Promijeni broj/email</button>
+      </div>
+
+      <!-- STEP 3a: Confirm cancel -->
+      <div id="step-cancel" hidden>
+        <p class="resched-hint">Šaljem zahtjev za otkazivanje:</p>
+        <div id="selected-cancel" class="selected-pill" style="margin-top:0;"></div>
+        <div class="field" style="margin-top:14px;">
+          <label for="cancel-reason">Razlog (opciono)</label>
+          <textarea id="cancel-reason" maxlength="500" rows="2" placeholder="npr. bolest, hitan posao…"></textarea>
+        </div>
+        <div class="cancel-actions">
+          <button type="button" id="submit-cancel" class="btn btn-primary">Pošalji zahtjev</button>
+          <button type="button" id="cancel-back" class="btn btn-ghost">← Nazad</button>
         </div>
       </div>
 
-      <!-- Reschedule mode: live slot picker (real free times only) -->
-      <div id="resched-fields" hidden>
-        <p class="resched-hint">Izaberi dan i slobodno vrijeme koje ti odgovara — prikazujemo samo stvarno dostupne termine.</p>
+      <!-- STEP 3b: Reschedule — pick new slot -->
+      <div id="step-reschedule" hidden>
+        <p class="resched-hint">Pomjeram:</p>
+        <div id="selected-resched" class="selected-pill" style="margin-top:0;"></div>
+        <p class="resched-hint" style="margin-top:14px;">Izaberi novi slobodni termin:</p>
         <div id="resched-days" class="day-strip"></div>
         <div id="resched-slots" class="slot-grid" hidden></div>
         <div id="resched-empty" class="cancel-state cancel-state--info" hidden style="margin-top:10px;font-size:0.9rem;padding:10px 14px;">Nema slobodnih termina tog dana.</div>
         <div id="resched-selected" class="selected-pill" hidden>
-          <span>Izabrano: <b id="resched-selected-label"></b></span>
+          <span>Novi termin: <b id="resched-selected-label"></b></span>
           <button type="button" class="x" id="resched-clear" aria-label="Obriši izbor">✕</button>
+        </div>
+        <div class="field" style="margin-top:14px;">
+          <label for="resched-note">Napomena (opciono)</label>
+          <textarea id="resched-note" maxlength="500" rows="2" placeholder="opciono…"></textarea>
+        </div>
+        <div class="cancel-actions">
+          <button type="button" id="submit-resched" class="btn btn-primary">Pošalji zahtjev</button>
+          <button type="button" id="resched-back" class="btn btn-ghost">← Nazad</button>
         </div>
       </div>
 
-      <div class="field">
-        <label for="req-reason"><span id="req-reason-label">Razlog (opciono)</span></label>
-        <textarea id="req-reason" maxlength="500" rows="2" placeholder="npr. bolest, hitan posao…"></textarea>
-      </div>
-      <input type="text" id="req-hp" name="website" tabindex="-1" autocomplete="off" aria-hidden="true" style="position:absolute;left:-10000px;width:1px;height:1px;opacity:0;">
-      <div class="cancel-actions">
-        <button id="req-submit" class="btn btn-primary" type="button">Pošalji zahtjev</button>
-        <a class="btn btn-ghost" href="index.html">Odustani</a>
-      </div>
-      <div id="req-error" class="cancel-state cancel-state--err" hidden style="margin-top:16px;"></div>
+      <div id="req-error" class="cancel-state cancel-state--err" hidden style="margin-top:14px;"></div>
     </div>
   </div>
 
@@ -245,34 +283,143 @@
     });
   }
 
-  // ----- Request-form (no email link) state -----
-  const state = { kind: "cancel", days: null, dayKey: null, slot: null };
+  // ===== Request-form (no email link) — multi-step flow =====
+  const state = {
+    kind: "cancel",
+    matches: [],     // results from /api/public-find-booking
+    picked: null,    // {eventId,label,startISO,endISO} chosen by user
+    days: null,      // availability for reschedule
+    dayKey: null,
+    slot: null,
+  };
 
   const SR_DOW = ["Ned", "Pon", "Uto", "Sri", "Čet", "Pet", "Sub"];
   const SR_MON = ["jan", "feb", "mar", "apr", "maj", "jun", "jul", "avg", "sep", "okt", "nov", "dec"];
+  const pad2 = (n) => String(n).padStart(2, "0");
   function dayLabelParts(key) {
     const [y, m, d] = key.split("-").map(Number);
     const dt = new Date(y, m - 1, d);
     return { dow: SR_DOW[dt.getDay()], date: `${d}. ${SR_MON[m - 1]}` };
   }
+  function bookingLabel(b) {
+    const d = new Date(b.startISO);
+    const dow = SR_DOW[d.getDay()];
+    return `${b.label} — ${dow} ${d.getDate()}. ${SR_MON[d.getMonth()]} u ${pad2(d.getHours())}:${pad2(d.getMinutes())}`;
+  }
+  function escapeHtml(s) { return String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]); }
+
+  function showStep(name) {
+    ["identify", "matches", "cancel", "reschedule"].forEach((s) => {
+      const el = $("step-" + s);
+      if (el) el.hidden = s !== name;
+    });
+    const err = $("req-error"); if (err) err.hidden = true;
+  }
 
   function setKind(kind) {
     state.kind = kind;
     document.querySelectorAll(".kind-chip").forEach((c) => c.classList.toggle("is-active", c.dataset.kind === kind));
-    $("cancel-fields").hidden = kind !== "cancel";
-    $("resched-fields").hidden = kind !== "reschedule";
-    const lbl = $("req-reason-label");
-    const ta = $("req-reason");
-    if (kind === "reschedule") {
-      if (lbl) lbl.textContent = "Napomena (opciono)";
-      if (ta) ta.placeholder = "npr. radije ujutru, ili ako baš ne može…";
-      if (!state.days) loadAvailability();
-    } else {
-      if (lbl) lbl.textContent = "Razlog (opciono)";
-      if (ta) ta.placeholder = "npr. bolest, hitan posao…";
+    // If user already picked a termin, jump straight to the right next step.
+    if (state.picked && !$("step-matches").hidden === false) return;
+    if (state.picked) {
+      if (kind === "cancel") { $("selected-cancel").innerHTML = `<span>${escapeHtml(bookingLabel(state.picked))}</span>`; showStep("cancel"); }
+      else { $("selected-resched").innerHTML = `<span>${escapeHtml(bookingLabel(state.picked))}</span>`; showStep("reschedule"); if (!state.days) loadAvailability(); }
     }
   }
 
+  document.querySelectorAll(".kind-chip").forEach((c) => c.addEventListener("click", () => setKind(c.dataset.kind)));
+  $("open-request")?.addEventListener("click", () => { show("request-form"); setKind("cancel"); showStep("identify"); });
+
+  // ----- STEP 1: identify by phone or email -----
+  $("find-btn")?.addEventListener("click", async () => {
+    const name = ($("req-name").value || "").trim();
+    const phone = ($("req-phone").value || "").trim();
+    const email = ($("req-email").value || "").trim();
+    const hp = ($("req-hp").value || "");
+    const err = $("find-error");
+    err.hidden = true;
+    if (!name) { err.hidden = false; err.textContent = "Unesi ime."; return; }
+    if (!phone && !email) { err.hidden = false; err.textContent = "Unesi telefon ili email."; return; }
+    const btn = $("find-btn"); btn.disabled = true; btn.textContent = "Tražim…";
+    try {
+      const r = await fetch("/api/public-find-booking", {
+        method: "POST", headers: { "content-type": "application/json" },
+        body: JSON.stringify({ phone, email, website: hp }),
+      });
+      const body = await r.json().catch(() => ({}));
+      if (body.error) { err.hidden = false; err.textContent = body.message || body.error; return; }
+      const list = body.bookings || [];
+      if (!list.length) { err.hidden = false; err.textContent = "Ne vidim najavljeni termin za taj broj ili email. Provjeri da li si dobro unijela."; return; }
+      state.matches = list;
+      renderMatches();
+      showStep("matches");
+    } catch (e) {
+      err.hidden = false; err.textContent = e.message || "Mreža nedostupna.";
+    } finally {
+      btn.disabled = false; btn.textContent = "Pronađi moj termin";
+    }
+  });
+
+  // ----- STEP 2: pick which existing booking -----
+  function renderMatches() {
+    const host = $("matches-list");
+    host.innerHTML = state.matches.map((b, i) => {
+      const d = new Date(b.startISO);
+      const dow = SR_DOW[d.getDay()];
+      return `<button type="button" class="match-card" data-i="${i}">
+        <strong>${dow} ${d.getDate()}. ${SR_MON[d.getMonth()]} u ${pad2(d.getHours())}:${pad2(d.getMinutes())}</strong>
+        <span>${escapeHtml(b.label)}</span>
+      </button>`;
+    }).join("");
+    host.querySelectorAll(".match-card").forEach((b) => b.addEventListener("click", () => {
+      state.picked = state.matches[Number(b.dataset.i)];
+      if (state.kind === "cancel") {
+        $("selected-cancel").innerHTML = `<span>${escapeHtml(bookingLabel(state.picked))}</span>`;
+        showStep("cancel");
+      } else {
+        $("selected-resched").innerHTML = `<span>${escapeHtml(bookingLabel(state.picked))}</span>`;
+        showStep("reschedule");
+        if (!state.days) loadAvailability();
+      }
+    }));
+  }
+
+  $("back-to-identify")?.addEventListener("click", () => { state.picked = null; showStep("identify"); });
+  $("cancel-back")?.addEventListener("click", () => showStep("matches"));
+  $("resched-back")?.addEventListener("click", () => showStep("matches"));
+
+  // ----- STEP 3a: submit cancel -----
+  $("submit-cancel")?.addEventListener("click", async () => {
+    if (!state.picked) return showStep("matches");
+    const reason = ($("cancel-reason").value || "").trim();
+    const phone = ($("req-phone").value || "").trim();
+    const email = ($("req-email").value || "").trim();
+    const name = ($("req-name").value || "").trim();
+    const err = $("req-error"); err.hidden = true;
+    const btn = $("submit-cancel"); btn.disabled = true; btn.textContent = "Šaljem…";
+    try {
+      const r = await fetch("/api/public-cancel-request", {
+        method: "POST", headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          name, phone: phone || email,
+          desiredDateISO: state.picked.startISO.slice(0, 10),
+          bookingEventId: state.picked.eventId,
+          bookingLabel: state.picked.label,
+          kind: "cancel",
+          reason,
+        }),
+      });
+      const body = await r.json().catch(() => ({}));
+      if (r.ok) return show("request-done");
+      err.hidden = false; err.textContent = body.message || "Greška. Probaj ponovo.";
+    } catch (e) {
+      err.hidden = false; err.textContent = e.message || "Mreža nedostupna.";
+    } finally {
+      btn.disabled = false; btn.textContent = "Pošalji zahtjev";
+    }
+  });
+
+  // ----- STEP 3b: reschedule helpers -----
   async function loadAvailability() {
     const host = $("resched-days");
     host.innerHTML = `<div class="cancel-state cancel-state--info" style="font-size:0.88rem;padding:10px 14px;">Učitavanje slobodnih termina…</div>`;
@@ -285,33 +432,22 @@
       host.innerHTML = `<div class="cancel-state cancel-state--err" style="font-size:0.88rem;padding:10px 14px;">Ne mogu da učitam slobodne termine: ${e.message}</div>`;
     }
   }
-
   function renderDays() {
     const host = $("resched-days");
-    if (!state.days || !state.days.length) {
-      host.innerHTML = `<div class="cancel-state cancel-state--info" style="font-size:0.88rem;padding:10px 14px;">Nema slobodnih termina u narednom periodu.</div>`;
-      return;
-    }
-    host.innerHTML = state.days.map((d) => {
-      const p = dayLabelParts(d.date);
-      return `<button type="button" class="day-chip" data-day="${d.date}"><span>${p.dow}</span><strong>${p.date}</strong></button>`;
-    }).join("");
+    if (!state.days || !state.days.length) { host.innerHTML = `<div class="cancel-state cancel-state--info" style="font-size:0.88rem;padding:10px 14px;">Nema slobodnih termina u narednom periodu.</div>`; return; }
+    host.innerHTML = state.days.map((d) => { const p = dayLabelParts(d.date); return `<button type="button" class="day-chip" data-day="${d.date}"><span>${p.dow}</span><strong>${p.date}</strong></button>`; }).join("");
     host.querySelectorAll(".day-chip").forEach((b) => b.addEventListener("click", () => pickDay(b.dataset.day)));
   }
-
   function pickDay(key) {
     state.dayKey = key; state.slot = null;
     document.querySelectorAll(".day-chip").forEach((c) => c.classList.toggle("is-active", c.dataset.day === key));
     const day = state.days.find((d) => d.date === key);
-    const sg = $("resched-slots");
-    const empty = $("resched-empty");
-    $("resched-selected").hidden = true;
+    const sg = $("resched-slots"); const empty = $("resched-empty"); $("resched-selected").hidden = true;
     if (!day || !day.slots.length) { sg.hidden = true; empty.hidden = false; return; }
     empty.hidden = true; sg.hidden = false;
     sg.innerHTML = day.slots.map((s) => `<button type="button" class="slot-pick" data-slot="${s}">${s}</button>`).join("");
     sg.querySelectorAll(".slot-pick").forEach((b) => b.addEventListener("click", () => pickSlot(b.dataset.slot)));
   }
-
   function pickSlot(s) {
     state.slot = s;
     document.querySelectorAll(".slot-pick").forEach((b) => b.classList.toggle("is-active", b.dataset.slot === s));
@@ -319,70 +455,48 @@
     $("resched-selected-label").textContent = `${dow} ${date} · ${s}`;
     $("resched-selected").hidden = false;
   }
-
   $("resched-clear")?.addEventListener("click", () => {
     state.slot = null;
     document.querySelectorAll(".slot-pick.is-active").forEach((b) => b.classList.remove("is-active"));
     $("resched-selected").hidden = true;
   });
 
-  // Wire chip toggle
-  document.querySelectorAll(".kind-chip").forEach((c) => c.addEventListener("click", () => setKind(c.dataset.kind)));
-
-  // "Pošalji zahtjev" path — for clients without email link.
-  $("open-request")?.addEventListener("click", () => { show("request-form"); setKind("cancel"); });
-
-  $("req-submit")?.addEventListener("click", async () => {
-    const name = ($("req-name").value || "").trim();
+  $("submit-resched")?.addEventListener("click", async () => {
+    if (!state.picked) return showStep("matches");
+    if (!state.dayKey || !state.slot) { const err = $("req-error"); err.hidden = false; err.textContent = "Izaberi novi dan i vrijeme."; return; }
+    const reason = ($("resched-note").value || "").trim();
     const phone = ($("req-phone").value || "").trim();
-    const reason = ($("req-reason").value || "").trim();
-    const hp = ($("req-hp").value || "");
-    const err = $("req-error");
-    err.hidden = true;
-    if (!name || !phone) { err.hidden = false; err.textContent = "Popunite ime i telefon."; return; }
-    let desiredDateISO = "";
-    let desiredTime;
-    if (state.kind === "reschedule") {
-      if (!state.dayKey || !state.slot) {
-        err.hidden = false; err.textContent = "Izaberi dan i vrijeme iz dostupnih termina.";
-        return;
-      }
-      desiredDateISO = state.dayKey; desiredTime = state.slot;
-    } else {
-      desiredDateISO = ($("req-date").value || "").trim();
-      if (!desiredDateISO) { err.hidden = false; err.textContent = "Izaberi datum termina."; return; }
-    }
-    $("req-submit").disabled = true; $("req-submit").textContent = "Šaljem…";
+    const email = ($("req-email").value || "").trim();
+    const name = ($("req-name").value || "").trim();
+    const err = $("req-error"); err.hidden = true;
+    const btn = $("submit-resched"); btn.disabled = true; btn.textContent = "Šaljem…";
     try {
       const r = await fetch("/api/public-cancel-request", {
         method: "POST", headers: { "content-type": "application/json" },
-        body: JSON.stringify({ name, phone, desiredDateISO, desiredTime, kind: state.kind, reason, website: hp }),
+        body: JSON.stringify({
+          name, phone: phone || email,
+          desiredDateISO: state.dayKey,
+          desiredTime: state.slot,
+          bookingEventId: state.picked.eventId,
+          bookingLabel: state.picked.label,
+          kind: "reschedule",
+          reason,
+        }),
       });
       const body = await r.json().catch(() => ({}));
       if (r.ok) return show("request-done");
       err.hidden = false; err.textContent = body.message || "Greška. Probaj ponovo.";
-      // If the chosen slot got taken, re-fetch and let the client pick again.
       if (body.error === "slot-taken") { state.slot = null; await loadAvailability(); }
-      $("req-submit").disabled = false; $("req-submit").textContent = "Pošalji zahtjev";
     } catch (e) {
       err.hidden = false; err.textContent = e.message || "Mreža nedostupna.";
-      $("req-submit").disabled = false; $("req-submit").textContent = "Pošalji zahtjev";
+    } finally {
+      btn.disabled = false; btn.textContent = "Pošalji zahtjev";
     }
   });
 
   // No token → visitor arrived from public footer "Otkaži / pomjeri termin"
-  // link, not from an email. Send them straight to the request form.
-  if (!token) {
-    const tomorrow = new Date(Date.now() + 86_400_000);
-    const yyyy = tomorrow.getFullYear();
-    const mm = String(tomorrow.getMonth() + 1).padStart(2, "0");
-    const dd = String(tomorrow.getDate()).padStart(2, "0");
-    const di = $("req-date");
-    if (di) di.value = `${yyyy}-${mm}-${dd}`;
-    show("request-form");
-    setKind("cancel");
-    return;
-  }
+  // link, not from an email. Send them straight to step 1 of the request form.
+  if (!token) { show("request-form"); setKind("cancel"); showStep("identify"); return; }
 
   // 1. Fetch booking summary.
   let info;

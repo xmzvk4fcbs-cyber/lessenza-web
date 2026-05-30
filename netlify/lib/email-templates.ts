@@ -320,7 +320,7 @@ export function inquiryCreatedToOwner(i: InquiryForEmail, ctx: OwnerTemplateCtx)
 }
 
 export function cancelRequestToOwner(
-  r: { name: string; phone: string; desiredDateISO: string; desiredTime?: string; kind: "cancel" | "reschedule"; reason?: string },
+  r: { name: string; phone: string; desiredDateISO: string; desiredTime?: string; kind: "cancel" | "reschedule"; reason?: string; bookingLabel?: string },
   ctx: OwnerTemplateCtx
 ): EmailMessage {
   const adminUrl = `${ctx.siteUrl.replace(/\/$/, "")}/admin/?screen=inquiries#cancel-requests`;
@@ -329,9 +329,10 @@ export function cancelRequestToOwner(
   const rows: Array<[string, string]> = [
     ["Klijent", r.name],
     ["Telefon", r.phone],
-    [r.kind === "reschedule" ? "Željeno novo vrijeme" : "Datum termina", dateLabel],
-    ["Razlog", r.reason ?? "—"],
   ];
+  if (r.bookingLabel) rows.push(["Termin koji menja", r.bookingLabel]);
+  rows.push([r.kind === "reschedule" ? "Željeno novo vrijeme" : "Datum termina", dateLabel]);
+  rows.push(["Razlog", r.reason ?? "—"]);
   const text = [
     `Klijent traži ${kindLabel} termina:`,
     ``,

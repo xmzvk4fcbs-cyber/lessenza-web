@@ -158,6 +158,21 @@ export interface SmtpMailerOpts {
   };
 }
 
+/** Parse "L'Essenza <info@lessenza.me>" → { name, address }. Passing a
+ *  structured object to nodemailer makes it RFC-encode the display name
+ *  correctly (apostrophes in unquoted display names get mangled by some
+ *  intermediate MTAs and render as garbage on the recipient side). */
+function parseAddr(raw: string): { name?: string; address: string } {
+  if (!raw) return { address: "" };
+  const m = raw.match(/^\s*"?([^"<]+?)"?\s*<([^>]+)>\s*$/);
+  if (m && m[1] && m[2]) {
+    const name = m[1].replace(/^"|"$/g, "").trim();
+    const address = m[2].trim();
+    return name ? { name, address } : { address };
+  }
+  return { address: raw.trim() };
+}
+
 export function createSmtpMailer(opts: SmtpMailerOpts): Mailer {
   const transport = (opts.transportFactory ?? defaultSmtpTransport)({
     host: opts.host,
@@ -169,7 +184,7 @@ export function createSmtpMailer(opts: SmtpMailerOpts): Mailer {
   return {
     async send(msg) {
       const info = await transport.sendMail({
-        from: opts.from,
+        from: parseAddr(opts.from) as unknown as string,
         to: msg.to,
         subject: msg.subject,
         text: msg.text,

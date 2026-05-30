@@ -23,6 +23,8 @@ interface Req {
   name: string;
   desiredDateISO: string;
   desiredTime?: string; // "HH:MM" — set when client picked a live slot
+  bookingEventId?: string; // event id of the matched existing booking
+  bookingLabel?: string;   // human label of that booking
   kind?: "cancel" | "reschedule";
   reason?: string;
 }
@@ -92,6 +94,11 @@ export const handler: Handler = async (event) => {
     }
   }
 
+  const bookingEventId = typeof body.bookingEventId === "string" && body.bookingEventId.trim()
+    ? body.bookingEventId.trim().slice(0, 120) : undefined;
+  const bookingLabel = typeof body.bookingLabel === "string" && body.bookingLabel.trim()
+    ? body.bookingLabel.trim().slice(0, 240) : undefined;
+
   const req: CancelRequest = {
     id: randomUUID(),
     createdAt: new Date().toISOString(),
@@ -99,6 +106,8 @@ export const handler: Handler = async (event) => {
     name: body.name.trim().slice(0, 120),
     desiredDateISO: body.desiredDateISO,
     desiredTime,
+    bookingEventId,
+    bookingLabel,
     kind,
     reason: reason || undefined,
     status: "pending",
@@ -110,7 +119,7 @@ export const handler: Handler = async (event) => {
     try {
       const mailer = await getMailerAsync();
       await mailer.send(cancelRequestToOwner(
-        { name: req.name, phone: req.phone, desiredDateISO: req.desiredDateISO, desiredTime: req.desiredTime, kind, reason: req.reason },
+        { name: req.name, phone: req.phone, desiredDateISO: req.desiredDateISO, desiredTime: req.desiredTime, kind, reason: req.reason, bookingLabel: req.bookingLabel },
         { ownerEmail: settings.ownerEmail, siteUrl: process.env.SITE_URL ?? "https://lessenza.me" }
       ));
     } catch (e) {

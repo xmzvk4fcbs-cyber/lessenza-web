@@ -286,6 +286,12 @@ export const CancelRequestSchema = z.object({
   /** Preferred new time (HH:MM, salon TZ) — set when the client picked a live
    *  available slot in the reschedule form. Validated server-side. */
   desiredTime: z.string().regex(/^\d{2}:\d{2}$/).optional(),
+  /** Calendar event id of the booking the client identified via find-booking,
+   *  so the owner sees exactly which termin is targeted (no guessing). */
+  bookingEventId: z.string().max(120).optional(),
+  /** Human label of the identified booking, captured at request time so the
+   *  owner sees it even if the event later changes. */
+  bookingLabel: z.string().max(240).optional(),
   /** What they're asking for. Default is cancel; reschedule clients write
    *  their preferred new time in the reason field — owner handles manually. */
   kind: z.enum(["cancel", "reschedule"]).default("cancel"),
