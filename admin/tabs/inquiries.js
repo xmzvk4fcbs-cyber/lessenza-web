@@ -89,7 +89,12 @@ async function renderCancelRequests() {
   const host = document.getElementById("cancel-requests");
   if (!host) return;
   try {
-    const { requests } = await must("/api/admin/cancel-requests");
+    const [{ requests }, services] = await Promise.all([
+      must("/api/admin/cancel-requests"),
+      getServices().catch(() => []),
+    ]);
+    const svcById = Object.fromEntries((services || []).map((s) => [s.id, s.name]));
+    const labelIds = (ids) => (ids || []).map((id) => svcById[id] || id).join(", ");
     const pending = (requests || []).filter((r) => r.status === "pending");
     if (!pending.length) { host.innerHTML = ""; return; }
     host.innerHTML = `
@@ -100,14 +105,29 @@ async function renderCancelRequests() {
       <div class="stack" id="cancel-req-list">
         ${pending.map((r) => {
           const isReschedule = r.kind === "reschedule";
-          const kindLabel = isReschedule ? "🔄 Želi pomjeriti termin" : "✕ Želi otkazati termin";
-          const actionLabel = isReschedule ? "Pomjeri termin" : "Otkaži termin";
+          const isModify = r.kind === "modify";
+          const removeLabel = labelIds(r.removeServiceIds);
+          const addLabel = labelIds(r.addServiceIds);
+          let kindLabel, actionLabel;
+          if (isReschedule) { kindLabel = "🔄 Želi pomjeriti termin"; actionLabel = "Pomjeri termin"; }
+          else if (isModify) {
+            if (removeLabel && addLabel) kindLabel = "🔧 Želi izmijeniti usluge";
+            else if (removeLabel) kindLabel = "− Želi ukloniti uslugu";
+            else if (addLabel) kindLabel = "+ Želi dodati uslugu";
+            else kindLabel = "🔧 Želi izmjenu termina";
+            actionLabel = "Obradi izmjenu";
+          } else { kindLabel = "✕ Želi otkazati termin"; actionLabel = "Otkaži termin"; }
+          const modifyDetail = isModify
+            ? `${removeLabel ? `<div class="stack-card__meta">➖ Ukloniti: <strong>${escapeHtml(removeLabel)}</strong></div>` : ""}${addLabel ? `<div class="stack-card__meta">➕ Dodati: <strong>${escapeHtml(addLabel)}</strong></div>` : ""}`
+            : "";
           return `
-          <article class="stack-card" data-id="${escapeHtml(r.id)}" data-phone="${escapeHtml(r.phone)}" data-name="${escapeHtml(r.name)}" data-date="${escapeHtml(r.desiredDateISO)}" data-kind="${escapeHtml(r.kind || "cancel")}">
+          <article class="stack-card" data-id="${escapeHtml(r.id)}" data-phone="${escapeHtml(r.phone)}" data-name="${escapeHtml(r.name)}" data-date="${escapeHtml(r.desiredDateISO)}" data-kind="${escapeHtml(r.kind || "cancel")}" data-remove="${escapeHtml(removeLabel)}" data-add="${escapeHtml(addLabel)}" data-booking="${escapeHtml(r.bookingLabel || "")}">
             <div class="stack-card__head">
               <div>
                 <div class="stack-card__title">${escapeHtml(r.name)} — ${escapeHtml(r.phone)}</div>
                 <div class="stack-card__meta"><strong>${kindLabel}</strong> za <strong>${escapeHtml(r.desiredDateISO)}</strong></div>
+                ${r.bookingLabel ? `<div class="stack-card__meta">📅 ${escapeHtml(r.bookingLabel)}</div>` : ""}
+                ${modifyDetail}
                 ${r.reason ? `<div class="stack-card__meta">📝 ${escapeHtml(r.reason)}</div>` : ""}
               </div>
             </div>
@@ -133,8 +153,41 @@ async function resolveRequest(card, status) {
   const phone = card.dataset.phone;
   const date = card.dataset.date;
   const kind = card.dataset.kind || "cancel";
+  const removeLabel = card.dataset.remove || "";
+  const addLabel = card.dataset.add || "";
+  const bookingLabel = card.dataset.booking || "";
   if (status === "approved") {
     const isReschedule = kind === "reschedule";
+    const isModify = kind === "modify";
+
+    // MODIFY — owner manually edits the booking in Raspored (add/remove services).
+    if (isModify) {
+      const what = removeLabel && addLabel
+        ? `<strong>uklanjanje:</strong> ${escapeHtml(removeLabel)}<br><strong>dodavanje:</strong> ${escapeHtml(addLabel)}`
+        : removeLabel ? `<strong>uklanjanje usluge:</strong> ${escapeHtml(removeLabel)}`
+        : addLabel ? `<strong>dodavanje usluge:</strong> ${escapeHtml(addLabel)}`
+        : "izmjenu termina";
+      openModal("Obradi izmjenu termina", `
+        <p>Klijentkinja <strong>${escapeHtml(name)}</strong> (${escapeHtml(phone)}) traži ${what}.</p>
+        ${bookingLabel ? `<p class="muted" style="font-size:0.88rem;">Postojeći termin: <strong>${escapeHtml(bookingLabel)}</strong> (${escapeHtml(date)})</p>` : ""}
+        <p class="muted" style="font-size:0.88rem;line-height:1.5;">Otvori Raspored za taj dan, klikni na termin i izmijeni usluge. Ako dodavanje produžava termin, provjeri da nema preklapanja. Kad je gotovo, klikni "Označi kao obavljeno" — sistem će obavijestiti klijentkinju da je zahtjev obrađen.</p>
+        <div class="stack-card__actions" style="margin-top:0.75rem;flex-wrap:wrap;">
+          <a class="btn btn-ghost" href="tel:${escapeHtml(phone)}">Pozovi</a>
+          <a class="btn btn-ghost" href="https://wa.me/${escapeHtml(phone).replace(/[^\d]/g, "")}" target="_blank" rel="noopener">WhatsApp</a>
+          <a class="btn btn-ghost" href="/admin/?view=day&anchor=${encodeURIComponent(date)}#schedule">Idi na raspored</a>
+          <button class="btn btn-primary" type="button" id="cr-done">Označi kao obavljeno</button>
+        </div>
+      `);
+      document.getElementById("cr-done").addEventListener("click", async () => {
+        try {
+          await must("/api/admin/cancel-requests", { method: "PATCH", body: { id, status: "approved" } });
+          closeModal();
+          toast("Zahtjev označen kao obavljen.", "success");
+          await renderCancelRequests();
+        } catch (e) { toast(e.message, "error"); }
+      });
+      return;
+    }
 
     // RESCHEDULE — owner must handle manually (negotiate new time with client).
     if (isReschedule) {

@@ -87,12 +87,22 @@ export const handler: Handler = async (event) => {
     })
     .sort((a, b) => Date.parse(a.startISO) - Date.parse(b.startISO))
     .slice(0, 5)
-    .map((b) => ({
-      eventId: b.calendarEventId,
-      label: b.combinedServicesLabel ?? b.serviceName,
-      startISO: b.startISO,
-      endISO: b.endISO,
-    }));
+    .map((b) => {
+      const allIds = [b.serviceId, ...(b.additionalServiceIds ?? [])];
+      const breakdown = allIds
+        .map((id) => {
+          const s = services.find((x) => x.id === id);
+          return s ? { id: s.id, name: s.name, durationMin: s.durationMinutes } : null;
+        })
+        .filter((x): x is { id: string; name: string; durationMin: number } => x !== null);
+      return {
+        eventId: b.calendarEventId,
+        label: b.combinedServicesLabel ?? b.serviceName,
+        startISO: b.startISO,
+        endISO: b.endISO,
+        services: breakdown,
+      };
+    });
 
   return json({ bookings });
 };

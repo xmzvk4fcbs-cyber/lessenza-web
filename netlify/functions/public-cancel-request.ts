@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import type { Handler } from "@netlify/functions";
 import { json, badRequest, methodNotAllowed, parseJson } from "../lib/http";
-import { addCancelRequest, getSettings, getPushSubscriptions, removePushSubscription, getWorkingHours, getBlocks } from "../lib/config";
+import { addCancelRequest, getSettings, getPushSubscriptions, removePushSubscription, getWorkingHours, getBlocks, getServices } from "../lib/config";
 import { getMailerAsync } from "../lib/mailer";
 import { cancelRequestToOwner } from "../lib/email-templates";
 import { normalizePhone } from "../lib/phone";
@@ -25,8 +25,12 @@ interface Req {
   desiredTime?: string; // "HH:MM" — set when client picked a live slot
   bookingEventId?: string; // event id of the matched existing booking
   bookingLabel?: string;   // human label of that booking
-  kind?: "cancel" | "reschedule";
+  kind?: "cancel" | "reschedule" | "modify";
   reason?: string;
+  /** Service ids to remove from the existing booking ("Otkaži samo jednu uslugu"). */
+  removeServiceIds?: string[];
+  /** Service ids to add to the existing booking ("Dodaj uslugu"). */
+  addServiceIds?: string[];
 }
 
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
@@ -68,7 +72,17 @@ export const handler: Handler = async (event) => {
   if (!phone) return badRequest("bad-phone", "Phone number is invalid");
 
   const reason = typeof body.reason === "string" ? body.reason.trim().slice(0, 500) : "";
-  const kind = body.kind === "reschedule" ? "reschedule" : "cancel";
+  const cleanIds = (arr: unknown): string[] | undefined => {
+    if (!Array.isArray(arr)) return undefined;
+    const out = arr.filter((x): x is string => typeof x === "string" && x.length > 0 && x.length <= 80).slice(0, 8);
+    return out.length ? out : undefined;
+  };
+  const removeServiceIds = cleanIds(body.removeServiceIds);
+  const addServiceIds = cleanIds(body.addServiceIds);
+  const kind: "cancel" | "reschedule" | "modify" =
+    body.kind === "reschedule" ? "reschedule" :
+    body.kind === "modify" || removeServiceIds || addServiceIds ? "modify" :
+    "cancel";
 
   // For reschedule: validate the picked time is still in live availability — the
   // form only offers free slots, but we re-check to protect against stale data.
@@ -109,17 +123,31 @@ export const handler: Handler = async (event) => {
     bookingEventId,
     bookingLabel,
     kind,
+    removeServiceIds,
+    addServiceIds,
     reason: reason || undefined,
     status: "pending",
   };
   await addCancelRequest(req);
+
+  // Resolve service ids to names for a human-readable email.
+  let removeLabel: string | undefined;
+  let addLabel: string | undefined;
+  if (removeServiceIds || addServiceIds) {
+    try {
+      const svcs = await getServices();
+      const toLabel = (ids?: string[]) => ids?.map((id) => svcs.find((s) => s.id === id)?.name ?? id).filter(Boolean).join(", ");
+      removeLabel = toLabel(removeServiceIds);
+      addLabel = toLabel(addServiceIds);
+    } catch { /* fall back to ids only */ }
+  }
 
   // Email the owner — best-effort (so they're notified even with push off).
   if (settings.ownerEmail) {
     try {
       const mailer = await getMailerAsync();
       await mailer.send(cancelRequestToOwner(
-        { name: req.name, phone: req.phone, desiredDateISO: req.desiredDateISO, desiredTime: req.desiredTime, kind, reason: req.reason, bookingLabel: req.bookingLabel },
+        { name: req.name, phone: req.phone, desiredDateISO: req.desiredDateISO, desiredTime: req.desiredTime, kind, reason: req.reason, bookingLabel: req.bookingLabel, removeLabel, addLabel },
         { ownerEmail: settings.ownerEmail, siteUrl: process.env.SITE_URL ?? "https://lessenza.me" }
       ));
     } catch (e) {

@@ -320,18 +320,28 @@ export function inquiryCreatedToOwner(i: InquiryForEmail, ctx: OwnerTemplateCtx)
 }
 
 export function cancelRequestToOwner(
-  r: { name: string; phone: string; desiredDateISO: string; desiredTime?: string; kind: "cancel" | "reschedule"; reason?: string; bookingLabel?: string },
+  r: { name: string; phone: string; desiredDateISO: string; desiredTime?: string; kind: "cancel" | "reschedule" | "modify"; reason?: string; bookingLabel?: string; removeLabel?: string; addLabel?: string },
   ctx: OwnerTemplateCtx
 ): EmailMessage {
   const adminUrl = `${ctx.siteUrl.replace(/\/$/, "")}/admin/?screen=inquiries#cancel-requests`;
-  const kindLabel = r.kind === "reschedule" ? "pomjeranje" : "otkazivanje";
+  let kindLabel = "otkazivanje";
+  if (r.kind === "reschedule") kindLabel = "pomjeranje";
+  else if (r.kind === "modify") {
+    if (r.removeLabel && r.addLabel) kindLabel = "izmjenu";
+    else if (r.removeLabel) kindLabel = "uklanjanje usluge";
+    else if (r.addLabel) kindLabel = "dodavanje usluge";
+    else kindLabel = "izmjenu";
+  }
   const dateLabel = r.desiredTime ? `${r.desiredDateISO} u ${r.desiredTime}` : r.desiredDateISO;
   const rows: Array<[string, string]> = [
     ["Klijent", r.name],
     ["Telefon", r.phone],
   ];
-  if (r.bookingLabel) rows.push(["Termin koji menja", r.bookingLabel]);
-  rows.push([r.kind === "reschedule" ? "Željeno novo vrijeme" : "Datum termina", dateLabel]);
+  if (r.bookingLabel) rows.push(["Postojeći termin", r.bookingLabel]);
+  if (r.kind === "reschedule") rows.push(["Željeno novo vrijeme", dateLabel]);
+  else if (r.kind === "cancel") rows.push(["Datum termina", dateLabel]);
+  if (r.removeLabel) rows.push(["Ukloniti uslugu(e)", r.removeLabel]);
+  if (r.addLabel) rows.push(["Dodati uslugu(e)", r.addLabel]);
   rows.push(["Razlog", r.reason ?? "—"]);
   const text = [
     `Klijent traži ${kindLabel} termina:`,

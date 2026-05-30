@@ -292,9 +292,14 @@ export const CancelRequestSchema = z.object({
   /** Human label of the identified booking, captured at request time so the
    *  owner sees it even if the event later changes. */
   bookingLabel: z.string().max(240).optional(),
-  /** What they're asking for. Default is cancel; reschedule clients write
-   *  their preferred new time in the reason field — owner handles manually. */
-  kind: z.enum(["cancel", "reschedule"]).default("cancel"),
+  /** What they're asking for. cancel/reschedule are auto-resolvable by the
+   *  owner with one click; `modify` is for partial edits (remove or add a
+   *  service to an existing termin) — owner applies manually. */
+  kind: z.enum(["cancel", "reschedule", "modify"]).default("cancel"),
+  /** Service ids the client wants removed from the existing booking. */
+  removeServiceIds: z.array(z.string().max(80)).max(8).optional(),
+  /** Service ids the client wants added to the existing booking. */
+  addServiceIds: z.array(z.string().max(80)).max(8).optional(),
   reason: z.string().max(500).optional(),
   status: z.enum(["pending", "approved", "declined"]),
   /** Set when admin approves and the calendar event was actually deleted. */

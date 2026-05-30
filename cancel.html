@@ -99,6 +99,33 @@
     }
     .match-card span { font-size: 0.92rem; color: var(--text, #4A4238); }
     .block { display: block; width: 100%; }
+    .action-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 10px; }
+    .action-card {
+      background: #fff; border: 1px solid rgba(201,169,97,0.5); border-radius: 12px;
+      padding: 14px 12px; cursor: pointer; font-family: inherit; text-align: left;
+      display: flex; flex-direction: column; gap: 6px; transition: all 0.18s ease;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .action-card:hover { border-color: var(--gold, #C9A961); transform: translateY(-2px); box-shadow: 0 6px 14px rgba(201,169,97,0.18); }
+    .action-card .ic { font-size: 1.4rem; color: #A8863F; line-height: 1; }
+    .action-card strong { font-family: 'Cormorant Garamond', Georgia, serif; font-size: 1.05rem; color: var(--text, #4A4238); font-weight: 600; line-height: 1.2; }
+    @media (max-width: 380px) { .action-grid { grid-template-columns: 1fr; } }
+    .service-row {
+      display: flex; align-items: center; gap: 10px;
+      padding: 11px 13px; background: #fff; border: 1px solid rgba(201,169,97,0.5);
+      border-radius: 10px; margin-bottom: 6px; cursor: pointer;
+      transition: all 0.16s ease; -webkit-tap-highlight-color: transparent;
+    }
+    .service-row:hover { border-color: var(--gold, #C9A961); }
+    .service-row .check { width: 22px; height: 22px; border: 1.5px solid rgba(201,169,97,0.55); border-radius: 6px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; }
+    .service-row.is-active { background: linear-gradient(135deg, #D4B575, #C9A961); color: #fff; border-color: var(--gold, #C9A961); }
+    .service-row.is-active .check { background: #fff; border-color: #fff; color: #A8863F; font-weight: 700; }
+    .service-row.is-active .check::after { content: "✓"; }
+    .service-row .info { flex: 1; min-width: 0; }
+    .service-row .name { font-weight: 600; color: var(--text, #4A4238); }
+    .service-row.is-active .name { color: #fff; }
+    .service-row .meta { font-size: 0.83rem; color: var(--sage, #6B6F4F); }
+    .service-row.is-active .meta { color: rgba(255,255,255,0.9); }
     .cancel-summary { background: rgba(255,255,255,0.75); border-left: 3px solid var(--gold, #C9A961); padding: 14px 16px; margin: 0 0 18px; border-radius: 0 10px 10px 0; font-size: 0.95rem; line-height: 1.5; }
     .cancel-summary strong { color: var(--sage, #6B6F4F); display: block; margin-bottom: 4px; font-family: 'Cormorant Garamond', Georgia, serif; font-size: 1.15rem; }
     .cancel-actions { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; margin-top: 16px; }
@@ -187,11 +214,6 @@
       <h1>Zahtjev salonu</h1>
       <p class="lead">Pronaći ćemo tvoj termin po broju telefona ili emailu.</p>
 
-      <div class="kind-toggle" role="tablist" aria-label="Šta želiš">
-        <button type="button" class="kind-chip is-active" data-kind="cancel" aria-selected="true">Otkaži termin</button>
-        <button type="button" class="kind-chip" data-kind="reschedule" aria-selected="false">Pomjeri termin</button>
-      </div>
-
       <!-- STEP 1: Identify -->
       <div id="step-identify">
         <div class="field">
@@ -213,18 +235,31 @@
 
       <!-- STEP 2: Pick existing booking -->
       <div id="step-matches" hidden>
-        <p class="resched-hint">Izaberi termin za koji šalješ zahtjev:</p>
+        <p class="resched-hint">Tvoji najavljeni termini — izaberi:</p>
         <div id="matches-list"></div>
         <button type="button" id="back-to-identify" class="btn btn-ghost block" style="margin-top:10px;">← Promijeni broj/email</button>
       </div>
 
-      <!-- STEP 3a: Confirm cancel -->
-      <div id="step-cancel" hidden>
-        <p class="resched-hint">Šaljem zahtjev za otkazivanje:</p>
+      <!-- STEP 3: Action picker -->
+      <div id="step-action" hidden>
+        <div id="picked-booking-pill" class="selected-pill" style="margin-top:0;"></div>
+        <p class="resched-hint" style="margin-top:14px;">Šta želiš sa ovim terminom?</p>
+        <div class="action-grid">
+          <button type="button" class="action-card" data-action="cancel-all"><span class="ic">✕</span><strong>Otkaži cijeli termin</strong></button>
+          <button type="button" class="action-card" data-action="cancel-some"><span class="ic">−</span><strong>Otkaži samo neku uslugu</strong></button>
+          <button type="button" class="action-card" data-action="reschedule"><span class="ic">↻</span><strong>Pomjeri termin</strong></button>
+          <button type="button" class="action-card" data-action="add"><span class="ic">+</span><strong>Dodaj uslugu</strong></button>
+        </div>
+        <button type="button" id="back-to-matches" class="btn btn-ghost block" style="margin-top:12px;">← Nazad na termine</button>
+      </div>
+
+      <!-- STEP 4a: Cancel all -->
+      <div id="step-cancel-all" hidden>
+        <p class="resched-hint">Šaljem zahtjev za otkazivanje cijelog termina:</p>
         <div id="selected-cancel" class="selected-pill" style="margin-top:0;"></div>
         <div class="field" style="margin-top:14px;">
-          <label for="cancel-reason">Razlog (opciono)</label>
-          <textarea id="cancel-reason" maxlength="500" rows="2" placeholder="npr. bolest, hitan posao…"></textarea>
+          <label for="cancel-all-reason">Razlog (opciono)</label>
+          <textarea id="cancel-all-reason" maxlength="500" rows="2" placeholder="npr. bolest, hitan posao…"></textarea>
         </div>
         <div class="cancel-actions">
           <button type="button" id="submit-cancel" class="btn btn-primary">Pošalji zahtjev</button>
@@ -232,7 +267,22 @@
         </div>
       </div>
 
-      <!-- STEP 3b: Reschedule — pick new slot -->
+      <!-- STEP 4b: Cancel some services -->
+      <div id="step-cancel-some" hidden>
+        <div id="selected-cancel-some" class="selected-pill" style="margin-top:0;"></div>
+        <p class="resched-hint" style="margin-top:14px;">Označi uslugu(e) koje želiš da otkažeš (ostatak ostaje):</p>
+        <div id="remove-services-list"></div>
+        <div class="field" style="margin-top:8px;">
+          <label for="cancel-some-reason">Razlog (opciono)</label>
+          <textarea id="cancel-some-reason" maxlength="500" rows="2" placeholder="opciono…"></textarea>
+        </div>
+        <div class="cancel-actions">
+          <button type="button" id="submit-cancel-some" class="btn btn-primary">Pošalji zahtjev</button>
+          <button type="button" id="cancel-some-back" class="btn btn-ghost">← Nazad</button>
+        </div>
+      </div>
+
+      <!-- STEP 4c: Reschedule — pick new slot -->
       <div id="step-reschedule" hidden>
         <p class="resched-hint">Pomjeram:</p>
         <div id="selected-resched" class="selected-pill" style="margin-top:0;"></div>
@@ -251,6 +301,22 @@
         <div class="cancel-actions">
           <button type="button" id="submit-resched" class="btn btn-primary">Pošalji zahtjev</button>
           <button type="button" id="resched-back" class="btn btn-ghost">← Nazad</button>
+        </div>
+      </div>
+
+      <!-- STEP 4d: Add service -->
+      <div id="step-add" hidden>
+        <div id="selected-add" class="selected-pill" style="margin-top:0;"></div>
+        <p class="resched-hint" style="margin-top:14px;">Koju uslugu želiš da dodaš u ovaj termin?</p>
+        <div id="add-services-list"></div>
+        <div class="field" style="margin-top:8px;">
+          <label for="add-note">Napomena (opciono)</label>
+          <textarea id="add-note" maxlength="500" rows="2" placeholder="opciono…"></textarea>
+        </div>
+        <p style="font-size:0.83rem;color:var(--sage,#6B6F4F);margin:6px 0 0;">Salon će provjeriti da li ima vremena i potvrditi.</p>
+        <div class="cancel-actions">
+          <button type="button" id="submit-add" class="btn btn-primary">Pošalji zahtjev</button>
+          <button type="button" id="add-back" class="btn btn-ghost">← Nazad</button>
         </div>
       </div>
 
@@ -285,12 +351,15 @@
 
   // ===== Request-form (no email link) — multi-step flow =====
   const state = {
-    kind: "cancel",
-    matches: [],     // results from /api/public-find-booking
-    picked: null,    // {eventId,label,startISO,endISO} chosen by user
-    days: null,      // availability for reschedule
+    action: null,         // "cancel-all" | "cancel-some" | "reschedule" | "add"
+    matches: [],          // results from /api/public-find-booking
+    picked: null,         // {eventId,label,startISO,endISO,services[]} chosen by user
+    days: null,           // availability for reschedule
     dayKey: null,
     slot: null,
+    services: null,       // service catalog (lazy-loaded for "add")
+    removeIds: new Set(), // for cancel-some
+    addIds: new Set(),    // for add
   };
 
   const SR_DOW = ["Ned", "Pon", "Uto", "Sri", "Čet", "Pet", "Sub"];
@@ -309,26 +378,16 @@
   function escapeHtml(s) { return String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]); }
 
   function showStep(name) {
-    ["identify", "matches", "cancel", "reschedule"].forEach((s) => {
+    ["identify", "matches", "action", "cancel-all", "cancel-some", "reschedule", "add"].forEach((s) => {
       const el = $("step-" + s);
       if (el) el.hidden = s !== name;
     });
     const err = $("req-error"); if (err) err.hidden = true;
   }
 
-  function setKind(kind) {
-    state.kind = kind;
-    document.querySelectorAll(".kind-chip").forEach((c) => c.classList.toggle("is-active", c.dataset.kind === kind));
-    // If user already picked a termin, jump straight to the right next step.
-    if (state.picked && !$("step-matches").hidden === false) return;
-    if (state.picked) {
-      if (kind === "cancel") { $("selected-cancel").innerHTML = `<span>${escapeHtml(bookingLabel(state.picked))}</span>`; showStep("cancel"); }
-      else { $("selected-resched").innerHTML = `<span>${escapeHtml(bookingLabel(state.picked))}</span>`; showStep("reschedule"); if (!state.days) loadAvailability(); }
-    }
-  }
+  function pillHtml(b) { return `<span>${escapeHtml(bookingLabel(b))}</span>`; }
 
-  document.querySelectorAll(".kind-chip").forEach((c) => c.addEventListener("click", () => setKind(c.dataset.kind)));
-  $("open-request")?.addEventListener("click", () => { show("request-form"); setKind("cancel"); showStep("identify"); });
+  $("open-request")?.addEventListener("click", () => { show("request-form"); showStep("identify"); });
 
   // ----- STEP 1: identify by phone or email -----
   $("find-btn")?.addEventListener("click", async () => {
@@ -373,50 +432,185 @@
     }).join("");
     host.querySelectorAll(".match-card").forEach((b) => b.addEventListener("click", () => {
       state.picked = state.matches[Number(b.dataset.i)];
-      if (state.kind === "cancel") {
-        $("selected-cancel").innerHTML = `<span>${escapeHtml(bookingLabel(state.picked))}</span>`;
-        showStep("cancel");
-      } else {
-        $("selected-resched").innerHTML = `<span>${escapeHtml(bookingLabel(state.picked))}</span>`;
-        showStep("reschedule");
-        if (!state.days) loadAvailability();
-      }
+      state.removeIds = new Set(); state.addIds = new Set();
+      $("picked-booking-pill").innerHTML = pillHtml(state.picked);
+      showStep("action");
     }));
   }
 
-  $("back-to-identify")?.addEventListener("click", () => { state.picked = null; showStep("identify"); });
-  $("cancel-back")?.addEventListener("click", () => showStep("matches"));
-  $("resched-back")?.addEventListener("click", () => showStep("matches"));
+  // ----- STEP 3: action picker -----
+  function pickAction(action) {
+    state.action = action;
+    if (action === "cancel-all") {
+      $("selected-cancel").innerHTML = pillHtml(state.picked);
+      showStep("cancel-all");
+    } else if (action === "cancel-some") {
+      $("selected-cancel-some").innerHTML = pillHtml(state.picked);
+      renderRemoveServices();
+      showStep("cancel-some");
+    } else if (action === "reschedule") {
+      $("selected-resched").innerHTML = pillHtml(state.picked);
+      showStep("reschedule");
+      if (!state.days) loadAvailability();
+    } else if (action === "add") {
+      $("selected-add").innerHTML = pillHtml(state.picked);
+      showStep("add");
+      loadServicesForAdd();
+    }
+  }
+  document.querySelectorAll(".action-card").forEach((c) =>
+    c.addEventListener("click", () => pickAction(c.dataset.action)));
 
-  // ----- STEP 3a: submit cancel -----
-  $("submit-cancel")?.addEventListener("click", async () => {
-    if (!state.picked) return showStep("matches");
-    const reason = ($("cancel-reason").value || "").trim();
-    const phone = ($("req-phone").value || "").trim();
-    const email = ($("req-email").value || "").trim();
-    const name = ($("req-name").value || "").trim();
+  $("back-to-identify")?.addEventListener("click", () => { state.picked = null; showStep("identify"); });
+  $("back-to-matches")?.addEventListener("click", () => { state.picked = null; showStep("matches"); });
+  $("cancel-back")?.addEventListener("click", () => showStep("action"));
+  $("cancel-some-back")?.addEventListener("click", () => showStep("action"));
+  $("resched-back")?.addEventListener("click", () => showStep("action"));
+  $("add-back")?.addEventListener("click", () => showStep("action"));
+
+  // ----- STEP 4b: render removable services + toggle handlers -----
+  function renderRemoveServices() {
+    const host = $("remove-services-list");
+    const svcs = state.picked?.services || [];
+    if (!svcs.length) {
+      host.innerHTML = `<div class="cancel-state cancel-state--info" style="font-size:0.88rem;padding:10px 14px;">Nema podataka o uslugama za ovaj termin.</div>`;
+      return;
+    }
+    host.innerHTML = svcs.map((s) => `
+      <button type="button" class="service-row" data-id="${escapeHtml(s.id)}">
+        <span class="check"></span>
+        <span class="info"><span class="name">${escapeHtml(s.name)}</span><br><span class="meta">${s.durationMin} min</span></span>
+      </button>`).join("");
+    host.querySelectorAll(".service-row").forEach((row) => row.addEventListener("click", () => {
+      const id = row.dataset.id;
+      if (state.removeIds.has(id)) state.removeIds.delete(id);
+      else state.removeIds.add(id);
+      row.classList.toggle("is-active", state.removeIds.has(id));
+    }));
+  }
+
+  // ----- STEP 4d: load full service catalog + render -----
+  async function loadServicesForAdd() {
+    const host = $("add-services-list");
+    if (state.services) { renderAddServices(); return; }
+    host.innerHTML = `<div class="cancel-state cancel-state--info" style="font-size:0.88rem;padding:10px 14px;">Učitavanje usluga…</div>`;
+    try {
+      const r = await fetch("/api/services", { cache: "no-store" });
+      const body = await r.json();
+      state.services = (body.services || []).filter((s) => !s.archived);
+      renderAddServices();
+    } catch (e) {
+      host.innerHTML = `<div class="cancel-state cancel-state--err" style="font-size:0.88rem;padding:10px 14px;">Ne mogu da učitam usluge: ${escapeHtml(e.message)}</div>`;
+    }
+  }
+  function renderAddServices() {
+    const host = $("add-services-list");
+    const existing = new Set((state.picked?.services || []).map((s) => s.id));
+    const list = (state.services || []).filter((s) => !existing.has(s.id));
+    if (!list.length) {
+      host.innerHTML = `<div class="cancel-state cancel-state--info" style="font-size:0.88rem;padding:10px 14px;">Sve usluge su već u ovom terminu.</div>`;
+      return;
+    }
+    host.innerHTML = list.map((s) => `
+      <button type="button" class="service-row" data-id="${escapeHtml(s.id)}">
+        <span class="check"></span>
+        <span class="info"><span class="name">${escapeHtml(s.name)}</span><br><span class="meta">${s.durationMinutes} min</span></span>
+      </button>`).join("");
+    host.querySelectorAll(".service-row").forEach((row) => row.addEventListener("click", () => {
+      const id = row.dataset.id;
+      if (state.addIds.has(id)) state.addIds.delete(id);
+      else state.addIds.add(id);
+      row.classList.toggle("is-active", state.addIds.has(id));
+    }));
+  }
+
+  // ----- Shared submit helper -----
+  function readContact() {
+    return {
+      name: ($("req-name").value || "").trim(),
+      phone: ($("req-phone").value || "").trim(),
+      email: ($("req-email").value || "").trim(),
+    };
+  }
+  async function submitRequest(btn, payload) {
     const err = $("req-error"); err.hidden = true;
-    const btn = $("submit-cancel"); btn.disabled = true; btn.textContent = "Šaljem…";
+    const origLabel = btn.textContent;
+    btn.disabled = true; btn.textContent = "Šaljem…";
     try {
       const r = await fetch("/api/public-cancel-request", {
         method: "POST", headers: { "content-type": "application/json" },
-        body: JSON.stringify({
-          name, phone: phone || email,
-          desiredDateISO: state.picked.startISO.slice(0, 10),
-          bookingEventId: state.picked.eventId,
-          bookingLabel: state.picked.label,
-          kind: "cancel",
-          reason,
-        }),
+        body: JSON.stringify(payload),
       });
       const body = await r.json().catch(() => ({}));
-      if (r.ok) return show("request-done");
+      if (r.ok) { show("request-done"); return { ok: true, body }; }
       err.hidden = false; err.textContent = body.message || "Greška. Probaj ponovo.";
+      return { ok: false, body };
     } catch (e) {
       err.hidden = false; err.textContent = e.message || "Mreža nedostupna.";
+      return { ok: false, body: { error: "network" } };
     } finally {
-      btn.disabled = false; btn.textContent = "Pošalji zahtjev";
+      btn.disabled = false; btn.textContent = origLabel;
     }
+  }
+
+  // ----- STEP 4a: submit cancel-all -----
+  $("submit-cancel")?.addEventListener("click", async () => {
+    if (!state.picked) return showStep("matches");
+    const c = readContact();
+    await submitRequest($("submit-cancel"), {
+      name: c.name, phone: c.phone || c.email,
+      desiredDateISO: state.picked.startISO.slice(0, 10),
+      bookingEventId: state.picked.eventId,
+      bookingLabel: state.picked.label,
+      kind: "cancel",
+      reason: ($("cancel-all-reason").value || "").trim(),
+    });
+  });
+
+  // ----- STEP 4b: submit cancel-some -----
+  $("submit-cancel-some")?.addEventListener("click", async () => {
+    if (!state.picked) return showStep("matches");
+    if (!state.removeIds.size) {
+      const err = $("req-error"); err.hidden = false;
+      err.textContent = "Označi bar jednu uslugu koju želiš da otkažeš.";
+      return;
+    }
+    const total = (state.picked.services || []).length;
+    if (state.removeIds.size >= total) {
+      const err = $("req-error"); err.hidden = false;
+      err.textContent = "Označila/o si sve usluge — koristi „Otkaži cijeli termin".";
+      return;
+    }
+    const c = readContact();
+    await submitRequest($("submit-cancel-some"), {
+      name: c.name, phone: c.phone || c.email,
+      desiredDateISO: state.picked.startISO.slice(0, 10),
+      bookingEventId: state.picked.eventId,
+      bookingLabel: state.picked.label,
+      kind: "modify",
+      removeServiceIds: Array.from(state.removeIds),
+      reason: ($("cancel-some-reason").value || "").trim(),
+    });
+  });
+
+  // ----- STEP 4d: submit add -----
+  $("submit-add")?.addEventListener("click", async () => {
+    if (!state.picked) return showStep("matches");
+    if (!state.addIds.size) {
+      const err = $("req-error"); err.hidden = false;
+      err.textContent = "Označi uslugu koju želiš da dodaš.";
+      return;
+    }
+    const c = readContact();
+    await submitRequest($("submit-add"), {
+      name: c.name, phone: c.phone || c.email,
+      desiredDateISO: state.picked.startISO.slice(0, 10),
+      bookingEventId: state.picked.eventId,
+      bookingLabel: state.picked.label,
+      kind: "modify",
+      addServiceIds: Array.from(state.addIds),
+      reason: ($("add-note").value || "").trim(),
+    });
   });
 
   // ----- STEP 3b: reschedule helpers -----
@@ -496,7 +690,7 @@
 
   // No token → visitor arrived from public footer "Otkaži / pomjeri termin"
   // link, not from an email. Send them straight to step 1 of the request form.
-  if (!token) { show("request-form"); setKind("cancel"); showStep("identify"); return; }
+  if (!token) { show("request-form"); showStep("identify"); return; }
 
   // 1. Fetch booking summary.
   let info;
