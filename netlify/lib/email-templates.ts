@@ -481,6 +481,51 @@ export function bookingRescheduledToClient(
   };
 }
 
+export function bookingServicesModifiedToClient(
+  original: Booking,
+  updated: Booking,
+  ctx: ClientTemplateCtx
+): EmailMessage {
+  if (!updated.email) throw new Error("Booking has no client email");
+  const oldServices = svc(original);
+  const newServices = svc(updated);
+  const dateLine = formatDateHuman(updated.startISO);
+  const text = [
+    `Zdravo ${updated.name},`,
+    ``,
+    `Usluge u vašem terminu su izmijenjene.`,
+    ``,
+    `Termin: ${dateLine}`,
+    `Prije: ${oldServices}`,
+    `Sada: ${newServices}`,
+    `Gdje: ${ctx.salonAddress}`,
+    ``,
+    `Za izmjene — odgovorite na ovaj email.`,
+    ``,
+    `— L'Essenza`,
+  ].filter(Boolean).join("\n");
+
+  const inner = [
+    paragraph(`Draga ${updated.name},`),
+    paragraph(`Usluge u vašem terminu su izmijenjene prema vašem zahtjevu.`),
+    detailsTable([
+      ["Termin", dateLine],
+      ["Prije", oldServices],
+      ["Sada", newServices],
+      ["Gdje", ctx.salonAddress],
+    ]),
+    softNote(`Ako ovako ne odgovara, odgovorite na ovaj email pa ćemo dogovoriti.`),
+    signOff(ctx?.emailSignature),
+  ].filter(Boolean).join("\n");
+
+  return {
+    to: updated.email,
+    subject: "L'Essenza — Usluge u terminu izmijenjene",
+    text,
+    html: renderShell({ heading: "Termin je izmijenjen", preheader: `${newServices} · ${dateLine}`, inner }),
+  };
+}
+
 export function inquiryAcceptedToClient(
   i: InquiryForEmail,
   startISO: string,

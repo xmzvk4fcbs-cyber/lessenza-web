@@ -27,7 +27,12 @@ async function must(path, opts = {}) {
     showGoogleDeadBanner();
     return r.data;
   }
-  if (!r.ok) throw new Error(r.data?.message || `HTTP ${r.status}`);
+  if (!r.ok) {
+    const err = new Error(r.data?.message || `HTTP ${r.status}`);
+    err.body = r.data;
+    err.status = r.status;
+    throw err;
+  }
   return r.data;
 }
 

@@ -160,32 +160,75 @@ async function resolveRequest(card, status) {
     const isReschedule = kind === "reschedule";
     const isModify = kind === "modify";
 
-    // MODIFY — owner manually edits the booking in Raspored (add/remove services).
+    // MODIFY — try to auto-apply the service change. If the new duration
+    // conflicts with another booking / pauza / working hours, surface the
+    // conflict so the owner can force or fall back to manual editing.
     if (isModify) {
       const what = removeLabel && addLabel
-        ? `<strong>uklanjanje:</strong> ${escapeHtml(removeLabel)}<br><strong>dodavanje:</strong> ${escapeHtml(addLabel)}`
-        : removeLabel ? `<strong>uklanjanje usluge:</strong> ${escapeHtml(removeLabel)}`
-        : addLabel ? `<strong>dodavanje usluge:</strong> ${escapeHtml(addLabel)}`
+        ? `<strong>ukloniti:</strong> ${escapeHtml(removeLabel)}<br><strong>dodati:</strong> ${escapeHtml(addLabel)}`
+        : removeLabel ? `<strong>ukloniti uslugu:</strong> ${escapeHtml(removeLabel)}`
+        : addLabel ? `<strong>dodati uslugu:</strong> ${escapeHtml(addLabel)}`
         : "izmjenu termina";
       openModal("Obradi izmjenu termina", `
         <p>Klijentkinja <strong>${escapeHtml(name)}</strong> (${escapeHtml(phone)}) traži ${what}.</p>
         ${bookingLabel ? `<p class="muted" style="font-size:0.88rem;">Postojeći termin: <strong>${escapeHtml(bookingLabel)}</strong> (${escapeHtml(date)})</p>` : ""}
-        <p class="muted" style="font-size:0.88rem;line-height:1.5;">Otvori Raspored za taj dan, klikni na termin i izmijeni usluge. Ako dodavanje produžava termin, provjeri da nema preklapanja. Kad je gotovo, klikni "Označi kao obavljeno" — sistem će obavijestiti klijentkinju da je zahtjev obrađen.</p>
+        <p class="muted" style="font-size:0.88rem;line-height:1.5;">Sistem će automatski izmijeniti termin u kalendaru i poslati email klijentkinji. Ako dodavanje produžava termin u preklapanje sa sljedećim, javit ću ti — pa biraš.</p>
         <div class="stack-card__actions" style="margin-top:0.75rem;flex-wrap:wrap;">
-          <a class="btn btn-ghost" href="tel:${escapeHtml(phone)}">Pozovi</a>
-          <a class="btn btn-ghost" href="https://wa.me/${escapeHtml(phone).replace(/[^\d]/g, "")}" target="_blank" rel="noopener">WhatsApp</a>
-          <a class="btn btn-ghost" href="/admin/?view=day&anchor=${encodeURIComponent(date)}#schedule">Idi na raspored</a>
-          <button class="btn btn-primary" type="button" id="cr-done">Označi kao obavljeno</button>
+          <button class="btn btn-ghost" type="button" data-close="1">Nazad</button>
+          <button class="btn btn-primary" type="button" id="cr-approve">Izmijeni termin</button>
         </div>
+        <div id="cr-error" class="mb-conflict-banner" hidden style="margin-top:0.75rem;"></div>
       `);
-      document.getElementById("cr-done").addEventListener("click", async () => {
+      const approve = async (force) => {
+        const btn = document.getElementById("cr-approve");
+        const err = document.getElementById("cr-error");
+        if (btn) { btn.disabled = true; btn.textContent = force ? "Forsiram…" : "Izmjenjujem…"; }
+        if (err) err.hidden = true;
         try {
-          await must("/api/admin/cancel-requests", { method: "PATCH", body: { id, status: "approved" } });
+          const r = await must("/api/admin/cancel-requests", {
+            method: "PATCH",
+            body: { id, status: "approved", autoModify: true, force: !!force },
+          });
           closeModal();
-          toast("Zahtjev označen kao obavljen.", "success");
+          if (r.modified) {
+            toast(`Termin izmijenjen. Email ${r.emailSent ? "poslat klijentkinji." : "nije poslat (nema adresu)."}`, "success");
+            if (r.message) showMessageActions("Obavijesti klijentkinju", r.message, r.whatsappLink, r.viberLink);
+          } else if (r.cancelled) {
+            toast(`Sve usluge uklonjene — termin je otkazan. Email ${r.emailSent ? "poslat." : "nije poslat."}`, "success");
+            if (r.message) showMessageActions("Obavijesti klijentkinju", r.message, r.whatsappLink, r.viberLink);
+          } else if (r.ambiguous) {
+            toast(`Nađeno više termina za taj broj na ${date}. Otvori Raspored.`, "warning");
+            location.href = `/admin/?view=day&anchor=${encodeURIComponent(date)}#schedule`;
+          } else if (r.matches === 0) {
+            toast(`Nije nađen termin za ${name} na ${date}. Zahtjev je označen kao obavljen.`, "warning");
+          } else {
+            toast("Zahtjev obavljen.", "success");
+          }
           await renderCancelRequests();
-        } catch (e) { toast(e.message, "error"); }
-      });
+        } catch (e) {
+          if (btn) { btn.disabled = false; btn.textContent = "Izmijeni termin"; }
+          // 409 → conflict; offer force + go-to-schedule
+          if (e.body && e.body.error === "modify-conflict") {
+            const exist = e.body.conflict;
+            const existSummary = exist ? `${escapeHtml(exist.summary || "termin")} ${exist.start ? "(" + new Date(exist.start).toLocaleTimeString("sr", {hour:"2-digit",minute:"2-digit"}) + ")" : ""}` : "";
+            if (err) {
+              err.hidden = false;
+              err.innerHTML = `<strong>⚠️ ${escapeHtml(e.body.message || "Konflikt")}</strong>${existSummary ? `<br>Preklapanje sa: ${existSummary}` : ""}<div style="margin-top:8px;display:flex;gap:6px;flex-wrap:wrap;">
+                <button class="btn btn-ghost btn-sm" type="button" id="cr-goto">Idi na raspored</button>
+                <button class="btn btn-danger btn-sm" type="button" id="cr-force">Forsiraj izmjenu</button>
+              </div>`;
+              document.getElementById("cr-goto")?.addEventListener("click", () => {
+                location.href = `/admin/?view=day&anchor=${encodeURIComponent(date)}#schedule`;
+              });
+              document.getElementById("cr-force")?.addEventListener("click", () => approve(true));
+            }
+            return;
+          }
+          if (err) { err.hidden = false; err.innerHTML = `<strong>⚠️ Greška</strong><br>${escapeHtml(e.message || "")}`; }
+          else toast(e.message || "Greška", "error");
+        }
+      };
+      document.getElementById("cr-approve").addEventListener("click", () => approve(false));
       return;
     }
 
