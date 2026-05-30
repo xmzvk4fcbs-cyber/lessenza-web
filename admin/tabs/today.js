@@ -1101,7 +1101,8 @@ async function openEditServicesModal({ eventId, serviceId, additionalServiceIds,
         throw new Error(data.message || `HTTP ${res.status}`);
       }
       closeModal();
-      toast("Usluga ažurirana.", "success");
+      toast(`Usluga ažurirana. Email ${data.emailSent ? "poslat klijentkinji." : "nije poslat (nema adresu)."}`, "success");
+      if (data.message) showMessageActions("Obavijesti klijentkinju (opciono)", data.message, data.whatsappLink, data.viberLink);
       await renderList();
     } catch (err) {
       saveBtn.disabled = false;

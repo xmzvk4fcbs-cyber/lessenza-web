@@ -2,11 +2,16 @@ import type { Handler } from "@netlify/functions";
 import { json, badRequest, notFound, methodNotAllowed, parseJson } from "../lib/http";
 import { adminGuard } from "../lib/admin-guard";
 import { createCalendarClientAsync, type CalendarClient } from "../lib/calendar";
-import { getServices, appendAudit } from "../lib/config";
+import { getServices, getSettings, appendAudit } from "../lib/config";
 import { applyServiceChange } from "../lib/booking-modify";
+import { getMailerAsync, type Mailer } from "../lib/mailer";
+import { bookingServicesModifiedToClient } from "../lib/email-templates";
+import { waLink, viberShareLink } from "../lib/phone";
+import { formatSalon } from "../lib/time";
 
 interface Deps {
   makeCalendar: () => CalendarClient | Promise<CalendarClient>;
+  makeMailer?: () => Mailer | Promise<Mailer>;
 }
 let deps: Deps | null = null;
 export function __setDepsForTests(d: Deps | null): void {
@@ -69,6 +74,33 @@ const inner: Handler = async (event) => {
   const { original, updated } = result;
   const oldLabel = original.combinedServicesLabel ?? original.serviceName;
   const newLabel = updated.combinedServicesLabel ?? updated.serviceName;
+
+  // Notify client by email — same template the auto-resolve path uses, so the
+  // client sees identical wording whether the change came from her or from us.
+  const settings = await getSettings();
+  let emailSent = false;
+  if (updated.email) {
+    try {
+      const makeMailer = deps?.makeMailer ?? getMailerAsync;
+      const mailer = await makeMailer();
+      await mailer.send(bookingServicesModifiedToClient(original, updated, {
+        salonAddress: settings.salonAddress,
+        ownerPhone: settings.ownerPhone,
+        emailGreeting: settings.emailGreeting,
+        emailClosing: settings.emailClosing,
+        emailSignature: settings.emailSignature,
+      }));
+      emailSent = true;
+    } catch (e) {
+      console.warn("[edit-services][email] failed:", (e as Error).message);
+    }
+  }
+
+  const dateLine = formatSalon(new Date(updated.startISO), "dd.MM.yyyy. 'u' HH:mm");
+  const message = `Draga ${updated.name}, vaš termin ${dateLine} je izmijenjen: prije ${oldLabel}, sada ${newLabel}. Vidimo se! ✿ L'Essenza`;
+  const whatsappLink = updated.phoneE164 ? waLink(updated.phoneE164, message) : null;
+  const viberLink = updated.phoneE164 ? viberShareLink(message) : null;
+
   try {
     await appendAudit({
       kind: "booking.rescheduled",
@@ -79,7 +111,7 @@ const inner: Handler = async (event) => {
     console.warn("[edit-services][audit] failed:", (e as Error).message);
   }
 
-  return json({ ok: true, booking: updated });
+  return json({ ok: true, booking: updated, emailSent, message, whatsappLink, viberLink });
 };
 
 export const handler = adminGuard(inner);
