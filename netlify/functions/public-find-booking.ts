@@ -17,6 +17,22 @@ async function makeCalendar(): Promise<CalendarClient> {
 interface Req {
   phone?: string;
   email?: string;
+  name?: string;
+}
+
+/** Loose name match — lower-cased, accents stripped, at least one shared 3+ char
+ *  word OR one side fully contained in the other. Stops random phone-number
+ *  fishing without requiring exact name match. */
+function namesMatch(a: string, b: string): boolean {
+  const norm = (s: string) => s.toLowerCase()
+    .normalize("NFD").replace(/[̀-ͯ]/g, "")
+    .replace(/[^a-z0-9 ]+/g, " ").trim();
+  const na = norm(a), nb = norm(b);
+  if (!na || !nb) return false;
+  if (na.includes(nb) || nb.includes(na)) return true;
+  const wa = new Set(na.split(/\s+/).filter((w) => w.length >= 3));
+  for (const w of nb.split(/\s+/)) if (w.length >= 3 && wa.has(w)) return true;
+  return false;
 }
 
 /**
@@ -43,8 +59,10 @@ export const handler: Handler = async (event) => {
   const [settings, services] = await Promise.all([getSettings(), getServices()]);
   const phone = body.phone ? normalizePhone(body.phone, settings.defaultCountryCode) : null;
   const email = body.email ? body.email.trim().toLowerCase() : "";
+  const reqName = (body.name || "").trim();
 
   if (!phone && !email) return badRequest("missing", "Unesi telefon ili email.");
+  if (!reqName) return badRequest("missing-name", "Unesi ime i prezime.");
 
   const now = new Date();
   const horizon = new Date(now.getTime() + 60 * 24 * 3600_000);
@@ -59,9 +77,13 @@ export const handler: Handler = async (event) => {
     .map((e) => eventToBooking(e, services))
     .filter((b): b is NonNullable<typeof b> => !!b && !!b.calendarEventId)
     .filter((b) => {
-      if (phone && b.phoneE164 === phone) return true;
-      if (email && b.email && b.email.toLowerCase() === email) return true;
-      return false;
+      const contactMatch =
+        (phone && b.phoneE164 === phone) ||
+        (email && b.email && b.email.toLowerCase() === email);
+      if (!contactMatch) return false;
+      // Also require the name to plausibly match — extra friction against
+      // strangers fishing with a random phone number.
+      return namesMatch(reqName, b.name);
     })
     .sort((a, b) => Date.parse(a.startISO) - Date.parse(b.startISO))
     .slice(0, 5)

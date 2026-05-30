@@ -344,7 +344,7 @@
     try {
       const r = await fetch("/api/public-find-booking", {
         method: "POST", headers: { "content-type": "application/json" },
-        body: JSON.stringify({ phone, email, website: hp }),
+        body: JSON.stringify({ name, phone, email, website: hp }),
       });
       const body = await r.json().catch(() => ({}));
       if (body.error) { err.hidden = false; err.textContent = body.message || body.error; return; }
