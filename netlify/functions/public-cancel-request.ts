@@ -7,7 +7,7 @@ import { cancelRequestToOwner } from "../lib/email-templates";
 import { normalizePhone } from "../lib/phone";
 import { computeDayAvailability } from "../lib/availability";
 import { createCalendarClientAsync } from "../lib/calendar";
-import { fromTZ } from "../lib/time";
+import { fromTZ, dayKeyInTZ, weekdayInTZ } from "../lib/time";
 import { isHoneypotTriggered } from "../lib/honeypot";
 import { rateLimitAllow, clientIP } from "../lib/rate-limit";
 import type { CancelRequest } from "../lib/schemas";
@@ -84,8 +84,13 @@ export const handler: Handler = async (event) => {
     body.kind === "modify" || removeServiceIds || addServiceIds ? "modify" :
     "cancel";
 
+  const bookingEventId = typeof body.bookingEventId === "string" && body.bookingEventId.trim()
+    ? body.bookingEventId.trim().slice(0, 120) : undefined;
+
   // For reschedule: validate the picked time is still in live availability — the
   // form only offers free slots, but we re-check to protect against stale data.
+  // Uses the booking's actual duration so a 90-min termin doesn't pass a 15-min
+  // free gap.
   let desiredTime: string | undefined;
   if (kind === "reschedule" && typeof body.desiredTime === "string" && body.desiredTime) {
     if (!TIME_RE.test(body.desiredTime)) return badRequest("bad-time", "desiredTime must be HH:MM");
@@ -95,23 +100,93 @@ export const handler: Handler = async (event) => {
         timeMin: fromTZ(body.desiredDateISO, "00:00").toISOString(),
         timeMax: fromTZ(body.desiredDateISO, "23:59").toISOString(),
       });
-      const free = computeDayAvailability({ date: body.desiredDateISO, hours, blocks, events, settings, now: new Date() });
+      // Try to find the booking being moved so we know its duration and can
+      // exclude it from busy intervals (same-day reschedule case).
+      let bookingDurationMin: number | undefined;
+      if (bookingEventId) {
+        const horizonStart = new Date().toISOString();
+        const horizonEnd = new Date(Date.now() + 60 * 86_400_000).toISOString();
+        const allEvents = await cal.listEvents({ timeMin: horizonStart, timeMax: horizonEnd });
+        const myEvent = allEvents.find((e) => e.id === bookingEventId);
+        const sMs = myEvent?.start?.dateTime ? new Date(myEvent.start.dateTime).getTime() : null;
+        const eMs = myEvent?.end?.dateTime ? new Date(myEvent.end.dateTime).getTime() : null;
+        if (sMs && eMs && eMs > sMs) bookingDurationMin = Math.round((eMs - sMs) / 60_000);
+      }
+      const free = computeDayAvailability({
+        date: body.desiredDateISO, hours, blocks, events, settings, now: new Date(),
+        durationMinutes: bookingDurationMin,
+        excludeEventId: bookingEventId,
+      });
       if (!free.includes(body.desiredTime)) {
-        return json({ error: "slot-taken", message: "Taj termin više nije slobodan. Izaberi drugi." }, 409);
+        return json({ error: "slot-taken", message: "Taj termin više nije slobodan za vašu uslugu. Izaberi drugi." }, 409);
       }
       desiredTime = body.desiredTime;
     } catch (e) {
       console.warn("[cancel-request][availability] check failed:", (e as Error).message);
-      // If availability lookup fails (e.g. calendar offline), don't block the
-      // request — let the owner manually verify on approval.
       desiredTime = body.desiredTime;
     }
   }
-
-  const bookingEventId = typeof body.bookingEventId === "string" && body.bookingEventId.trim()
-    ? body.bookingEventId.trim().slice(0, 120) : undefined;
   const bookingLabel = typeof body.bookingLabel === "string" && body.bookingLabel.trim()
     ? body.bookingLabel.trim().slice(0, 240) : undefined;
+
+  // For "Dodaj uslugu" (modify with addServiceIds): pre-validate that the new
+  // services fit in the gap after the existing booking. Reject early with a
+  // friendly message instead of letting the request linger and surprise the
+  // owner with a conflict.
+  if (kind === "modify" && addServiceIds && addServiceIds.length && bookingEventId) {
+    try {
+      const [hours, blocks, allServices, cal] = await Promise.all([
+        getWorkingHours(), getBlocks(), getServices(), createCalendarClientAsync(),
+      ]);
+      const horizonStart = new Date().toISOString();
+      const horizonEnd = new Date(Date.now() + 60 * 86_400_000).toISOString();
+      const allEvents = await cal.listEvents({ timeMin: horizonStart, timeMax: horizonEnd });
+      const myEvent = allEvents.find((e) => e.id === bookingEventId);
+      const myEndMs = myEvent?.end?.dateTime ? new Date(myEvent.end.dateTime).getTime() : null;
+      if (myEndMs) {
+        const addMin = addServiceIds.reduce((sum, id) => sum + (allServices.find((s) => s.id === id)?.durationMinutes ?? 0), 0);
+        if (addMin > 0) {
+          const day = dayKeyInTZ(new Date(myEndMs));
+          const weekday = weekdayInTZ(fromTZ(day, "12:00"));
+          const dayHours = hours[weekday];
+          const windowsRaw = (dayHours.open && "windows" in dayHours && dayHours.windows)
+            ? dayHours.windows
+            : (dayHours.open && "from" in dayHours && "to" in dayHours ? [{ from: dayHours.from, to: dayHours.to }] : []);
+          const window = windowsRaw.find((w) => {
+            const f = fromTZ(day, w.from).getTime();
+            const t = fromTZ(day, w.to).getTime();
+            return myEndMs >= f && myEndMs < t;
+          });
+          if (!window) {
+            return json({ error: "no-room", message: "Termin ne staje u radno vrijeme nakon dodatka." }, 409);
+          }
+          const closeMs = fromTZ(day, window.to).getTime();
+          const dayEvents = allEvents.filter((e) => {
+            if (e.id === bookingEventId) return false;
+            const s = e.start?.dateTime ? new Date(e.start.dateTime).getTime() : 0;
+            return s >= myEndMs && s < closeMs;
+          }).map((e) => new Date(e.start!.dateTime!).getTime());
+          const blockHits = blocks.map((b) => new Date(b.startISO).getTime()).filter((s) => s >= myEndMs && s < closeMs);
+          const nextBusy = [...dayEvents, ...blockHits].sort((a, c) => a - c)[0];
+          const ceilingMs = nextBusy ?? closeMs;
+          const freeMin = Math.floor((ceilingMs - myEndMs) / 60_000);
+          // Grace window: tolerate up to ADD_GRACE_MIN overshoot — request still
+          // goes through, but owner sees a conflict on auto-apply and can
+          // "Forsiraj" if they're OK with the small overlap.
+          const ADD_GRACE_MIN = 15;
+          if (addMin - freeMin > ADD_GRACE_MIN) {
+            return json({
+              error: "no-room",
+              message: `Za to nema dovoljno vremena nakon vašeg termina (slobodno ${freeMin} min, traženo ${addMin} min). Pozovite salon ili izaberite kraću uslugu.`,
+            }, 409);
+          }
+        }
+      }
+    } catch (e) {
+      console.warn("[cancel-request][add-fit] check failed:", (e as Error).message);
+      // Don't block on lookup failure — owner re-validates on approval.
+    }
+  }
 
   const req: CancelRequest = {
     id: randomUUID(),

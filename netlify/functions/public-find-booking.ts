@@ -1,11 +1,20 @@
 import type { Handler } from "@netlify/functions";
 import { json, badRequest, methodNotAllowed, parseJson } from "../lib/http";
 import { normalizePhone } from "../lib/phone";
-import { getSettings, getServices } from "../lib/config";
+import { getSettings, getServices, getWorkingHours, getBlocks } from "../lib/config";
 import { createCalendarClient, createCalendarClientAsync, type CalendarClient } from "../lib/calendar";
-import { eventToBooking } from "../lib/calendar-domain";
+import { eventToBooking, eventBusyInterval } from "../lib/calendar-domain";
 import { isHoneypotTriggered } from "../lib/honeypot";
 import { rateLimitAllow, clientIP } from "../lib/rate-limit";
+import { fromTZ, weekdayInTZ, dayKeyInTZ } from "../lib/time";
+import type { DayHours, TimeWindow } from "../lib/schemas";
+
+function dayWindows(day: DayHours): TimeWindow[] {
+  if (!day.open) return [];
+  if ("windows" in day && day.windows) return day.windows;
+  if ("from" in day && "to" in day) return [{ from: day.from, to: day.to }];
+  return [];
+}
 
 let factory: (() => CalendarClient) | null = null;
 export function __setCalendarFactoryForTests(f: (() => CalendarClient) | null): void { factory = f; }
@@ -56,7 +65,9 @@ export const handler: Handler = async (event) => {
     return json({ error: "rate-limited", message: "Previše pokušaja, probaj kasnije." }, 429, { "retry-after": String(rl.retryAfterSec) });
   }
 
-  const [settings, services] = await Promise.all([getSettings(), getServices()]);
+  const [settings, services, hours, blocks] = await Promise.all([
+    getSettings(), getServices(), getWorkingHours(), getBlocks(),
+  ]);
   const phone = body.phone ? normalizePhone(body.phone, settings.defaultCountryCode) : null;
   const email = body.email ? body.email.trim().toLowerCase() : "";
   const reqName = (body.name || "").trim();
@@ -95,12 +106,46 @@ export const handler: Handler = async (event) => {
           return s ? { id: s.id, name: s.name, durationMin: s.durationMinutes } : null;
         })
         .filter((x): x is { id: string; name: string; durationMin: number } => x !== null);
+
+      // Compute how many free minutes the client can ADD after this booking —
+      // i.e. the gap between booking end and the next busy interval (other
+      // booking, block, or working-hours close) on the same day. Drives the
+      // "Dodaj uslugu" filter so we only offer services that actually fit.
+      const endMs = new Date(b.endISO).getTime();
+      const dayKey = dayKeyInTZ(new Date(b.startISO));
+      const weekday = weekdayInTZ(fromTZ(dayKey, "12:00"));
+      const windows = dayWindows(hours[weekday]);
+      const window = windows.find((w) => {
+        const fromMs = fromTZ(dayKey, w.from).getTime();
+        const toMs = fromTZ(dayKey, w.to).getTime();
+        return endMs >= fromMs && endMs < toMs;
+      });
+      let freeAfterMin = 0;
+      if (window) {
+        const closeMs = fromTZ(dayKey, window.to).getTime();
+        const sameDayBusy = events
+          .filter((e) => e.id !== b.calendarEventId)
+          .map(eventBusyInterval)
+          .filter((x): x is NonNullable<typeof x> => !!x);
+        const blockBusy = blocks.map((bl) => ({
+          startMs: new Date(bl.startISO).getTime(),
+          endMs: new Date(bl.endISO).getTime(),
+        }));
+        const nextBusyStart = [...sameDayBusy, ...blockBusy]
+          .filter((x) => x.startMs >= endMs && x.startMs < closeMs)
+          .map((x) => x.startMs)
+          .sort((a, c) => a - c)[0];
+        const ceilingMs = nextBusyStart ?? closeMs;
+        freeAfterMin = Math.max(0, Math.floor((ceilingMs - endMs) / 60_000));
+      }
+
       return {
         eventId: b.calendarEventId,
         label: b.combinedServicesLabel ?? b.serviceName,
         startISO: b.startISO,
         endISO: b.endISO,
         services: breakdown,
+        freeAfterMin,
       };
     });
 

@@ -126,6 +126,10 @@
     .service-row.is-active .name { color: #fff; }
     .service-row .meta { font-size: 0.83rem; color: var(--sage, #6B6F4F); }
     .service-row.is-active .meta { color: rgba(255,255,255,0.9); }
+    .service-row--overflow { border-color: rgba(184,140,60,0.55); background: #FFFCF3; }
+    .service-row--overflow:hover { border-color: #B88C3C; }
+    .service-row--overflow.is-active { background: linear-gradient(135deg, #D9A85A, #B88C3C); border-color: #B88C3C; }
+    .service-row--overflow .meta { color: #8B7233; }
     .cancel-summary { background: rgba(255,255,255,0.75); border-left: 3px solid var(--gold, #C9A961); padding: 14px 16px; margin: 0 0 18px; border-radius: 0 10px 10px 0; font-size: 0.95rem; line-height: 1.5; }
     .cancel-summary strong { color: var(--sage, #6B6F4F); display: block; margin-bottom: 4px; font-family: 'Cormorant Garamond', Georgia, serif; font-size: 1.15rem; }
     .cancel-actions { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; margin-top: 16px; }
@@ -503,19 +507,50 @@
       host.innerHTML = `<div class="cancel-state cancel-state--err" style="font-size:0.88rem;padding:10px 14px;">Ne mogu da učitam usluge: ${escapeHtml(e.message)}</div>`;
     }
   }
+  // Grace window: if a service overshoots the free gap by up to GRACE_MIN, we
+  // still let the client send a request — owner can approve with "Forsiraj" in
+  // admin. Anything beyond is hidden as truly impossible.
+  const ADD_GRACE_MIN = 15;
   function renderAddServices() {
     const host = $("add-services-list");
     const existing = new Set((state.picked?.services || []).map((s) => s.id));
-    const list = (state.services || []).filter((s) => !existing.has(s.id));
-    if (!list.length) {
+    const freeAfter = Number(state.picked?.freeAfterMin ?? 0);
+    const all = (state.services || []).filter((s) => !existing.has(s.id));
+    if (!all.length) {
       host.innerHTML = `<div class="cancel-state cancel-state--info" style="font-size:0.88rem;padding:10px 14px;">Sve usluge su već u ovom terminu.</div>`;
       return;
     }
-    host.innerHTML = list.map((s) => `
-      <button type="button" class="service-row" data-id="${escapeHtml(s.id)}">
-        <span class="check"></span>
-        <span class="info"><span class="name">${escapeHtml(s.name)}</span><br><span class="meta">${s.durationMinutes} min</span></span>
-      </button>`).join("");
+    const fits = [];      // duration <= freeAfter (clean)
+    const overflow = [];  // overshoots by 1..GRACE min (needs admin approval)
+    const tooLong = [];   // overshoots by > GRACE (hidden)
+    for (const s of all) {
+      const d = Number(s.durationMinutes);
+      const over = d - freeAfter;
+      if (over <= 0) fits.push(s);
+      else if (over <= ADD_GRACE_MIN) overflow.push({ ...s, _over: over });
+      else tooLong.push(s);
+    }
+    if (!fits.length && !overflow.length) {
+      host.innerHTML = `<div class="cancel-state cancel-state--info" style="font-size:0.88rem;padding:10px 14px;">Nakon vašeg termina ima ${freeAfter} min slobodno — ni jedna usluga ne staje. Pozovite salon ako baš želite dodatak.</div>`;
+      return;
+    }
+    host.innerHTML = `
+      <p style="font-size:0.83rem;color:var(--sage,#6B6F4F);margin:0 0 6px;">Slobodno nakon vašeg termina: <strong>${freeAfter} min</strong>.</p>
+      ${fits.map((s) => `
+        <button type="button" class="service-row" data-id="${escapeHtml(s.id)}">
+          <span class="check"></span>
+          <span class="info"><span class="name">${escapeHtml(s.name)}</span><br><span class="meta">${s.durationMinutes} min</span></span>
+        </button>`).join("")}
+      ${overflow.length ? `
+        <p style="font-size:0.78rem;color:#8B7233;margin:14px 0 6px;font-style:italic;">Ove fali malo (do ${ADD_GRACE_MIN} min) — može se poslati zahtjev, salon će potvrditi:</p>
+        ${overflow.map((s) => `
+          <button type="button" class="service-row service-row--overflow" data-id="${escapeHtml(s.id)}" data-over="${s._over}">
+            <span class="check"></span>
+            <span class="info"><span class="name">${escapeHtml(s.name)}</span><br><span class="meta">${s.durationMinutes} min · fali ${s._over} min</span></span>
+          </button>`).join("")}
+      ` : ""}
+      ${tooLong.length ? `<p style="font-size:0.8rem;color:var(--sage,#6B6F4F);margin:10px 0 0;font-style:italic;">Sakriveno (predugo da bi stalo): ${tooLong.map((s) => escapeHtml(s.name)).join(", ")}</p>` : ""}
+    `;
     host.querySelectorAll(".service-row").forEach((row) => row.addEventListener("click", () => {
       const id = row.dataset.id;
       if (state.addIds.has(id)) state.addIds.delete(id);
@@ -613,12 +648,22 @@
     });
   });
 
-  // ----- STEP 3b: reschedule helpers -----
+  // ----- STEP 4c: reschedule helpers -----
+  function totalBookingMin(b) {
+    return (b?.services || []).reduce((s, x) => s + (x.durationMin || 0), 0);
+  }
   async function loadAvailability() {
     const host = $("resched-days");
     host.innerHTML = `<div class="cancel-state cancel-state--info" style="font-size:0.88rem;padding:10px 14px;">Učitavanje slobodnih termina…</div>`;
     try {
-      const r = await fetch("/api/public-availability", { cache: "no-store" });
+      // Pass the booking's full duration so we only see slots where the whole
+      // termin actually fits — not generic 15-min gaps.
+      const params = new URLSearchParams();
+      const dur = totalBookingMin(state.picked);
+      if (dur > 0) params.set("duration", String(dur));
+      if (state.picked?.eventId) params.set("excludeEventId", state.picked.eventId);
+      const url = "/api/public-availability" + (params.toString() ? "?" + params.toString() : "");
+      const r = await fetch(url, { cache: "no-store" });
       const body = await r.json();
       state.days = body.days || [];
       renderDays();
