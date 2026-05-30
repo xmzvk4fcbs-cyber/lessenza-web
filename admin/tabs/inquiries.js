@@ -120,13 +120,18 @@ async function renderCancelRequests() {
           const modifyDetail = isModify
             ? `${removeLabel ? `<div class="stack-card__meta">➖ Ukloniti: <strong>${escapeHtml(removeLabel)}</strong></div>` : ""}${addLabel ? `<div class="stack-card__meta">➕ Dodati: <strong>${escapeHtml(addLabel)}</strong></div>` : ""}`
             : "";
+          const desiredTime = r.desiredTime || "";
+          const reschedTarget = isReschedule && desiredTime
+            ? `<div class="stack-card__meta">🆕 Novi termin: <strong>${escapeHtml(r.desiredDateISO)} u ${escapeHtml(desiredTime)}</strong></div>`
+            : "";
           return `
-          <article class="stack-card" data-id="${escapeHtml(r.id)}" data-phone="${escapeHtml(r.phone)}" data-name="${escapeHtml(r.name)}" data-date="${escapeHtml(r.desiredDateISO)}" data-kind="${escapeHtml(r.kind || "cancel")}" data-remove="${escapeHtml(removeLabel)}" data-add="${escapeHtml(addLabel)}" data-booking="${escapeHtml(r.bookingLabel || "")}">
+          <article class="stack-card" data-id="${escapeHtml(r.id)}" data-phone="${escapeHtml(r.phone)}" data-name="${escapeHtml(r.name)}" data-date="${escapeHtml(r.desiredDateISO)}" data-time="${escapeHtml(desiredTime)}" data-kind="${escapeHtml(r.kind || "cancel")}" data-remove="${escapeHtml(removeLabel)}" data-add="${escapeHtml(addLabel)}" data-booking="${escapeHtml(r.bookingLabel || "")}">
             <div class="stack-card__head">
               <div>
                 <div class="stack-card__title">${escapeHtml(r.name)} — ${escapeHtml(r.phone)}</div>
-                <div class="stack-card__meta"><strong>${kindLabel}</strong> za <strong>${escapeHtml(r.desiredDateISO)}</strong></div>
+                <div class="stack-card__meta"><strong>${kindLabel}</strong></div>
                 ${r.bookingLabel ? `<div class="stack-card__meta">📅 ${escapeHtml(r.bookingLabel)}</div>` : ""}
+                ${reschedTarget}
                 ${modifyDetail}
                 ${r.reason ? `<div class="stack-card__meta">📝 ${escapeHtml(r.reason)}</div>` : ""}
               </div>
@@ -156,6 +161,7 @@ async function resolveRequest(card, status) {
   const removeLabel = card.dataset.remove || "";
   const addLabel = card.dataset.add || "";
   const bookingLabel = card.dataset.booking || "";
+  const desiredTime = card.dataset.time || "";
   if (status === "approved") {
     const isReschedule = kind === "reschedule";
     const isModify = kind === "modify";
@@ -232,8 +238,68 @@ async function resolveRequest(card, status) {
       return;
     }
 
-    // RESCHEDULE — owner must handle manually (negotiate new time with client).
+    // RESCHEDULE — if client picked a concrete slot in the form, try auto-move.
+    // Otherwise fall back to manual flow (call client, edit in Raspored).
     if (isReschedule) {
+      if (desiredTime) {
+        // One-click auto: server patches event start/end. Conflict → owner forces or goes manual.
+        openModal("Pomjeri termin", `
+          <p>Pomjeri termin za <strong>${escapeHtml(name)}</strong> (${escapeHtml(phone)})?</p>
+          ${bookingLabel ? `<p class="muted" style="font-size:0.88rem;">Sa: <strong>${escapeHtml(bookingLabel)}</strong></p>` : ""}
+          <p class="muted" style="font-size:0.88rem;">Na: <strong>${escapeHtml(date)} u ${escapeHtml(desiredTime)}</strong></p>
+          <p class="muted" style="font-size:0.88rem;line-height:1.5;">Sistem će izmijeniti termin u kalendaru i poslati email klijentkinji. Ako je slot u međuvremenu zauzet, javit ću ti.</p>
+          <div class="stack-card__actions" style="margin-top:0.75rem;flex-wrap:wrap;">
+            <button class="btn btn-ghost" type="button" data-close="1">Nazad</button>
+            <button class="btn btn-primary" type="button" id="cr-approve">Pomjeri termin</button>
+          </div>
+          <div id="cr-error" class="mb-conflict-banner" hidden style="margin-top:0.75rem;"></div>
+        `);
+        const approveRs = async (force) => {
+          const btn = document.getElementById("cr-approve");
+          const err = document.getElementById("cr-error");
+          if (btn) { btn.disabled = true; btn.textContent = force ? "Forsiram…" : "Pomjeram…"; }
+          if (err) err.hidden = true;
+          try {
+            const r = await must("/api/admin/cancel-requests", {
+              method: "PATCH",
+              body: { id, status: "approved", autoReschedule: true, force: !!force },
+            });
+            closeModal();
+            if (r.rescheduled) {
+              toast(`Termin pomjeren. Email ${r.emailSent ? "poslat klijentkinji." : "nije poslat (nema adresu)."}`, "success");
+              if (r.message) showMessageActions("Obavijesti klijentkinju", r.message, r.whatsappLink, r.viberLink);
+            } else {
+              toast(r.message || "Zahtjev obavljen.", "warning");
+            }
+            await renderCancelRequests();
+          } catch (e) {
+            if (btn) { btn.disabled = false; btn.textContent = "Pomjeri termin"; }
+            if (e.body && e.body.error === "reschedule-conflict") {
+              const exist = e.body.conflict;
+              const summary = exist && exist.summary ? `${escapeHtml(exist.summary)} ${exist.start ? "(" + new Date(exist.start).toLocaleTimeString("sr", {hour:"2-digit",minute:"2-digit"}) + ")" : ""}` : "drugi termin";
+              if (err) {
+                err.hidden = false;
+                err.innerHTML = `<strong>⚠️ Slot zauzet</strong><br>Preklapa se sa: ${summary}<div style="margin-top:8px;display:flex;gap:6px;flex-wrap:wrap;">
+                  <a class="btn btn-ghost btn-sm" href="tel:${escapeHtml(phone)}">Pozovi</a>
+                  <a class="btn btn-ghost btn-sm" href="https://wa.me/${escapeHtml(phone).replace(/[^\d]/g, "")}" target="_blank" rel="noopener">WhatsApp</a>
+                  <button class="btn btn-ghost btn-sm" type="button" id="cr-goto">Idi na raspored</button>
+                  <button class="btn btn-danger btn-sm" type="button" id="cr-force">Forsiraj pomjeranje</button>
+                </div>`;
+                document.getElementById("cr-goto")?.addEventListener("click", () => {
+                  location.href = `/admin/?view=day&anchor=${encodeURIComponent(date)}#schedule`;
+                });
+                document.getElementById("cr-force")?.addEventListener("click", () => approveRs(true));
+              }
+              return;
+            }
+            if (err) { err.hidden = false; err.innerHTML = `<strong>⚠️ Greška</strong><br>${escapeHtml(e.message || "")}`; }
+            else toast(e.message || "Greška", "error");
+          }
+        };
+        document.getElementById("cr-approve").addEventListener("click", () => approveRs(false));
+        return;
+      }
+      // No desiredTime in request (older flow) → manual negotiation.
       openModal("Pomjeri termin za klijentkinju", `
         <p>Klijentkinja <strong>${escapeHtml(name)}</strong> (${escapeHtml(phone)}) želi <strong>pomjeriti</strong> termin za <strong>${escapeHtml(date)}</strong>.</p>
         <p class="muted" style="font-size:0.88rem;line-height:1.5;">Pozovi je ili pošalji WhatsApp da dogovorite novo vrijeme. Onda otvori Raspored za taj dan, klikni na karticu termina → <strong>Pomjeri</strong>. Kad je gotovo, klikni "Označi kao obavljeno".</p>
@@ -246,7 +312,7 @@ async function resolveRequest(card, status) {
       `);
       document.getElementById("cr-done").addEventListener("click", async () => {
         try {
-          await must("/api/admin/cancel-requests", { method: "PATCH", body: { id, status: "approved" } });
+          await must("/api/admin/cancel-requests", { method: "PATCH", body: { id, status: "approved", autoReschedule: false } });
           closeModal();
           toast("Zahtjev označen kao obavljen.", "success");
           await renderCancelRequests();

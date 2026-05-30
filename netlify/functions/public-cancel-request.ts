@@ -7,6 +7,7 @@ import { cancelRequestToOwner } from "../lib/email-templates";
 import { normalizePhone } from "../lib/phone";
 import { computeDayAvailability } from "../lib/availability";
 import { createCalendarClientAsync } from "../lib/calendar";
+import { eventToBooking } from "../lib/calendar-domain";
 import { fromTZ, dayKeyInTZ, weekdayInTZ } from "../lib/time";
 import { isHoneypotTriggered } from "../lib/honeypot";
 import { rateLimitAllow, clientIP } from "../lib/rate-limit";
@@ -16,7 +17,8 @@ import type { CancelRequest } from "../lib/schemas";
  * Client without an email link asks for cancellation. We DO NOT auto-cancel —
  * just store the request and notify the owner, who confirms manually in admin.
  * Phone alone isn't an authenticator (anyone could look it up), so the owner
- * is the gate.
+ * is the gate — but we DO bind `bookingEventId` to the request phone here so a
+ * malicious client can't ask the system to modify someone else's termin.
  */
 interface Req {
   phone: string;
@@ -35,6 +37,7 @@ interface Req {
 
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 const TIME_RE = /^\d{2}:\d{2}$/;
+const ADD_GRACE_MIN = 15;
 
 export const handler: Handler = async (event) => {
   if (event.httpMethod !== "POST") return methodNotAllowed(["POST"]);
@@ -77,8 +80,8 @@ export const handler: Handler = async (event) => {
     const out = arr.filter((x): x is string => typeof x === "string" && x.length > 0 && x.length <= 80).slice(0, 8);
     return out.length ? out : undefined;
   };
-  const removeServiceIds = cleanIds(body.removeServiceIds);
-  const addServiceIds = cleanIds(body.addServiceIds);
+  let removeServiceIds = cleanIds(body.removeServiceIds);
+  let addServiceIds = cleanIds(body.addServiceIds);
   const kind: "cancel" | "reschedule" | "modify" =
     body.kind === "reschedule" ? "reschedule" :
     body.kind === "modify" || removeServiceIds || addServiceIds ? "modify" :
@@ -86,11 +89,46 @@ export const handler: Handler = async (event) => {
 
   const bookingEventId = typeof body.bookingEventId === "string" && body.bookingEventId.trim()
     ? body.bookingEventId.trim().slice(0, 120) : undefined;
+  const bookingLabel = typeof body.bookingLabel === "string" && body.bookingLabel.trim()
+    ? body.bookingLabel.trim().slice(0, 240) : undefined;
 
-  // For reschedule: validate the picked time is still in live availability — the
-  // form only offers free slots, but we re-check to protect against stale data.
-  // Uses the booking's actual duration so a 90-min termin doesn't pass a 15-min
-  // free gap.
+  // Up-front: if the client referenced a specific termin via bookingEventId,
+  // fetch it ONCE and reuse for every later check (security, validation, fit).
+  let myBooking: ReturnType<typeof eventToBooking> | null = null;
+  let allEvents: Awaited<ReturnType<Awaited<ReturnType<typeof createCalendarClientAsync>>["listEvents"]>> = [];
+  let services: Awaited<ReturnType<typeof getServices>> = [];
+  if (bookingEventId) {
+    try {
+      const cal = await createCalendarClientAsync();
+      services = await getServices();
+      const horizonStart = new Date().toISOString();
+      const horizonEnd = new Date(Date.now() + 60 * 86_400_000).toISOString();
+      allEvents = await cal.listEvents({ timeMin: horizonStart, timeMax: horizonEnd });
+      const target = allEvents.find((e) => e.id === bookingEventId);
+      if (target) myBooking = eventToBooking(target, services);
+    } catch (e) {
+      console.warn("[cancel-request][lookup] failed:", (e as Error).message);
+      // Don't block the request on calendar errors — owner sees it and decides.
+    }
+
+    // Security: the booking must belong to the phone that's asking. This stops
+    // someone with a leaked eventId from triggering a mod on a stranger's termin.
+    if (myBooking && myBooking.phoneE164 && myBooking.phoneE164 !== phone) {
+      return json({ error: "not-yours", message: "Ovaj termin ne odgovara unijetom broju." }, 403);
+    }
+
+    // Filter removeServiceIds to ids actually present in the booking — keeps the
+    // owner's email/admin card from showing services that aren't even there.
+    if (myBooking && removeServiceIds) {
+      const present = new Set([myBooking.serviceId, ...(myBooking.additionalServiceIds ?? [])]);
+      removeServiceIds = removeServiceIds.filter((id) => present.has(id));
+      if (!removeServiceIds.length) removeServiceIds = undefined;
+    }
+  }
+
+  // For reschedule: validate the picked time is still in live availability —
+  // form only offers free slots, but stale data is real. Uses booking's actual
+  // duration so a 90-min termin doesn't slip through a 15-min gap.
   let desiredTime: string | undefined;
   if (kind === "reschedule" && typeof body.desiredTime === "string" && body.desiredTime) {
     if (!TIME_RE.test(body.desiredTime)) return badRequest("bad-time", "desiredTime must be HH:MM");
@@ -100,17 +138,11 @@ export const handler: Handler = async (event) => {
         timeMin: fromTZ(body.desiredDateISO, "00:00").toISOString(),
         timeMax: fromTZ(body.desiredDateISO, "23:59").toISOString(),
       });
-      // Try to find the booking being moved so we know its duration and can
-      // exclude it from busy intervals (same-day reschedule case).
       let bookingDurationMin: number | undefined;
-      if (bookingEventId) {
-        const horizonStart = new Date().toISOString();
-        const horizonEnd = new Date(Date.now() + 60 * 86_400_000).toISOString();
-        const allEvents = await cal.listEvents({ timeMin: horizonStart, timeMax: horizonEnd });
-        const myEvent = allEvents.find((e) => e.id === bookingEventId);
-        const sMs = myEvent?.start?.dateTime ? new Date(myEvent.start.dateTime).getTime() : null;
-        const eMs = myEvent?.end?.dateTime ? new Date(myEvent.end.dateTime).getTime() : null;
-        if (sMs && eMs && eMs > sMs) bookingDurationMin = Math.round((eMs - sMs) / 60_000);
+      if (myBooking) {
+        const sMs = new Date(myBooking.startISO).getTime();
+        const eMs = new Date(myBooking.endISO).getTime();
+        if (eMs > sMs) bookingDurationMin = Math.round((eMs - sMs) / 60_000);
       }
       const free = computeDayAvailability({
         date: body.desiredDateISO, hours, blocks, events, settings, now: new Date(),
@@ -126,66 +158,57 @@ export const handler: Handler = async (event) => {
       desiredTime = body.desiredTime;
     }
   }
-  const bookingLabel = typeof body.bookingLabel === "string" && body.bookingLabel.trim()
-    ? body.bookingLabel.trim().slice(0, 240) : undefined;
 
-  // For "Dodaj uslugu" (modify with addServiceIds): pre-validate that the new
-  // services fit in the gap after the existing booking. Reject early with a
-  // friendly message instead of letting the request linger and surprise the
-  // owner with a conflict.
-  if (kind === "modify" && addServiceIds && addServiceIds.length && bookingEventId) {
+  // For "Dodaj uslugu": pre-validate that the new services fit in the gap after
+  // the existing booking, allowing up to ADD_GRACE_MIN overshoot (owner can
+  // force-approve those). Anything bigger is rejected at request-time.
+  if (kind === "modify" && addServiceIds && addServiceIds.length && myBooking) {
     try {
-      const [hours, blocks, allServices, cal] = await Promise.all([
-        getWorkingHours(), getBlocks(), getServices(), createCalendarClientAsync(),
-      ]);
-      const horizonStart = new Date().toISOString();
-      const horizonEnd = new Date(Date.now() + 60 * 86_400_000).toISOString();
-      const allEvents = await cal.listEvents({ timeMin: horizonStart, timeMax: horizonEnd });
-      const myEvent = allEvents.find((e) => e.id === bookingEventId);
-      const myEndMs = myEvent?.end?.dateTime ? new Date(myEvent.end.dateTime).getTime() : null;
-      if (myEndMs) {
-        const addMin = addServiceIds.reduce((sum, id) => sum + (allServices.find((s) => s.id === id)?.durationMinutes ?? 0), 0);
-        if (addMin > 0) {
-          const day = dayKeyInTZ(new Date(myEndMs));
-          const weekday = weekdayInTZ(fromTZ(day, "12:00"));
-          const dayHours = hours[weekday];
-          const windowsRaw = (dayHours.open && "windows" in dayHours && dayHours.windows)
-            ? dayHours.windows
-            : (dayHours.open && "from" in dayHours && "to" in dayHours ? [{ from: dayHours.from, to: dayHours.to }] : []);
-          const window = windowsRaw.find((w) => {
-            const f = fromTZ(day, w.from).getTime();
-            const t = fromTZ(day, w.to).getTime();
-            return myEndMs >= f && myEndMs < t;
-          });
-          if (!window) {
-            return json({ error: "no-room", message: "Termin ne staje u radno vrijeme nakon dodatka." }, 409);
-          }
-          const closeMs = fromTZ(day, window.to).getTime();
-          const dayEvents = allEvents.filter((e) => {
-            if (e.id === bookingEventId) return false;
-            const s = e.start?.dateTime ? new Date(e.start.dateTime).getTime() : 0;
-            return s >= myEndMs && s < closeMs;
-          }).map((e) => new Date(e.start!.dateTime!).getTime());
-          const blockHits = blocks.map((b) => new Date(b.startISO).getTime()).filter((s) => s >= myEndMs && s < closeMs);
-          const nextBusy = [...dayEvents, ...blockHits].sort((a, c) => a - c)[0];
-          const ceilingMs = nextBusy ?? closeMs;
-          const freeMin = Math.floor((ceilingMs - myEndMs) / 60_000);
-          // Grace window: tolerate up to ADD_GRACE_MIN overshoot — request still
-          // goes through, but owner sees a conflict on auto-apply and can
-          // "Forsiraj" if they're OK with the small overlap.
-          const ADD_GRACE_MIN = 15;
-          if (addMin - freeMin > ADD_GRACE_MIN) {
-            return json({
-              error: "no-room",
-              message: `Za to nema dovoljno vremena nakon vašeg termina (slobodno ${freeMin} min, traženo ${addMin} min). Pozovite salon ili izaberite kraću uslugu.`,
-            }, 409);
-          }
+      const [hours, blocks] = await Promise.all([getWorkingHours(), getBlocks()]);
+      if (!services.length) services = await getServices();
+      const myEndMs = new Date(myBooking.endISO).getTime();
+      const addMin = addServiceIds.reduce((sum, id) => sum + (services.find((s) => s.id === id)?.durationMinutes ?? 0), 0);
+      if (addMin > 0) {
+        const day = dayKeyInTZ(new Date(myEndMs));
+        const weekday = weekdayInTZ(fromTZ(day, "12:00"));
+        const dayHours = hours[weekday];
+        const windowsRaw = (dayHours.open && "windows" in dayHours && dayHours.windows)
+          ? dayHours.windows
+          : (dayHours.open && "from" in dayHours && "to" in dayHours ? [{ from: dayHours.from, to: dayHours.to }] : []);
+        const window = windowsRaw.find((w) => {
+          const f = fromTZ(day, w.from).getTime();
+          const t = fromTZ(day, w.to).getTime();
+          return myEndMs >= f && myEndMs < t;
+        });
+        if (!window) {
+          return json({ error: "no-room", message: "Termin ne staje u radno vrijeme nakon dodatka." }, 409);
+        }
+        const closeMs = fromTZ(day, window.to).getTime();
+        const dayEvents = allEvents.filter((e) => {
+          if (e.id === bookingEventId) return false;
+          const s = e.start?.dateTime ? new Date(e.start.dateTime).getTime() : 0;
+          return s >= myEndMs && s < closeMs;
+        }).map((e) => new Date(e.start!.dateTime!).getTime());
+        const blockHits = blocks.map((b) => new Date(b.startISO).getTime()).filter((s) => s >= myEndMs && s < closeMs);
+        const nextBusy = [...dayEvents, ...blockHits].sort((a, c) => a - c)[0];
+        const ceilingMs = nextBusy ?? closeMs;
+        const freeMin = Math.floor((ceilingMs - myEndMs) / 60_000);
+        if (addMin - freeMin > ADD_GRACE_MIN) {
+          return json({
+            error: "no-room",
+            message: `Za to nema dovoljno vremena nakon vašeg termina (slobodno ${freeMin} min, traženo ${addMin} min). Pozovite salon ili izaberite kraću uslugu.`,
+          }, 409);
         }
       }
     } catch (e) {
       console.warn("[cancel-request][add-fit] check failed:", (e as Error).message);
-      // Don't block on lookup failure — owner re-validates on approval.
     }
+  }
+
+  // If client requested both remove and add and they ended up empty after
+  // filtering, downgrade to a plain cancel/ack instead of storing a no-op.
+  if (kind === "modify" && !removeServiceIds && !addServiceIds) {
+    return badRequest("empty-modify", "Nije izabrana nijedna izmjena.");
   }
 
   const req: CancelRequest = {
@@ -210,7 +233,7 @@ export const handler: Handler = async (event) => {
   let addLabel: string | undefined;
   if (removeServiceIds || addServiceIds) {
     try {
-      const svcs = await getServices();
+      const svcs = services.length ? services : await getServices();
       const toLabel = (ids?: string[]) => ids?.map((id) => svcs.find((s) => s.id === id)?.name ?? id).filter(Boolean).join(", ");
       removeLabel = toLabel(removeServiceIds);
       addLabel = toLabel(addServiceIds);
@@ -240,7 +263,9 @@ export const handler: Handler = async (event) => {
         process.env.VAPID_PRIVATE_KEY,
       );
       const subs = await getPushSubscriptions();
-      const title = kind === "reschedule" ? "Zahtjev za pomjeranje" : "Zahtjev za otkazivanje";
+      let title = "Zahtjev za otkazivanje";
+      if (kind === "reschedule") title = "Zahtjev za pomjeranje";
+      else if (kind === "modify") title = "Zahtjev za izmjenu termina";
       const payload = JSON.stringify({
         title,
         body: `${req.name} (${req.phone}) za ${req.desiredDateISO}${reason ? ` — ${reason}` : ""}`,

@@ -11,13 +11,14 @@ import {
   getSettings,
 } from "../lib/config";
 import { createCalendarClientAsync, type CalendarClient } from "../lib/calendar";
-import { eventToBooking } from "../lib/calendar-domain";
+import { eventToBooking, type Booking } from "../lib/calendar-domain";
 import { getMailerAsync } from "../lib/mailer";
-import { bookingCancelledToClient, bookingServicesModifiedToClient } from "../lib/email-templates";
+import { bookingCancelledToClient, bookingServicesModifiedToClient, bookingRescheduledToClient } from "../lib/email-templates";
 import { waLink, viberShareLink } from "../lib/phone";
-import { fromTZ, formatSalon } from "../lib/time";
-import { withDayLock } from "../lib/booking-lock";
+import { fromTZ, formatSalon, dayKeyInTZ, TZ } from "../lib/time";
+import { withDayLock, withTwoDayLock } from "../lib/booking-lock";
 import { applyServiceChange } from "../lib/booking-modify";
+import { getParallelPairs } from "../lib/config";
 
 interface MatchResult {
   match: ReturnType<typeof eventToBooking> | null;
@@ -45,7 +46,7 @@ const inner: Handler = async (event) => {
     return json({ requests });
   }
   if (event.httpMethod === "PATCH") {
-    let body: { id?: unknown; status?: unknown; resolutionNote?: unknown; autoCancel?: unknown; autoModify?: unknown; force?: unknown };
+    let body: { id?: unknown; status?: unknown; resolutionNote?: unknown; autoCancel?: unknown; autoModify?: unknown; autoReschedule?: unknown; force?: unknown };
     try {
       body = parseJson(event.body);
     } catch {
@@ -55,6 +56,7 @@ const inner: Handler = async (event) => {
     const status = typeof body.status === "string" ? body.status : "";
     const autoCancel = body.autoCancel !== false; // default true — owner can disable per-call
     const autoModify = body.autoModify !== false; // default true
+    const autoReschedule = body.autoReschedule !== false; // default true (only used when client picked a slot)
     const force = body.force === true;
     if (!id || (status !== "approved" && status !== "declined")) {
       return badRequest("bad-input", "id + status (approved|declined) required");
@@ -91,6 +93,7 @@ const inner: Handler = async (event) => {
     let autoResult: {
       cancelled: boolean;
       modified?: boolean;
+      rescheduled?: boolean;
       conflict?: { summary?: string | null; start?: string | null; end?: string | null };
       conflictKind?: "outside-hours" | "overlaps-block" | "conflict" | "patch-failed";
       ambiguous?: boolean;
@@ -308,11 +311,151 @@ const inner: Handler = async (event) => {
       }
     }
 
-    const autoNote = autoResult.modified
-      ? "Auto: usluge izmijenjene kroz zahtjev."
-      : autoResult.cancelled
-        ? "Auto: termin otkazan kroz zahtjev."
-        : undefined;
+    // RESCHEDULE-kind: if the client picked a concrete new slot in the form,
+    // auto-apply by patching the event's start/end. If the slot was taken in
+    // the meantime → 409, owner falls back to manual (Pozovi/WhatsApp).
+    if (cur.kind === "reschedule" && autoReschedule && cur.desiredTime) {
+      try {
+        const cal = await createCalendarClientAsync();
+        const services = await getServices();
+        const settings = await getSettings();
+
+        // Locate the original event — prefer captured id, else fuzzy by phone+day.
+        let eventId = cur.bookingEventId ?? "";
+        let original: Booking | null = null;
+        if (eventId) {
+          // The original may be on a DIFFERENT day than desiredDateISO (you're
+          // moving from old day to new day). Look over the next 60 days.
+          const events = await cal.listEvents({
+            timeMin: new Date().toISOString(),
+            timeMax: new Date(Date.now() + 60 * 86_400_000).toISOString(),
+          });
+          const hit = events.find((e) => e.id === eventId);
+          if (hit) original = eventToBooking(hit, services);
+        }
+        if (!original) {
+          // Fallback: try to find by phone on the desired date. Best-effort only —
+          // if the client's old termin is on a different day this will miss.
+          const m = await findMatchingEvent(cal, cur.phone, cur.desiredDateISO);
+          if (m.match && m.eventId) { original = m.match; eventId = m.eventId; }
+        }
+
+        if (!original || !eventId) {
+          autoResult = { cancelled: false, message: "Ne mogu da nađem termin za pomjeranje — uradi ručno." };
+        } else {
+          const newStart = fromTZ(cur.desiredDateISO, cur.desiredTime);
+          const now = new Date();
+          if (newStart.getTime() <= now.getTime()) {
+            autoResult = { cancelled: false, message: "Novo vrijeme je već prošlo — pozovi klijentkinju." };
+          } else {
+            const durationMs = new Date(original.endISO).getTime() - new Date(original.startISO).getTime();
+            const newEnd = new Date(newStart.getTime() + durationMs);
+            const oldDayKey = dayKeyInTZ(new Date(original.startISO));
+            const newDayKey = dayKeyInTZ(newStart);
+
+            const pairs = await getParallelPairs();
+            const parallelAllowed = new Set<string>();
+            for (const p of pairs) {
+              if (p.serviceIdA === original.serviceId) parallelAllowed.add(p.serviceIdB);
+              if (p.serviceIdB === original.serviceId) parallelAllowed.add(p.serviceIdA);
+            }
+
+            type LockResult =
+              | { kind: "conflict"; existing?: { summary?: string | null; start?: string | null; end?: string | null } }
+              | { kind: "patch-failed"; message: string }
+              | { kind: "ok" };
+            const lockResult = await withTwoDayLock<LockResult>(oldDayKey, newDayKey, async () => {
+              const existing = await cal.listEvents({
+                timeMin: fromTZ(newDayKey, "00:00").toISOString(),
+                timeMax: fromTZ(newDayKey, "23:59").toISOString(),
+              });
+              const conflict = existing.find((e) => {
+                if (e.id === eventId) return false;
+                const s = new Date(e.start?.dateTime ?? 0).getTime();
+                const en = new Date(e.end?.dateTime ?? 0).getTime();
+                if (!s || !en) return false;
+                const sid = e.extendedProperties?.private?.serviceId;
+                if (sid && parallelAllowed.has(sid)) return false;
+                return s < newEnd.getTime() && en > newStart.getTime();
+              });
+              if (conflict && !force) {
+                return {
+                  kind: "conflict",
+                  existing: {
+                    summary: conflict.summary ?? null,
+                    start: conflict.start?.dateTime ?? null,
+                    end: conflict.end?.dateTime ?? null,
+                  },
+                };
+              }
+              try {
+                await cal.patchEvent(eventId, {
+                  start: { dateTime: newStart.toISOString(), timeZone: TZ },
+                  end: { dateTime: newEnd.toISOString(), timeZone: TZ },
+                });
+                return { kind: "ok" };
+              } catch (e) {
+                return { kind: "patch-failed", message: (e as Error).message };
+              }
+            });
+
+            if (lockResult.kind === "conflict") {
+              return json({
+                error: "reschedule-conflict",
+                conflict: lockResult.existing,
+                message: "Taj termin je u međuvremenu zauzet — pozovi klijentkinju ili izaberi drugi.",
+              }, 409);
+            }
+            if (lockResult.kind === "patch-failed") {
+              console.error("[cancel-request-admin][auto-resched] patch failed:", lockResult.message);
+              autoResult = { cancelled: false, message: "Greška pri pomjeranju — uradi ručno." };
+            } else {
+              const updated: Booking = { ...original, startISO: newStart.toISOString(), endISO: newEnd.toISOString() };
+              let emailSent = false;
+              if (updated.email) {
+                try {
+                  const mailer = await getMailerAsync();
+                  await mailer.send(bookingRescheduledToClient(original, updated, {
+                    salonAddress: settings.salonAddress,
+                    ownerPhone: settings.ownerPhone,
+                    emailGreeting: settings.emailGreeting,
+                    emailClosing: settings.emailClosing,
+                    emailSignature: settings.emailSignature,
+                  }));
+                  emailSent = true;
+                } catch { /* swallow */ }
+              }
+              const newDateLine = formatSalon(newStart, "dd.MM.yyyy. 'u' HH:mm");
+              const oldDateLine = formatSalon(new Date(original.startISO), "dd.MM.yyyy. 'u' HH:mm");
+              const svcLabel = updated.combinedServicesLabel ?? updated.serviceName;
+              const msg = `Draga ${updated.name}, vaš termin za ${svcLabel} je pomjeren sa ${oldDateLine} na ${newDateLine}. Vidimo se! ✿ L'Essenza`;
+              autoResult = {
+                cancelled: false,
+                rescheduled: true,
+                whatsappLink: updated.phoneE164 ? waLink(updated.phoneE164, msg) : null,
+                viberLink: updated.phoneE164 ? viberShareLink(msg) : null,
+                message: msg,
+                emailSent,
+                bookingLabel: svcLabel,
+              };
+            }
+          }
+        }
+      } catch (e) {
+        console.warn("[cancel-request-admin][auto-resched] failed:", (e as Error).message);
+        autoResult = { cancelled: false, message: "Greška pri pomjeranju — uradi ručno." };
+      }
+    }
+
+    const autoNote = autoResult.rescheduled
+      ? "Auto: termin pomjeren kroz zahtjev."
+      : autoResult.modified
+        ? "Auto: usluge izmijenjene kroz zahtjev."
+        : autoResult.cancelled
+          ? (cur.kind === "modify"
+              ? "Auto: sve usluge uklonjene → termin otkazan."
+              : "Auto: termin otkazan kroz zahtjev.")
+          : undefined;
     const next = await updateCancelRequest(id, {
       status,
       resolvedAt: new Date().toISOString(),
@@ -321,11 +464,17 @@ const inner: Handler = async (event) => {
     try {
       let summary: string;
       if (cur.kind === "reschedule") {
-        summary = `Odobren zahtjev za pomjeranje: ${next.name} za ${next.desiredDateISO}`;
+        summary = autoResult.rescheduled
+          ? `Klijent pomjerio termin (preko zahtjeva): ${autoResult.bookingLabel ?? "termin"} — ${next.name} za ${next.desiredDateISO}${cur.desiredTime ? ` u ${cur.desiredTime}` : ""}`
+          : `Odobreno pomjeranje (zahtjev, ručno): ${next.name} za ${next.desiredDateISO}`;
       } else if (cur.kind === "modify") {
-        summary = autoResult.modified
-          ? `Klijent izmijenio usluge (preko zahtjeva): ${autoResult.bookingLabel ?? "termin"} — ${next.name}`
-          : `Odobrena izmjena (zahtjev, ručno): ${next.name} za ${next.desiredDateISO}`;
+        if (autoResult.modified) {
+          summary = `Klijent izmijenio usluge (preko zahtjeva): ${autoResult.bookingLabel ?? "termin"} — ${next.name}`;
+        } else if (autoResult.cancelled) {
+          summary = `Klijent uklonio sve usluge → termin otkazan (zahtjev): ${autoResult.bookingLabel ?? "termin"} — ${next.name}`;
+        } else {
+          summary = `Odobrena izmjena (zahtjev, ručno): ${next.name} za ${next.desiredDateISO}`;
+        }
       } else {
         summary = autoResult.cancelled
           ? `Klijent otkazao (preko zahtjeva): ${autoResult.bookingLabel ?? "termin"} — ${next.name}`
