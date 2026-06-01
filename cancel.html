@@ -616,7 +616,7 @@
     const total = (state.picked.services || []).length;
     if (state.removeIds.size >= total) {
       const err = $("req-error"); err.hidden = false;
-      err.textContent = "Označila/o si sve usluge — koristi „Otkaži cijeli termin".";
+      err.textContent = 'Označila/o si sve usluge — koristi „Otkaži cijeli termin".';
       return;
     }
     const c = readContact();
