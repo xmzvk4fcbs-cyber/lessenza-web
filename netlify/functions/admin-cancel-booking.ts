@@ -6,7 +6,7 @@ import { getMailerAsync, type Mailer } from "../lib/mailer";
 import { getServices, getSettings, appendCancellation, appendAudit, listCancelRequests, updateCancelRequest } from "../lib/config";
 import { eventToBooking } from "../lib/calendar-domain";
 import { bookingCancelledToClient } from "../lib/email-templates";
-import { waLink, viberShareLink } from "../lib/phone";
+import { waLink, viberAddLink } from "../lib/phone";
 import { formatSalon, dayKeyInTZ } from "../lib/time";
 import { withDayLock } from "../lib/booking-lock";
 
@@ -125,7 +125,7 @@ const inner: Handler = async (event) => {
     message = `Draga ${booking.name}, moram otkazati naš termin za ${cancelLabel}, ${dateLine}${reasonLine}. Izvinjavam se na neprijatnosti — javite se kad stignete da ugovorimo novi termin. Hvala na razumijevanju, srdačan pozdrav ✿ L'Essenza`;
     if (booking.phoneE164) {
       whatsappLink = waLink(booking.phoneE164, message);
-      viberLink = viberShareLink(message);
+      viberLink = viberAddLink(booking.phoneE164);
     }
   }
   try {

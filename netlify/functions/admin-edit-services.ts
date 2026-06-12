@@ -6,7 +6,7 @@ import { getServices, getSettings, appendAudit } from "../lib/config";
 import { applyServiceChange } from "../lib/booking-modify";
 import { getMailerAsync, type Mailer } from "../lib/mailer";
 import { bookingServicesModifiedToClient } from "../lib/email-templates";
-import { waLink, viberShareLink } from "../lib/phone";
+import { waLink, viberAddLink } from "../lib/phone";
 import { formatSalon } from "../lib/time";
 
 interface Deps {
@@ -99,7 +99,7 @@ const inner: Handler = async (event) => {
   const dateLine = formatSalon(new Date(updated.startISO), "dd.MM.yyyy. 'u' HH:mm");
   const message = `Draga ${updated.name}, vaš termin ${dateLine} je izmijenjen: prije ${oldLabel}, sada ${newLabel}. Vidimo se! ✿ L'Essenza`;
   const whatsappLink = updated.phoneE164 ? waLink(updated.phoneE164, message) : null;
-  const viberLink = updated.phoneE164 ? viberShareLink(message) : null;
+  const viberLink = updated.phoneE164 ? viberAddLink(updated.phoneE164) : null;
 
   try {
     await appendAudit({

@@ -14,7 +14,7 @@ import { createCalendarClientAsync, type CalendarClient } from "../lib/calendar"
 import { eventToBooking, type Booking } from "../lib/calendar-domain";
 import { getMailerAsync } from "../lib/mailer";
 import { bookingCancelledToClient, bookingServicesModifiedToClient, bookingRescheduledToClient } from "../lib/email-templates";
-import { waLink, viberShareLink } from "../lib/phone";
+import { waLink, viberAddLink } from "../lib/phone";
 import { fromTZ, formatSalon, dayKeyInTZ, TZ } from "../lib/time";
 import { withDayLock, withTwoDayLock } from "../lib/booking-lock";
 import { applyServiceChange } from "../lib/booking-modify";
@@ -154,7 +154,7 @@ const inner: Handler = async (event) => {
           const cancelLabel = booking.combinedServicesLabel ?? booking.serviceName;
           const msg = `Draga ${booking.name}, potvrđujemo da je vaš termin za ${cancelLabel}, ${dateLine}${reasonLine} otkazan na vaš zahtjev. Javite se kad budete htjeli novi. Hvala ✿ L'Essenza`;
           const wa = booking.phoneE164 ? waLink(booking.phoneE164, msg) : null;
-          const viber = booking.phoneE164 ? viberShareLink(msg) : null;
+          const viber = booking.phoneE164 ? viberAddLink(booking.phoneE164) : null;
           autoResult = {
             cancelled: true,
             whatsappLink: wa,
@@ -247,7 +247,7 @@ const inner: Handler = async (event) => {
             autoResult = {
               cancelled: true,
               whatsappLink: booking.phoneE164 ? waLink(booking.phoneE164, msg) : null,
-              viberLink: booking.phoneE164 ? viberShareLink(msg) : null,
+              viberLink: booking.phoneE164 ? viberAddLink(booking.phoneE164) : null,
               message: msg,
               emailSent,
               bookingLabel: cancelLabel,
@@ -282,7 +282,7 @@ const inner: Handler = async (event) => {
                 cancelled: false,
                 modified: true,
                 whatsappLink: result.updated.phoneE164 ? waLink(result.updated.phoneE164, msg) : null,
-                viberLink: result.updated.phoneE164 ? viberShareLink(msg) : null,
+                viberLink: result.updated.phoneE164 ? viberAddLink(result.updated.phoneE164) : null,
                 message: msg,
                 emailSent,
                 bookingLabel: newLabel,
@@ -433,7 +433,7 @@ const inner: Handler = async (event) => {
                 cancelled: false,
                 rescheduled: true,
                 whatsappLink: updated.phoneE164 ? waLink(updated.phoneE164, msg) : null,
-                viberLink: updated.phoneE164 ? viberShareLink(msg) : null,
+                viberLink: updated.phoneE164 ? viberAddLink(updated.phoneE164) : null,
                 message: msg,
                 emailSent,
                 bookingLabel: svcLabel,

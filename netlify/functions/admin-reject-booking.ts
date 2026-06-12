@@ -6,7 +6,7 @@ import { getMailerAsync, type Mailer } from "../lib/mailer";
 import { getServices, getSettings, addBlockedPhone, appendCancellation, appendAudit } from "../lib/config";
 import { eventToBooking } from "../lib/calendar-domain";
 import { bookingRejectedToClient } from "../lib/email-templates";
-import { waLink, viberShareLink } from "../lib/phone";
+import { waLink, viberAddLink } from "../lib/phone";
 
 interface Deps {
   makeCalendar: () => CalendarClient | Promise<CalendarClient>;
@@ -100,7 +100,7 @@ const inner: Handler = async (event) => {
     message = `Draga ${booking.name}, hvala na interesovanju. Nažalost u narednom periodu ne mogu prihvatiti Vaš termin za ${rejectLabel}. Srdačno ✿ L'Essenza`;
     if (booking.phoneE164) {
       whatsappLink = waLink(booking.phoneE164, message);
-      viberLink = viberShareLink(message);
+      viberLink = viberAddLink(booking.phoneE164);
     }
   }
   // Activity feed entry — best-effort, never blocks the response.

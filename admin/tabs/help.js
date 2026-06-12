@@ -88,8 +88,8 @@ const SECTIONS = [
       <h4>Termin kartica — šta sva dugmad rade</h4>
       <ul>
         <li><strong>Pozovi</strong> — otvara telefonski poziv klijenta.</li>
-        <li><strong>WhatsApp</strong> — otvara WhatsApp sa već napisanom porukom.</li>
-        <li><strong>Viber</strong> — isto, samo Viber.</li>
+        <li><strong>WhatsApp</strong> — otvara WhatsApp sa već napisanom porukom (radi za svaki broj).</li>
+        <li><strong>Viber</strong> — Viber ne dozvoljava otvaranje nepoznatog broja kao WhatsApp. Zato dugme otvara Viber ekran „Dodaj kontakt" za taj broj — tapneš Dodaj, pa u poruku držiš prst → Nalijepi (poruka se automatski kopira). Za brojeve koji su ti već Viber kontakt, otvara se direktno.</li>
         <li><strong>Pomjeri</strong> — modal za promjenu datuma/vremena termina.</li>
         <li><strong>Promijeni uslugu</strong> — modal gdje biraš drugu primarnu uslugu i dodaš ekstra usluge u istom terminu (npr. manikir + pedikir).</li>
         <li><strong>Zamijeni</strong> — termin daješ drugoj klijentkinji.</li>

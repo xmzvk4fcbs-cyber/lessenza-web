@@ -130,7 +130,8 @@ function renderBookingCard(a) {
  *  local so this tab doesn't cross-import. */
 function showMessageActions(title, message, whatsappLink, viberLink) {
   const waBtn = whatsappLink ? `<a class="btn btn-primary" href="${whatsappLink}" target="_blank" rel="noopener">📱 WhatsApp</a>` : "";
-  const viBtn = viberLink ? `<a class="btn btn-ghost" href="${viberLink}">💜 Viber</a>` : "";
+  const viBtn = viberLink ? `<a class="btn btn-ghost" id="bk-viber-btn" href="${viberLink}">💜 Viber</a>` : "";
+  const viHint = viberLink ? `<p class="muted" style="font-size:0.82rem;margin-top:0.5rem;">💜 Viber: otvoriće se ekran „Dodaj kontakt" — tapni Dodaj, pa u polju za poruku drži prst → <strong>Nalijepi</strong> (poruka je već kopirana).</p>` : "";
   openModal(title, `
     <p class="muted" style="font-size:0.88rem;">Poruka za klijentkinju:</p>
     <textarea id="bk-msg-copy" readonly rows="5" style="width:100%;">${escapeHtml(message)}</textarea>
@@ -140,6 +141,7 @@ function showMessageActions(title, message, whatsappLink, viberLink) {
       <button type="button" class="btn btn-ghost" id="bk-msg-copy-btn">📋 Kopiraj</button>
       <button type="button" class="btn btn-ghost" data-close="1">Zatvori</button>
     </div>
+    ${viHint}
   `);
   const cbtn = document.getElementById("bk-msg-copy-btn");
   cbtn?.addEventListener("click", async () => {
@@ -147,6 +149,13 @@ function showMessageActions(title, message, whatsappLink, viberLink) {
     try { await navigator.clipboard.writeText(ta.value); cbtn.textContent = "Kopirano ✓"; }
     catch { ta.select(); document.execCommand("copy"); cbtn.textContent = "Kopirano ✓"; }
     setTimeout(() => { cbtn.textContent = "📋 Kopiraj"; }, 1800);
+  });
+  // viber://add can't carry the message — copy it on tap so it's ready to paste.
+  const vbtn = document.getElementById("bk-viber-btn");
+  vbtn?.addEventListener("click", () => {
+    const ta = document.getElementById("bk-msg-copy");
+    navigator.clipboard?.writeText(ta.value).catch(() => {});
+    toast("Poruka kopirana — nalijepi je u Viberu.", "success");
   });
 }
 

@@ -42,10 +42,14 @@ export function waLink(e164: string, text: string): string {
   return `https://wa.me/${digits}?text=${encodeURIComponent(text)}`;
 }
 
-export function viberShareLink(message: string): string {
-  // Viber's `chat?number=PHONE` deep link fails silently on iOS unless the
-  // phone is already in the user's Viber contacts. `forward?text=MSG` always
-  // opens Viber with the message prefilled — owner picks the recipient
-  // inside Viber's contact picker. Matches WhatsApp's "one tap, prefilled" UX.
-  return `viber://forward?text=${encodeURIComponent(message || "")}`;
+export function viberAddLink(e164: string): string {
+  // Unlike WhatsApp's wa.me, Viber has NO public link that opens a chat with an
+  // arbitrary number — `chat?number=PHONE` works ONLY when the number is already
+  // a Viber contact and fails silently on iOS otherwise. `add?number=PHONE`
+  // opens Viber's add-contact screen prefilled with the number: one tap to add,
+  // then the owner can message — the only way to reach a non-contact. The
+  // message can't ride along on this scheme, so the client copies it to the
+  // clipboard on click for a manual paste.
+  const digits = e164.startsWith("+") ? e164 : `+${digitsOnly(e164)}`;
+  return `viber://add?number=${encodeURIComponent(digits)}`;
 }

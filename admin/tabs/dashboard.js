@@ -556,11 +556,12 @@ function waLink(phoneE164, text) {
   return `https://wa.me/${digits}${text ? `?text=${encodeURIComponent(text)}` : ""}`;
 }
 
-function viberShareLink(message) {
-  // viber://chat?number= fails silently on iOS for non-contacts.
-  // viber://forward?text= opens Viber with the message prefilled and lets the
-  // owner pick the recipient — works for any client.
-  return `viber://forward?text=${encodeURIComponent(message || "")}`;
+function viberAddLink(phoneE164) {
+  // Viber has no wa.me-style open-any-number link. viber://add?number= opens the
+  // add-contact screen for this number (one tap to add, then message). The text
+  // can't ride along, so the click handler copies the message to the clipboard.
+  const digits = String(phoneE164 || "").replace(/[^\d]/g, "");
+  return `viber://add?number=${encodeURIComponent("+" + digits)}`;
 }
 
 function fmtShortDate(iso) {
@@ -578,7 +579,7 @@ function renderSuggestionRow(s) {
       : `${s.weeksAgo} sedmica od zadnjeg termina`;
     subtitle = detail;
     action = `<a class="sugg__action" href="${waLink(s.phoneE164, s.suggestedMessage)}" target="_blank" rel="noopener">📱 Pošalji podsjetnik</a>
-              <a class="sugg__action sugg__action--ghost" href="${viberShareLink(s.suggestedMessage)}">💜 Viber</a>`;
+              <a class="sugg__action sugg__action--ghost" data-viber-copy href="${viberAddLink(s.phoneE164)}" data-msg="${escapeHtml(s.suggestedMessage)}">💜 Viber</a>`;
   } else if (s.kind === "sparse-day") {
     eyebrow = "Slab dan";
     title = escapeHtml(s.dowLabel);
@@ -677,6 +678,15 @@ async function renderSuggestions() {
   });
   host.querySelectorAll("[data-goto-inquiries]").forEach((btn) => {
     btn.addEventListener("click", () => { location.hash = "#inquiries"; });
+  });
+
+  // Viber's add-contact link can't carry the message — copy it on tap so it's
+  // ready to paste once the chat opens.
+  host.querySelectorAll("[data-viber-copy]").forEach((a) => {
+    a.addEventListener("click", () => {
+      const msg = a.dataset.msg || "";
+      if (msg) navigator.clipboard?.writeText(msg).catch(() => {});
+    });
   });
 }
 

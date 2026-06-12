@@ -641,11 +641,13 @@ async function onAction(e) {
     if (!phone) {
       openMessageModal("Broj nije unešen", msg);
     } else {
-      // viber://chat?number= fails silently on iOS unless the phone is already
-      // a Viber contact. viber://forward?text= always opens Viber with the
-      // message prefilled — owner picks the recipient inside Viber.
-      window.location.href = `viber://forward?text=${encodeURIComponent(msg)}`;
-      openCopyMessageToast(msg);
+      // Viber has no wa.me-style open-any-number link. viber://add?number=
+      // opens the add-contact screen for this number — one tap to add, then the
+      // owner can message. The message can't ride along, so copy it first.
+      const digits = phone.replace(/\D+/g, "");
+      navigator.clipboard?.writeText(msg).catch(() => {});
+      window.location.href = `viber://add?number=${encodeURIComponent("+" + digits)}`;
+      toast("Poruka kopirana — dodaj kontakt pa nalijepi je u Viberu.", "success");
     }
     if (e.preventDefault) e.preventDefault();
     return;
@@ -746,8 +748,9 @@ async function onAction(e) {
         if (phone) {
           const when = fmtDateTime(start);
           const msg = `Draga ${name}, niste se pojavili na terminu (${service}, ${when}). Molim Vas da mi javite kad budete htjeli novi termin. Srdačno, L'Essenza ✿`;
-          const wa = `https://wa.me/${phone.replace(/[^\d]/g, "")}?text=${encodeURIComponent(msg)}`;
-          const viber = `viber://forward?text=${encodeURIComponent(msg)}`;
+          const digits = phone.replace(/[^\d]/g, "");
+          const wa = `https://wa.me/${digits}?text=${encodeURIComponent(msg)}`;
+          const viber = `viber://add?number=${encodeURIComponent("+" + digits)}`;
           showMessageActions("Pošalji poruku klijentkinji (opciono)", msg, wa, viber);
         }
         await renderList();
@@ -1674,7 +1677,8 @@ function localToISO(dateKey, hhmm) {
 
 function showMessageActions(title, message, whatsappLink, viberLink) {
   const waBtn = whatsappLink ? `<a class="btn btn-primary" href="${whatsappLink}" target="_blank" rel="noopener">📱 Pošalji WhatsApp</a>` : "";
-  const viBtn = viberLink ? `<a class="btn btn-ghost" href="${viberLink}">💜 Otvori Viber</a>` : "";
+  const viBtn = viberLink ? `<a class="btn btn-ghost" id="msg-viber-btn" href="${viberLink}">💜 Viber</a>` : "";
+  const viHint = viberLink ? `<p class="muted" style="font-size:0.82rem;margin-top:0.5rem;">💜 Viber: otvoriće se ekran „Dodaj kontakt" — tapni Dodaj, pa u polju za poruku drži prst → <strong>Nalijepi</strong> (poruka je već kopirana).</p>` : "";
   openModal(title, `
     <p class="muted" style="font-size:0.88rem;">Poruka za klijentkinju:</p>
     <textarea id="msg-copy" readonly rows="5" style="width:100%;">${escapeHtml(message)}</textarea>
@@ -1684,6 +1688,7 @@ function showMessageActions(title, message, whatsappLink, viberLink) {
       <button type="button" class="btn btn-ghost" id="msg-copy-btn">📋 Kopiraj poruku</button>
       <button type="button" class="btn btn-ghost" data-close="1">Zatvori</button>
     </div>
+    ${viHint}
   `);
   const cbtn = document.getElementById("msg-copy-btn");
   cbtn.addEventListener("click", async () => {
@@ -1692,17 +1697,18 @@ function showMessageActions(title, message, whatsappLink, viberLink) {
     catch { ta.select(); document.execCommand("copy"); cbtn.textContent = "Kopirano ✓"; }
     setTimeout(() => { cbtn.textContent = "📋 Kopiraj poruku"; }, 1800);
   });
+  // Viber's add-contact link can't carry the message, so copy it to the clipboard
+  // the moment she taps Viber — ready to paste once the chat opens.
+  const vbtn = document.getElementById("msg-viber-btn");
+  vbtn?.addEventListener("click", () => {
+    const ta = document.getElementById("msg-copy");
+    navigator.clipboard?.writeText(ta.value).catch(() => {});
+    toast("Poruka kopirana — nalijepi je u Viberu.", "success");
+  });
 }
 
 function openMessageModal(title, msg) {
   showMessageActions(title, msg, null, null);
-}
-
-function openCopyMessageToast(msg) {
-  navigator.clipboard?.writeText(msg).then(
-    () => toast("Poruka kopirana (Viber nema pre-fill). Nalijepi je u chat.", "success"),
-    () => toast("Otvaram Viber — poruku otkucaj ručno.", "success"),
-  );
 }
 
 // --- View switcher (Dan / Sedmica / Mjesec) ---
